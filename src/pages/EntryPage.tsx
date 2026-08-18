@@ -53,7 +53,15 @@ export function EntryPage() {
         .sort((a, b) => a.sortOrder - b.sortOrder),
     [arms.data, trialId],
   );
-  const template = templates.data?.find((candidate) => candidate.trialId === trialId);
+  // Which form: named by the link, else the trial's grower form.
+  const trialTemplates = useMemo(
+    () => (templates.data ?? []).filter((candidate) => candidate.trialId === trialId),
+    [templates.data, trialId],
+  );
+  const template =
+    trialTemplates.find((candidate) => candidate.templateId === searchParams.get("form")) ??
+    trialTemplates.find((candidate) => candidate.audience === "grower") ??
+    trialTemplates[0];
 
   // Site and arm come from the link the grower was given, so they never have
   // to choose (CLAUDE.md). When a link omits them we ask explicitly rather
@@ -82,7 +90,7 @@ export function EntryPage() {
     );
   }
 
-  if (!trial || !template || trialSites.length === 0 || trialArms.length === 0) {
+  if (!trial || !template) {
     return (
       <EmptyState
         message="This trial isn't set up for data entry yet."
@@ -95,13 +103,17 @@ export function EntryPage() {
     return <AccessGate onSubmit={tryUnlock} />;
   }
 
-  if (!site || !arm) {
+  // Only ask for the context this form actually needs: a cost log belongs to
+  // the trial, weather to a site, a harvest run to a site and a practice.
+  const needsSite = template.requiresSite && !site;
+  const needsArm = template.requiresArm && !arm;
+  if (needsSite || needsArm) {
     return (
       <ContextChooser
         trialName={trial.name}
         sites={trialSites}
         arms={trialArms}
-        site={site}
+        site={needsSite ? undefined : site}
         onPickSite={setPickedSiteId}
         onPickArm={setPickedArmId}
       />
@@ -110,11 +122,14 @@ export function EntryPage() {
 
   return (
     <EntryForm
+      formName={template.name}
       trialName={trial.name}
-      siteLabel={`${site.location} (${site.region})`}
-      armLabel={arm.name}
-      siteId={site.siteId}
-      armId={arm.armId}
+      siteLabel={template.requiresSite && site ? `${site.location} (${site.region})` : null}
+      armLabel={template.requiresArm && arm ? arm.name : null}
+      frequency={template.frequency}
+      eventType={template.eventType}
+      siteId={template.requiresSite && site ? site.siteId : null}
+      armId={template.requiresArm && arm ? arm.armId : null}
       enteredBy={grower?.contactId ?? ""}
       fields={[...template.fields].sort((a, b) => a.displayOrder - b.displayOrder)}
     />
@@ -243,19 +258,25 @@ function AccessGate({ onSubmit }: { onSubmit: (code: string) => boolean }) {
 }
 
 function EntryForm({
+  formName,
   trialName,
   siteLabel,
   armLabel,
+  frequency,
+  eventType,
   siteId,
   armId,
   enteredBy,
   fields,
 }: {
+  formName: string;
   trialName: string;
-  siteLabel: string;
-  armLabel: string;
-  siteId: string;
-  armId: string;
+  siteLabel: string | null;
+  armLabel: string | null;
+  frequency: string;
+  eventType: string;
+  siteId: string | null;
+  armId: string | null;
   enteredBy: string;
   fields: FormField[];
 }) {
@@ -328,7 +349,7 @@ function EntryForm({
     const result = await addEntry({
       siteId,
       armId,
-      eventType: "field_record",
+      eventType,
       enteredBy,
       deviceType: detectDevice(),
       values: metricValues,
@@ -374,15 +395,22 @@ function EntryForm({
   return (
     <form onSubmit={onSubmit} className="mx-auto max-w-md space-y-4">
       <div>
-        <PageTitle>Record your run</PageTitle>
-        <p className="mt-1 text-sm text-ink/60 dark:text-ink-dark/60">{trialName}</p>
+        <PageTitle>{formName}</PageTitle>
+        <p className="mt-1 text-sm text-ink/60 dark:text-ink-dark/60">
+          {trialName}
+          {frequency ? ` · ${frequency}` : ""}
+        </p>
         <p className="mt-2 flex flex-wrap gap-2 text-sm">
-          <span className="rounded-full bg-primary/10 px-2.5 py-0.5 font-medium text-primary dark:bg-primary-soft/20 dark:text-primary-soft">
-            📍 {siteLabel}
-          </span>
-          <span className="rounded-full bg-primary/10 px-2.5 py-0.5 font-medium text-primary dark:bg-primary-soft/20 dark:text-primary-soft">
-            {armLabel}
-          </span>
+          {siteLabel ? (
+            <span className="rounded-full bg-primary/10 px-2.5 py-0.5 font-medium text-primary dark:bg-primary-soft/20 dark:text-primary-soft">
+              📍 {siteLabel}
+            </span>
+          ) : null}
+          {armLabel ? (
+            <span className="rounded-full bg-primary/10 px-2.5 py-0.5 font-medium text-primary dark:bg-primary-soft/20 dark:text-primary-soft">
+              {armLabel}
+            </span>
+          ) : null}
         </p>
       </div>
 

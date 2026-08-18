@@ -67,6 +67,11 @@ describe("saveTemplate", () => {
     trialId: "22222222-2222-4222-8222-222222222222",
     armId: null,
     name: "Test form",
+    eventType: "field_record",
+    audience: "grower",
+    frequency: "",
+    requiresSite: true,
+    requiresArm: true,
     fields: [field("notes", 0)],
     createdAt: "2026-08-18T00:00:00.000Z",
   };

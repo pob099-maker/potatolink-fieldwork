@@ -165,8 +165,8 @@ export async function saveResults(results: ResultSet[]): Promise<Result<string>>
 }
 
 export interface NewEntryInput {
-  siteId: string;
-  armId: string;
+  siteId: string | null;
+  armId: string | null;
   eventType: string;
   enteredBy: string;
   deviceType: DataEntryLog["deviceType"];
@@ -270,6 +270,11 @@ export async function addTrial(input: {
     trialId: trial.trialId,
     armId: null,
     name: `${input.name} record`,
+    eventType: "field_record",
+    audience: "grower",
+    frequency: "",
+    requiresSite: true,
+    requiresArm: true,
     fields: starterFields,
     createdAt,
   };

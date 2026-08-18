@@ -6,6 +6,7 @@ import type {
   ArmAssumption,
   Contact,
   EconomicScenario,
+  FormField,
   FormTemplate,
   PracticeArm,
   Project,
@@ -150,6 +151,11 @@ const template: FormTemplate = {
   trialId: SEED_IDS.trial,
   armId: null,
   name: "CropVision run record",
+  eventType: "field_record",
+  audience: "grower",
+  frequency: "Each run",
+  requiresSite: true,
+  requiresArm: true,
   fields: [
     {
       fieldName: "tonnesHandled",
@@ -326,6 +332,11 @@ const heTemplate: FormTemplate = {
   trialId: SEED_IDS.heTrial,
   armId: null,
   name: "HarvestEye harvest run record",
+  eventType: "field_record",
+  audience: "grower",
+  frequency: "Each pass",
+  requiresSite: true,
+  requiresArm: true,
   fields: [
     {
       fieldName: "varietyName",
@@ -485,6 +496,159 @@ const heTemplate: FormTemplate = {
   createdAt: T0,
 };
 
+// Staff forms for the HarvestEye protocol stages that aren't per-pass
+// (docs/harvesteye_trial_protocol.csv). Each names who fills it in and how
+// often; those that describe a site or the whole trial don't attach to a
+// practice arm.
+
+type SeedField = [
+  fieldName: string,
+  label: string,
+  type: FormField["type"],
+  required?: boolean,
+  extra?: Partial<Pick<FormField, "options" | "min" | "max" | "unit">>,
+];
+
+function staffForm(
+  templateId: string,
+  name: string,
+  eventType: string,
+  frequency: string,
+  scope: { requiresSite: boolean; requiresArm: boolean },
+  fields: SeedField[],
+): FormTemplate {
+  return {
+    templateId,
+    trialId: SEED_IDS.heTrial,
+    armId: null,
+    name,
+    eventType,
+    audience: "staff",
+    frequency,
+    requiresSite: scope.requiresSite,
+    requiresArm: scope.requiresArm,
+    fields: fields.map(([fieldName, label, type, required = false, extra], index) => ({
+      fieldName,
+      label,
+      type,
+      required,
+      options: extra?.options ?? null,
+      min: extra?.min ?? null,
+      max: extra?.max ?? null,
+      unit: extra?.unit ?? null,
+      displayOrder: index,
+    })),
+    createdAt: T0,
+  };
+}
+
+const SITE_ONLY = { requiresSite: true, requiresArm: false };
+const TRIAL_ONLY = { requiresSite: false, requiresArm: false };
+
+const heStaffForms: FormTemplate[] = [
+  staffForm(
+    "5f0a6c1e-0006-4000-8000-000000000010",
+    "Site setup",
+    "site_setup",
+    "Once per site, before harvest",
+    SITE_ONLY,
+    [
+      ["siteBoundary", "Field boundary location", "gps"],
+      ["varietyLayout", "Variety layout map (photo or file)", "file"],
+      ["rowSpacing", "Row spacing", "number", false, { unit: "cm", min: 0 }],
+      ["plantingDate", "Planting date", "date"],
+      ["daysToHarvest", "Days to harvest", "number", false, { min: 0 }],
+      ["irrigationRegime", "Irrigation regime", "text"],
+    ],
+  ),
+  staffForm(
+    "5f0a6c1e-0006-4000-8000-000000000011",
+    "Calibration record",
+    "calibration",
+    "Start of each session",
+    SITE_ONLY,
+    [
+      ["calibrationMethod", "Calibration method used", "text", true],
+      ["technician", "Technician", "text", true],
+      ["calibrationPhoto", "Photo of the calibration", "photo"],
+      ["calibrationNotes", "Anything unusual?", "text"],
+    ],
+  ),
+  staffForm(
+    "5f0a6c1e-0006-4000-8000-000000000012",
+    "Install / removal log",
+    "install_log",
+    "Each install and removal",
+    SITE_ONLY,
+    [
+      ["action", "Install or removal?", "select", true, { options: ["install", "removal"] }],
+      ["minutesTaken", "Time taken", "number", true, { unit: "minutes", min: 0 }],
+      ["fitPhoto", "Photo of the unit fitted", "photo"],
+      ["disruption", "Did fitting disrupt normal work?", "boolean", true],
+      ["installNotes", "Notes", "text"],
+    ],
+  ),
+  staffForm(
+    "5f0a6c1e-0006-4000-8000-000000000013",
+    "Daily weather",
+    "weather",
+    "Daily during the trial",
+    SITE_ONLY,
+    [
+      ["temperature", "Temperature", "number", true, { unit: "°C" }],
+      ["rainfall7Day", "Rainfall, last 7 days", "number", false, { unit: "mm", min: 0 }],
+      ["soilMoisture", "Soil moisture", "number", false, { unit: "%", min: 0, max: 100 }],
+      ["weatherNotes", "Conditions worth noting", "text"],
+    ],
+  ),
+  staffForm(
+    "5f0a6c1e-0006-4000-8000-000000000014",
+    "Portal output check",
+    "portal_output",
+    "End of each harvest day",
+    SITE_ONLY,
+    [
+      ["portalScreenshot", "Portal export (screenshot or PDF)", "file", true],
+      ["dataLagMinutes", "Time from harvest to portal-ready data", "number", true, { unit: "minutes", min: 0 }],
+      ["outputUsable", "Was the output usable as-is?", "boolean", true],
+      ["portalNotes", "Notes", "text"],
+    ],
+  ),
+  staffForm(
+    "5f0a6c1e-0006-4000-8000-000000000015",
+    "Observer feedback",
+    "observer_feedback",
+    "End of each site visit",
+    SITE_ONLY,
+    [
+      ["observerName", "Observer name", "text", true],
+      [
+        "observerRole",
+        "Role",
+        "select",
+        true,
+        { options: ["grower", "processor", "agronomist", "other"] },
+      ],
+      ["relevanceRating", "How relevant is this to your operation?", "slider", true, { min: 1, max: 5 }],
+      ["wouldUse", "Would you consider using it?", "boolean", true],
+      ["observerComments", "Comments", "text"],
+    ],
+  ),
+  staffForm(
+    "5f0a6c1e-0006-4000-8000-000000000016",
+    "Cost log",
+    "cost_log",
+    "Once per trial",
+    TRIAL_ONLY,
+    [
+      ["leaseCost", "Lease or subscription cost", "number", true, { unit: "$", min: 0 }],
+      ["technicianCost", "Technician time", "number", false, { unit: "$", min: 0 }],
+      ["freightCost", "Freight", "number", false, { unit: "$", min: 0 }],
+      ["costNotes", "What's included in these figures?", "text"],
+    ],
+  ),
+];
+
 // Placeholder economics for the CropVision trial so the Results page
 // demonstrates the engine out of the box. Values are illustrative only and
 // fully editable in the app.
@@ -560,7 +724,7 @@ const seedScenarios: EconomicScenario[] = [
   },
 ];
 
-const SEED_FLAG = { key: "seeded", version: 9 };
+const SEED_FLAG = { key: "seeded", version: 10 };
 
 export async function seedIfNeeded(): Promise<void> {
   const existing = await dbGet<{ key: string; version: number }>("meta", "seeded");
@@ -578,6 +742,7 @@ export async function seedIfNeeded(): Promise<void> {
     ...heArms.map((arm) => ({ collection: "practiceArms" as const, value: arm })),
     { collection: "formTemplates", value: template },
     { collection: "formTemplates", value: heTemplate },
+    ...heStaffForms.map((form) => ({ collection: "formTemplates" as const, value: form })),
     ...seedAssumptions.map((assumption) => ({
       collection: "armAssumptions" as const,
       value: assumption,

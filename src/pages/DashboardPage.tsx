@@ -87,8 +87,17 @@ export function DashboardPage() {
                   .filter((arm) => arm.trialId === trial.trialId)
                   .map((arm) => arm.armId),
               );
-              const entryCount = (events.data ?? []).filter((event) =>
-                trialArmIds.has(event.armId),
+              // Staff records (weather, cost logs) carry no arm, so match on
+              // the trial's sites as well.
+              const trialSiteIds = new Set(
+                (sites.data ?? [])
+                  .filter((site) => site.trialId === trial.trialId)
+                  .map((site) => site.siteId),
+              );
+              const entryCount = (events.data ?? []).filter(
+                (event) =>
+                  (event.armId !== null && trialArmIds.has(event.armId)) ||
+                  (event.armId === null && event.siteId !== null && trialSiteIds.has(event.siteId)),
               ).length;
               return (
                 <li key={trial.trialId} className="py-3">
