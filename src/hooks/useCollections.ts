@@ -2,11 +2,14 @@ import { useEffect } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   listArms,
+  listAssumptions,
   listContacts,
   listEntryLogs,
   listEvents,
   listMetrics,
   listProjects,
+  listResults,
+  listScenarios,
   listSites,
   listTemplates,
   listTrials,
@@ -37,3 +40,8 @@ export const useEvents = () => useQuery({ queryKey: ["events"], queryFn: listEve
 export const useMetrics = () => useQuery({ queryKey: ["metrics"], queryFn: listMetrics });
 export const useEntryLogs = () =>
   useQuery({ queryKey: ["entryLogs"], queryFn: listEntryLogs });
+export const useAssumptions = () =>
+  useQuery({ queryKey: ["assumptions"], queryFn: listAssumptions });
+export const useScenarios = () =>
+  useQuery({ queryKey: ["scenarios"], queryFn: listScenarios });
+export const useResults = () => useQuery({ queryKey: ["results"], queryFn: listResults });

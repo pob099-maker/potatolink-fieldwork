@@ -93,6 +93,17 @@ export async function dbPut(collection: CollectionName, value: unknown): Promise
   });
 }
 
+export async function dbDelete(collection: CollectionName, key: string): Promise<void> {
+  const db = await openDb();
+  const tx = db.transaction(collection, "readwrite");
+  tx.objectStore(collection).delete(key);
+  await new Promise<void>((resolve, reject) => {
+    tx.oncomplete = () => resolve();
+    tx.onerror = () => reject(tx.error ?? new Error("IndexedDB delete failed"));
+    tx.onabort = () => reject(tx.error ?? new Error("IndexedDB delete aborted"));
+  });
+}
+
 export async function dbPutMany(
   entries: Array<{ collection: CollectionName; value: unknown }>,
 ): Promise<void> {
