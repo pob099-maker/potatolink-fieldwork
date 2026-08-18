@@ -24,7 +24,16 @@ function scenario(scenarioId: string, siteId: string | null, values: ScenarioAss
 }
 
 function arm(armId: string, type: PracticeArm["type"], sortOrder: number): PracticeArm {
-  return { armId, trialId: "trial-1", name: armId, type, description: "", sortOrder, createdAt: T0 };
+  return {
+    armId,
+    trialId: "trial-1",
+    name: armId,
+    type,
+    description: "",
+    sortOrder,
+    archived: false,
+    createdAt: T0,
+  };
 }
 
 function assumption(

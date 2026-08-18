@@ -83,6 +83,8 @@ export interface PracticeArm {
   type: ArmType;
   description: string;
   sortOrder: number;
+  /** Retired: kept for its data, but not offered for new entries. */
+  archived: boolean;
   createdAt: string;
 }
 

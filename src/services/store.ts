@@ -280,10 +280,22 @@ export async function addTrial(input: {
     fields: starterFields,
     createdAt,
   };
+  // A trial needs at least a control arm to compare against, so start with one.
+  const controlArm: PracticeArm = {
+    armId: newId(),
+    trialId: trial.trialId,
+    name: "Current practice",
+    type: "control",
+    description: "",
+    sortOrder: 0,
+    archived: false,
+    createdAt,
+  };
   try {
     await dbPutMany([
       { collection: "trials", value: trial },
       { collection: "formTemplates", value: starterTemplate },
+      { collection: "practiceArms", value: controlArm },
     ]);
   } catch {
     return { success: false, error: "Could not save the trial on this device." };
@@ -291,9 +303,78 @@ export async function addTrial(input: {
   if (supabase) {
     void supabase.from("trials").upsert(toRow(trial)).then();
     void supabase.from("form_templates").upsert(toRow(starterTemplate)).then();
+    void supabase.from("practice_arms").upsert(toRow(controlArm)).then();
   }
   notify();
   return { success: true, data: trial };
+}
+
+/** Add a practice arm to a trial. New arms sort after the existing ones. */
+export async function addArm(input: {
+  trialId: string;
+  name: string;
+  type: PracticeArm["type"];
+  description?: string;
+}): Promise<Result<PracticeArm>> {
+  const existing = (await listArms()).filter((arm) => arm.trialId === input.trialId);
+  const arm: PracticeArm = {
+    armId: newId(),
+    trialId: input.trialId,
+    name: input.name,
+    type: input.type,
+    description: input.description ?? "",
+    sortOrder: existing.reduce((max, candidate) => Math.max(max, candidate.sortOrder), -1) + 1,
+    archived: false,
+    createdAt: nowIso(),
+  };
+  const check = practiceArmSchema.safeParse(arm);
+  if (!check.success) {
+    return { success: false, error: "That practice isn't valid — check the name." };
+  }
+  return saveRecord("practiceArms", arm, "Could not save the practice.");
+}
+
+/** Persist an edited arm (rename, reorder, archive/restore). */
+export async function saveArm(arm: PracticeArm): Promise<Result<PracticeArm>> {
+  const check = practiceArmSchema.safeParse(arm);
+  if (!check.success) {
+    return { success: false, error: "That practice isn't valid — check the name." };
+  }
+  return saveRecord("practiceArms", arm, "Could not save the practice.");
+}
+
+/** Whether an arm has any records or economics against it. */
+export async function armHasData(armId: string): Promise<boolean> {
+  const [events, assumptions, results] = await Promise.all([
+    listEvents(),
+    listAssumptions(),
+    listResults(),
+  ]);
+  return (
+    events.some((event) => event.armId === armId) ||
+    assumptions.some((assumption) => assumption.armId === armId) ||
+    results.some((result) => result.armId === armId)
+  );
+}
+
+/**
+ * Retire an arm: delete it outright if nothing has been recorded against it
+ * (added in error), otherwise archive it so its data survives. Returns which
+ * of the two happened.
+ */
+export async function removeArm(arm: PracticeArm): Promise<Result<"deleted" | "archived">> {
+  if (await armHasData(arm.armId)) {
+    const archived = await saveArm({ ...arm, archived: true });
+    return archived.success
+      ? { success: true, data: "archived" }
+      : { success: false, error: archived.error };
+  }
+  await dbDelete("practiceArms", arm.armId);
+  if (supabase) {
+    void supabase.from("practice_arms").delete().eq("arm_id", arm.armId).then();
+  }
+  notify();
+  return { success: true, data: "deleted" };
 }
 
 /** Validate and persist an edited form template, locally and to Supabase. */

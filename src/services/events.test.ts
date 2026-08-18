@@ -32,6 +32,7 @@ const arms: PracticeArm[] = [
     type: "control",
     description: "",
     sortOrder: 0,
+    archived: false,
     createdAt: T0,
   },
 ];
