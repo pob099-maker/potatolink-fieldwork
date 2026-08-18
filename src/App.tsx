@@ -1,4 +1,4 @@
-import { BrowserRouter, Route, Routes } from "react-router-dom";
+import { HashRouter, Route, Routes } from "react-router-dom";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { Layout } from "./components/Layout";
 import { AccessProvider } from "./contexts/AccessContext";
@@ -36,12 +36,18 @@ export function App() {
     <QueryClientProvider client={queryClient}>
       <ThemeProvider>
         <AccessProvider>
-          <BrowserRouter
-            basename={import.meta.env.BASE_URL.replace(/\/$/, "")}
+          {/*
+            Hash routing: static hosts (GitHub Pages included) answer an
+            unknown deep path with a 404 before any fallback runs, which makes
+            an emailed entry link look broken to mail scanners and previews.
+            Everything after the # is never sent to the server, so a deep link
+            always resolves. Legacy path links are redirected by 404.html.
+          */}
+          <HashRouter
             future={{ v7_startTransition: true, v7_relativeSplatPath: true }}
           >
             <AppRoutes />
-          </BrowserRouter>
+          </HashRouter>
         </AccessProvider>
       </ThemeProvider>
     </QueryClientProvider>

@@ -38,13 +38,19 @@ describe("entry links", () => {
     expect(path).toBe(`/trials/trial-1/entry?site=${WALKERS}&arm=${ARM}`);
   });
 
-  it("builds absolute urls for both root and sub-path deployments", () => {
+  it("puts the route after the hash so a shared link never 404s", () => {
     expect(buildEntryUrl("https://example.org", "/", "t", "s", "a")).toBe(
-      "https://example.org/trials/t/entry?site=s&arm=a",
+      "https://example.org/#/trials/t/entry?site=s&arm=a",
     );
     expect(
       buildEntryUrl("https://pob099-maker.github.io", "/potatolink-fieldwork/", "t", "s", "a"),
-    ).toBe("https://pob099-maker.github.io/potatolink-fieldwork/trials/t/entry?site=s&arm=a");
+    ).toBe("https://pob099-maker.github.io/potatolink-fieldwork/#/trials/t/entry?site=s&arm=a");
+  });
+
+  it("keeps a single slash before the hash when the base lacks one", () => {
+    expect(buildEntryUrl("https://example.org", "/app", "t", "s", "a")).toBe(
+      "https://example.org/app/#/trials/t/entry?site=s&arm=a",
+    );
   });
 });
 

@@ -14,6 +14,9 @@ export function buildEntryPath(trialId: string, siteId: string, armId: string): 
 /**
  * Absolute link to hand out. `base` is the app's deployment base path
  * (import.meta.env.BASE_URL), which may be "/" or "/potatolink-fieldwork/".
+ *
+ * The route goes after the # so the whole path is a real page on the server:
+ * an emailed link never returns a 404, whichever static host serves the app.
  */
 export function buildEntryUrl(
   origin: string,
@@ -23,8 +26,8 @@ export function buildEntryUrl(
   armId: string,
 ): string {
   const path = buildEntryPath(trialId, siteId, armId);
-  const prefix = base.endsWith("/") ? base.slice(0, -1) : base;
-  return `${origin}${prefix}${path}`;
+  const prefix = base.endsWith("/") ? base : `${base}/`;
+  return `${origin}${prefix}#${path}`;
 }
 
 export interface ArmSummary {
