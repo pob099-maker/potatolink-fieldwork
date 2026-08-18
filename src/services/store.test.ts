@@ -47,6 +47,7 @@ describe("seed", () => {
 
   it("records a staff entry with no site or arm", async () => {
     const result = await addEntry({
+      trialId: SEED_IDS.heTrial,
       siteId: null,
       armId: null,
       eventType: "cost_log",
@@ -71,6 +72,7 @@ describe("seed", () => {
 describe("addEntry", () => {
   it("saves an event, its metrics, and an entry log as pending", async () => {
     const result = await addEntry({
+      trialId: SEED_IDS.trial,
       siteId: SEED_IDS.siteWalkersFlat,
       armId: SEED_IDS.armControl,
       eventType: "field_record",

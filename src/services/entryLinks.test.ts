@@ -9,6 +9,7 @@ const ARM = "arm-owned";
 function event(eventId: string, siteId: string, armId: string): MeasurementEvent {
   return {
     eventId,
+    trialId: "trial-1",
     siteId,
     armId,
     eventDate: "2026-08-18T00:00:00.000Z",

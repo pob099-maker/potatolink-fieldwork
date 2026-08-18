@@ -10,8 +10,9 @@ import {
   useTrials,
 } from "../hooks/useCollections";
 import { buildEntryUrl, summariseArm } from "../services/entryLinks";
+import { describeEvent, describeEventScope, eventsForTrial } from "../services/events";
 import { Card, EmptyState, ErrorState, PageTitle, Skeleton, StatusPill, SyncBadge } from "../components/ui";
-import type { FormTemplate, PracticeArm, Site, Trial } from "../types";
+import type { FormTemplate, MeasurementEvent, Metric, PracticeArm, Site, Trial } from "../types";
 
 export function TrialDetailPage() {
   const { trialId } = useParams<{ trialId: string }>();
@@ -44,6 +45,10 @@ export function TrialDetailPage() {
   );
 
   const growerForm = trialTemplates.find((template) => template.audience === "grower");
+  const trialEvents = useMemo(
+    () => eventsForTrial(events.data ?? [], trialId ?? "", sites.data ?? [], arms.data ?? []),
+    [events.data, trialId, sites.data, arms.data],
+  );
 
   // null = every site combined; otherwise one site's figures only.
   const [selectedSiteId, setSelectedSiteId] = useState<string | null>(null);
@@ -135,6 +140,19 @@ export function TrialDetailPage() {
           Results &amp; economics
         </Link>
       </div>
+
+      <StaffRecords
+        events={trialEvents.filter((event) => {
+          const template = trialTemplates.find(
+            (candidate) => candidate.eventType === event.eventType,
+          );
+          return template ? template.audience === "staff" : event.armId === null;
+        })}
+        templates={trialTemplates}
+        sites={trialSites}
+        metrics={metrics.data ?? []}
+        selectedSiteId={selectedSiteId}
+      />
 
       <TrialForms trial={trial} templates={trialTemplates} />
 
@@ -257,6 +275,78 @@ export function TrialDetailPage() {
         })
       )}
     </div>
+  );
+}
+
+/**
+ * Records from the staff forms — calibration, weather, cost logs and the like.
+ * They don't belong to a practice arm, so they'd otherwise be invisible on a
+ * page organised by arm.
+ */
+function StaffRecords({
+  events,
+  templates,
+  sites,
+  metrics,
+  selectedSiteId,
+}: {
+  events: MeasurementEvent[];
+  templates: FormTemplate[];
+  sites: Site[];
+  metrics: Metric[];
+  selectedSiteId: string | null;
+}) {
+  // A trial-level record (no site) stays visible whichever site is selected.
+  const shown = events
+    .filter(
+      (event) =>
+        selectedSiteId === null || event.siteId === null || event.siteId === selectedSiteId,
+    )
+    .sort((a, b) => b.eventDate.localeCompare(a.eventDate));
+
+  if (shown.length === 0) return null;
+
+  return (
+    <Card>
+      <h2 className="font-display text-lg font-bold">Staff records</h2>
+      <ul className="mt-2 divide-y divide-ink/10 text-sm dark:divide-ink-dark/10">
+        {shown.map((event) => {
+          const values = metrics.filter((metric) => metric.eventId === event.eventId);
+          const media = values.filter((metric) => metric.photoUrl?.startsWith("http"));
+          const readable = values
+            .filter((metric) => !metric.photoUrl)
+            .slice(0, 3)
+            .map((metric) => `${metric.metricName}: ${metric.value}${metric.unit ? ` ${metric.unit}` : ""}`)
+            .join(" · ");
+          return (
+            <li key={event.eventId} className="py-2">
+              <div className="flex flex-wrap items-center gap-2">
+                <span className="font-medium">{describeEvent(event, templates)}</span>
+                <span className="text-ink/60 dark:text-ink-dark/60">
+                  {format(new Date(event.eventDate), "d MMM yyyy")} ·{" "}
+                  {describeEventScope(event, sites)}
+                </span>
+                <SyncBadge status={event.syncStatus} />
+                {media.map((metric) => (
+                  <a
+                    key={metric.metricId}
+                    href={metric.photoUrl ?? "#"}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="text-primary underline dark:text-primary-soft"
+                  >
+                    {metric.value === "video" ? "🎬" : metric.value === "file" ? "📎" : "📷"}
+                  </a>
+                ))}
+              </div>
+              {readable ? (
+                <p className="text-xs text-ink/60 dark:text-ink-dark/60">{readable}</p>
+              ) : null}
+            </li>
+          );
+        })}
+      </ul>
+    </Card>
   );
 }
 
