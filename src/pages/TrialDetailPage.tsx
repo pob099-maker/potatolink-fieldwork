@@ -1,4 +1,4 @@
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import { format } from "date-fns";
 import {
@@ -8,15 +8,9 @@ import {
   useSites,
   useTrials,
 } from "../hooks/useCollections";
+import { buildEntryUrl, summariseArm } from "../services/entryLinks";
 import { Card, EmptyState, ErrorState, PageTitle, Skeleton, StatusPill, SyncBadge } from "../components/ui";
-import type { Metric } from "../types";
-
-function metricNumber(metrics: Metric[], eventIds: Set<string>, name: string): number[] {
-  return metrics
-    .filter((metric) => eventIds.has(metric.eventId) && metric.metricName === name)
-    .map((metric) => Number(metric.value))
-    .filter((value) => Number.isFinite(value));
-}
+import type { PracticeArm, Site, Trial } from "../types";
 
 export function TrialDetailPage() {
   const { trialId } = useParams<{ trialId: string }>();
@@ -41,6 +35,10 @@ export function TrialDetailPage() {
         .sort((a, b) => a.sortOrder - b.sortOrder),
     [arms.data, trialId],
   );
+
+  // null = every site combined; otherwise one site's figures only.
+  const [selectedSiteId, setSelectedSiteId] = useState<string | null>(null);
+  const selectedSite = trialSites.find((site) => site.siteId === selectedSiteId);
 
   if (loading) {
     return (
@@ -67,24 +65,53 @@ export function TrialDetailPage() {
         <p className="mt-1 text-ink/70 dark:text-ink-dark/70">{trial.objective}</p>
         <p className="mt-2 flex flex-wrap items-center gap-2 text-sm">
           <StatusPill status={trial.status} />
-          {trialSites.map((site) => (
-            <span key={site.siteId} className="text-ink/60 dark:text-ink-dark/60">
-              📍 {site.location}
-            </span>
-          ))}
         </p>
       </div>
 
+      {trialSites.length > 1 ? (
+        <div>
+          <h2 className="sr-only">Filter by site</h2>
+          <div role="group" aria-label="Filter by site" className="flex flex-wrap gap-2">
+            <button
+              type="button"
+              aria-pressed={selectedSiteId === null}
+              onClick={() => setSelectedSiteId(null)}
+              className={`min-h-11 rounded-full border px-4 py-2 font-medium ${
+                selectedSiteId === null
+                  ? "border-primary bg-primary text-white"
+                  : "border-ink/20 dark:border-ink-dark/20"
+              }`}
+            >
+              All sites
+            </button>
+            {trialSites.map((site) => (
+              <button
+                key={site.siteId}
+                type="button"
+                aria-pressed={selectedSiteId === site.siteId}
+                onClick={() => setSelectedSiteId(site.siteId)}
+                className={`min-h-11 rounded-full border px-4 py-2 font-medium ${
+                  selectedSiteId === site.siteId
+                    ? "border-primary bg-primary text-white"
+                    : "border-ink/20 dark:border-ink-dark/20"
+                }`}
+              >
+                📍 {site.location}
+              </button>
+            ))}
+          </div>
+          {selectedSite ? (
+            <p className="mt-2 text-sm text-ink/60 dark:text-ink-dark/60">
+              Showing {selectedSite.location} only — {selectedSite.region}, {selectedSite.soilType}.
+            </p>
+          ) : null}
+        </div>
+      ) : null}
+
       <div className="flex flex-wrap gap-2">
         <Link
-          to={`/trials/${trial.trialId}/entry`}
-          className="min-h-11 rounded-lg bg-primary px-4 py-2.5 font-medium text-white"
-        >
-          Grower entry form
-        </Link>
-        <Link
           to={`/trials/${trial.trialId}/results`}
-          className="min-h-11 rounded-lg border border-primary px-4 py-2.5 font-medium text-primary dark:text-primary-soft"
+          className="min-h-11 rounded-lg bg-primary px-4 py-2.5 font-medium text-white"
         >
           Results &amp; economics
         </Link>
@@ -96,16 +123,23 @@ export function TrialDetailPage() {
         </Link>
       </div>
 
+      <EntryLinks trial={trial} sites={trialSites} arms={trialArms} selectedSiteId={selectedSiteId} />
+
       {trialArms.length === 0 ? (
         <EmptyState message="No practice arms configured for this trial yet." />
       ) : (
         trialArms.map((arm) => {
-          const armEvents = (events.data ?? []).filter((event) => event.armId === arm.armId);
-          const eventIds = new Set(armEvents.map((event) => event.eventId));
-          const tonnes = metricNumber(metrics.data ?? [], eventIds, "tonnesHandled");
-          const durations = metricNumber(metrics.data ?? [], eventIds, "runDuration");
-          const totalTonnes = tonnes.reduce((sum, value) => sum + value, 0);
-          const totalHours = durations.reduce((sum, value) => sum + value, 0);
+          const armEvents = (events.data ?? []).filter(
+            (event) =>
+              event.armId === arm.armId &&
+              (selectedSiteId === null || event.siteId === selectedSiteId),
+          );
+          const summary = summariseArm(
+            events.data ?? [],
+            metrics.data ?? [],
+            arm.armId,
+            selectedSiteId ?? undefined,
+          );
 
           return (
             <Card key={arm.armId}>
@@ -118,21 +152,44 @@ export function TrialDetailPage() {
               <dl className="mt-3 grid grid-cols-3 gap-2 text-center">
                 <div className="rounded-lg bg-paper p-2 dark:bg-paper-dark">
                   <dt className="text-xs text-ink/60 dark:text-ink-dark/60">Entries</dt>
-                  <dd className="font-display text-xl font-bold">{armEvents.length}</dd>
+                  <dd className="font-display text-xl font-bold">{summary.entryCount}</dd>
                 </div>
                 <div className="rounded-lg bg-paper p-2 dark:bg-paper-dark">
                   <dt className="text-xs text-ink/60 dark:text-ink-dark/60">Total tonnes</dt>
                   <dd className="font-display text-xl font-bold">
-                    {totalTonnes > 0 ? totalTonnes.toFixed(1) : "–"}
+                    {summary.totalTonnes > 0 ? summary.totalTonnes.toFixed(1) : "–"}
                   </dd>
                 </div>
                 <div className="rounded-lg bg-paper p-2 dark:bg-paper-dark">
                   <dt className="text-xs text-ink/60 dark:text-ink-dark/60">Avg t/hr</dt>
                   <dd className="font-display text-xl font-bold">
-                    {totalHours > 0 ? (totalTonnes / totalHours).toFixed(1) : "–"}
+                    {summary.throughput === null ? "–" : summary.throughput.toFixed(1)}
                   </dd>
                 </div>
               </dl>
+
+              {trialSites.length > 1 && selectedSiteId === null && summary.entryCount > 0 ? (
+                <ul className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-xs text-ink/60 dark:text-ink-dark/60">
+                  {trialSites.map((site) => {
+                    const perSite = summariseArm(
+                      events.data ?? [],
+                      metrics.data ?? [],
+                      arm.armId,
+                      site.siteId,
+                    );
+                    return (
+                      <li key={site.siteId}>
+                        📍 {site.location}: {perSite.entryCount}{" "}
+                        {perSite.entryCount === 1 ? "entry" : "entries"}
+                        {perSite.totalTonnes > 0 ? ` · ${perSite.totalTonnes.toFixed(1)} t` : ""}
+                        {perSite.throughput !== null
+                          ? ` · ${perSite.throughput.toFixed(1)} t/hr`
+                          : ""}
+                      </li>
+                    );
+                  })}
+                </ul>
+              ) : null}
 
               {armEvents.length > 0 ? (
                 <ul className="mt-3 divide-y divide-ink/10 text-sm dark:divide-ink-dark/10">
@@ -175,7 +232,9 @@ export function TrialDetailPage() {
                 </ul>
               ) : (
                 <p className="mt-3 text-sm text-ink/50 dark:text-ink-dark/50">
-                  No measurement events for this arm yet.
+                  {selectedSite
+                    ? `No entries for this practice at ${selectedSite.location} yet.`
+                    : "No measurement events for this arm yet."}
                 </p>
               )}
             </Card>
@@ -183,5 +242,88 @@ export function TrialDetailPage() {
         })
       )}
     </div>
+  );
+}
+
+/**
+ * Copyable entry links, one per site and practice. Every link names both, so a
+ * run can never be recorded against the wrong site.
+ */
+function EntryLinks({
+  trial,
+  sites,
+  arms,
+  selectedSiteId,
+}: {
+  trial: Trial;
+  sites: Site[];
+  arms: PracticeArm[];
+  selectedSiteId: string | null;
+}) {
+  const [copied, setCopied] = useState<string | null>(null);
+  const [open, setOpen] = useState(false);
+
+  const shown = selectedSiteId ? sites.filter((site) => site.siteId === selectedSiteId) : sites;
+
+  if (!open) {
+    return (
+      <button
+        type="button"
+        onClick={() => setOpen(true)}
+        className="min-h-11 w-full rounded-lg border border-dashed border-ink/30 px-4 py-2.5 font-medium text-ink/70 dark:border-ink-dark/30 dark:text-ink-dark/70"
+      >
+        🔗 Show entry links to send to growers
+      </button>
+    );
+  }
+
+  return (
+    <Card>
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <h2 className="font-display text-lg font-bold">Entry links</h2>
+        <button
+          type="button"
+          onClick={() => setOpen(false)}
+          className="min-h-11 rounded-lg border border-ink/20 px-3 font-medium dark:border-ink-dark/20"
+        >
+          Hide
+        </button>
+      </div>
+      <p className="mt-1 text-sm text-ink/60 dark:text-ink-dark/60">
+        Send the link that matches where the grower is and which practice they are using.
+        Each link fills in the site and practice automatically.
+      </p>
+      {shown.map((site) => (
+        <div key={site.siteId} className="mt-3">
+          <h3 className="font-semibold">📍 {site.location}</h3>
+          <ul className="mt-1 divide-y divide-ink/10 text-sm dark:divide-ink-dark/10">
+            {arms.map((arm) => {
+              const url = buildEntryUrl(
+                window.location.origin,
+                import.meta.env.BASE_URL,
+                trial.trialId,
+                site.siteId,
+                arm.armId,
+              );
+              const key = `${site.siteId}-${arm.armId}`;
+              return (
+                <li key={key} className="flex flex-wrap items-center gap-2 py-2">
+                  <span className="flex-1">{arm.name}</span>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      void navigator.clipboard.writeText(url).then(() => setCopied(key));
+                    }}
+                    className="min-h-11 rounded-lg border border-primary px-3 font-medium text-primary dark:text-primary-soft"
+                  >
+                    {copied === key ? "Copied ✓" : "Copy link"}
+                  </button>
+                </li>
+              );
+            })}
+          </ul>
+        </div>
+      ))}
+    </Card>
   );
 }

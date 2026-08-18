@@ -16,7 +16,7 @@ import {
 import { Card, EmptyState, ErrorState, PageTitle, Skeleton, SyncBadge } from "../components/ui";
 import { EntryField } from "../components/fields";
 import { useAccess } from "../contexts/AccessContext";
-import type { DeviceType, FormField, MeasurementEvent } from "../types";
+import type { DeviceType, FormField, MeasurementEvent, PracticeArm, Site } from "../types";
 
 const FIELDS_PER_SCREEN = 4; // brief allows at most 5 visible per screen
 
@@ -55,12 +55,23 @@ export function EntryPage() {
   );
   const template = templates.data?.find((candidate) => candidate.trialId === trialId);
 
-  // Site and arm come from the link the grower was given; never chosen by hand.
+  // Site and arm come from the link the grower was given, so they never have
+  // to choose (CLAUDE.md). When a link omits them we ask explicitly rather
+  // than guessing — a silent default files runs against the wrong site.
+  const [pickedSiteId, setPickedSiteId] = useState<string | null>(null);
+  const [pickedArmId, setPickedArmId] = useState<string | null>(null);
+
+  const onlySite = trialSites.length === 1 ? trialSites[0] : undefined;
+  const onlyArm = trialArms.length === 1 ? trialArms[0] : undefined;
+
   const site =
-    trialSites.find((candidate) => candidate.siteId === searchParams.get("site")) ?? trialSites[0];
+    trialSites.find((candidate) => candidate.siteId === searchParams.get("site")) ??
+    trialSites.find((candidate) => candidate.siteId === pickedSiteId) ??
+    onlySite;
   const arm =
     trialArms.find((candidate) => candidate.armId === searchParams.get("arm")) ??
-    trialArms.find((candidate) => candidate.type === "control");
+    trialArms.find((candidate) => candidate.armId === pickedArmId) ??
+    onlyArm;
   const grower = contacts.data?.find((contact) => contact.role === "grower");
 
   if (loading) {
@@ -71,7 +82,7 @@ export function EntryPage() {
     );
   }
 
-  if (!trial || !template || !site || !arm) {
+  if (!trial || !template || trialSites.length === 0 || trialArms.length === 0) {
     return (
       <EmptyState
         message="This trial isn't set up for data entry yet."
@@ -84,6 +95,19 @@ export function EntryPage() {
     return <AccessGate onSubmit={tryUnlock} />;
   }
 
+  if (!site || !arm) {
+    return (
+      <ContextChooser
+        trialName={trial.name}
+        sites={trialSites}
+        arms={trialArms}
+        site={site}
+        onPickSite={setPickedSiteId}
+        onPickArm={setPickedArmId}
+      />
+    );
+  }
+
   return (
     <EntryForm
       trialName={trial.name}
@@ -94,6 +118,73 @@ export function EntryPage() {
       enteredBy={grower?.contactId ?? ""}
       fields={[...template.fields].sort((a, b) => a.displayOrder - b.displayOrder)}
     />
+  );
+}
+
+/**
+ * Shown only when the entry link didn't name a site and/or arm. Growers with a
+ * proper link never see this; it exists so a generic link can't silently
+ * attribute a run to the wrong place.
+ */
+function ContextChooser({
+  trialName,
+  sites,
+  arms,
+  site,
+  onPickSite,
+  onPickArm,
+}: {
+  trialName: string;
+  sites: Site[];
+  arms: PracticeArm[];
+  site: Site | undefined;
+  onPickSite: (siteId: string) => void;
+  onPickArm: (armId: string) => void;
+}) {
+  const needsSite = !site;
+  return (
+    <Card className="mx-auto max-w-md">
+      <PageTitle>{needsSite ? "Where are you today?" : "Which practice?"}</PageTitle>
+      <p className="mt-1 text-ink/60 dark:text-ink-dark/60">
+        {trialName}. {needsSite
+          ? "Choose the site you're recording at so this run is filed correctly."
+          : "Choose the practice this run used."}
+      </p>
+      <div className="mt-4 space-y-2">
+        {needsSite
+          ? sites.map((candidate) => (
+              <button
+                key={candidate.siteId}
+                type="button"
+                onClick={() => onPickSite(candidate.siteId)}
+                className="min-h-11 w-full rounded-lg border border-ink/20 px-4 py-3 text-left font-medium hover:border-primary dark:border-ink-dark/20"
+              >
+                📍 {candidate.location}
+                <span className="block text-sm font-normal text-ink/60 dark:text-ink-dark/60">
+                  {candidate.region}
+                </span>
+              </button>
+            ))
+          : arms.map((candidate) => (
+              <button
+                key={candidate.armId}
+                type="button"
+                onClick={() => onPickArm(candidate.armId)}
+                className="min-h-11 w-full rounded-lg border border-ink/20 px-4 py-3 text-left font-medium hover:border-primary dark:border-ink-dark/20"
+              >
+                {candidate.name}
+                <span className="block text-sm font-normal text-ink/60 dark:text-ink-dark/60">
+                  {candidate.description}
+                </span>
+              </button>
+            ))}
+      </div>
+      {site ? (
+        <p className="mt-3 text-sm text-ink/50 dark:text-ink-dark/50">
+          Recording at {site.location}.
+        </p>
+      ) : null}
+    </Card>
   );
 }
 
