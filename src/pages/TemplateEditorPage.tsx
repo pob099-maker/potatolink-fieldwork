@@ -167,7 +167,7 @@ export function TemplateEditorPage() {
 
           <div>
             <label htmlFor={`label-${index}`} className="mb-1 block text-sm font-medium">
-              Question shown to the grower
+              Question shown to the {stored.audience === "staff" ? "person filling it in" : "grower"}
             </label>
             <input
               id={`label-${index}`}

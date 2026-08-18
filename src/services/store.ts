@@ -165,6 +165,7 @@ export async function saveResults(results: ResultSet[]): Promise<Result<string>>
 }
 
 export interface NewEntryInput {
+  trialId: string;
   siteId: string | null;
   armId: string | null;
   eventType: string;
@@ -183,6 +184,7 @@ export async function addEntry(input: NewEntryInput): Promise<Result<Measurement
   const createdAt = nowIso();
   const event: MeasurementEvent = {
     eventId: newId(),
+    trialId: input.trialId,
     siteId: input.siteId,
     armId: input.armId,
     eventDate: createdAt,

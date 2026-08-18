@@ -62,6 +62,7 @@ export const syncStatusSchema = z.enum(["pending", "synced", "error"]);
 
 export const measurementEventSchema = z.object({
   eventId: id,
+  trialId: id.nullable().default(null),
   siteId: id.nullable().default(null),
   armId: id.nullable().default(null),
   eventDate: isoDate,

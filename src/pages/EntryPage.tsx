@@ -123,6 +123,7 @@ export function EntryPage() {
   return (
     <EntryForm
       formName={template.name}
+      trialId={trial.trialId}
       trialName={trial.name}
       siteLabel={template.requiresSite && site ? `${site.location} (${site.region})` : null}
       armLabel={template.requiresArm && arm ? arm.name : null}
@@ -259,6 +260,7 @@ function AccessGate({ onSubmit }: { onSubmit: (code: string) => boolean }) {
 
 function EntryForm({
   formName,
+  trialId,
   trialName,
   siteLabel,
   armLabel,
@@ -270,6 +272,7 @@ function EntryForm({
   fields,
 }: {
   formName: string;
+  trialId: string;
   trialName: string;
   siteLabel: string | null;
   armLabel: string | null;
@@ -347,6 +350,7 @@ function EntryForm({
       .filter((value): value is NonNullable<typeof value> => value !== null);
 
     const result = await addEntry({
+      trialId,
       siteId,
       armId,
       eventType,

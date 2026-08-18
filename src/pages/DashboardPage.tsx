@@ -6,9 +6,11 @@ import {
   useEvents,
   useProjects,
   useSites,
+  useTemplates,
   useTrials,
 } from "../hooks/useCollections";
 import { addTrial } from "../services/store";
+import { describeEvent, describeEventScope, eventsForTrial } from "../services/events";
 import { Card, EmptyState, ErrorState, PageTitle, Skeleton, StatusPill, SyncBadge } from "../components/ui";
 
 export function DashboardPage() {
@@ -17,6 +19,7 @@ export function DashboardPage() {
   const sites = useSites();
   const arms = useArms();
   const events = useEvents();
+  const templates = useTemplates();
 
   const loading = trials.isPending || sites.isPending || events.isPending || arms.isPending;
   const failed = trials.isError || sites.isError || events.isError;
@@ -82,22 +85,11 @@ export function DashboardPage() {
               const siteCount = (sites.data ?? []).filter(
                 (site) => site.trialId === trial.trialId,
               ).length;
-              const trialArmIds = new Set(
-                (arms.data ?? [])
-                  .filter((arm) => arm.trialId === trial.trialId)
-                  .map((arm) => arm.armId),
-              );
-              // Staff records (weather, cost logs) carry no arm, so match on
-              // the trial's sites as well.
-              const trialSiteIds = new Set(
-                (sites.data ?? [])
-                  .filter((site) => site.trialId === trial.trialId)
-                  .map((site) => site.siteId),
-              );
-              const entryCount = (events.data ?? []).filter(
-                (event) =>
-                  (event.armId !== null && trialArmIds.has(event.armId)) ||
-                  (event.armId === null && event.siteId !== null && trialSiteIds.has(event.siteId)),
+              const entryCount = eventsForTrial(
+                events.data ?? [],
+                trial.trialId,
+                sites.data ?? [],
+                arms.data ?? [],
               ).length;
               return (
                 <li key={trial.trialId} className="py-3">
@@ -132,14 +124,15 @@ export function DashboardPage() {
         ) : (
           <ul className="divide-y divide-ink/10 dark:divide-ink-dark/10">
             {recentEvents.map((event) => {
-              const site = (sites.data ?? []).find(
-                (candidate) => candidate.siteId === event.siteId,
-              );
               const arm = (arms.data ?? []).find((candidate) => candidate.armId === event.armId);
               return (
                 <li key={event.eventId} className="flex flex-wrap items-center gap-2 py-2 text-sm">
-                  <span className="font-medium">{site?.location ?? "Unknown site"}</span>
-                  <span className="text-ink/60 dark:text-ink-dark/60">{arm?.name ?? ""}</span>
+                  <span className="font-medium">
+                    {describeEventScope(event, sites.data ?? [])}
+                  </span>
+                  <span className="text-ink/60 dark:text-ink-dark/60">
+                    {arm?.name ?? describeEvent(event, templates.data ?? [])}
+                  </span>
                   <span className="text-ink/50 dark:text-ink-dark/50">
                     {formatDistanceToNow(new Date(event.createdAt), { addSuffix: true })}
                   </span>

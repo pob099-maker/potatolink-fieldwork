@@ -98,6 +98,12 @@ export interface ArmAssumption {
 
 export interface MeasurementEvent {
   eventId: string;
+  /**
+   * The trial this record belongs to. Always set for new records; may be null
+   * on rows created before trials were recorded directly, which are resolved
+   * through their site or arm instead.
+   */
+  trialId: string | null;
   /** null for trial-level records such as a cost log. */
   siteId: string | null;
   /** null for records that aren't about one practice, such as weather. */
