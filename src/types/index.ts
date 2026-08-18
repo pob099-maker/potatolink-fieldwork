@@ -98,8 +98,10 @@ export interface ArmAssumption {
 
 export interface MeasurementEvent {
   eventId: string;
-  siteId: string;
-  armId: string;
+  /** null for trial-level records such as a cost log. */
+  siteId: string | null;
+  /** null for records that aren't about one practice, such as weather. */
+  armId: string | null;
   eventDate: string;
   eventType: string;
   enteredBy: string;
@@ -173,11 +175,21 @@ export interface FormField {
   displayOrder: number;
 }
 
+export type FormAudience = "grower" | "staff";
+
 export interface FormTemplate {
   templateId: string;
   trialId: string;
   armId: string | null;
   name: string;
+  /** Distinguishes this form's records from other stages of the protocol. */
+  eventType: string;
+  /** Who fills it in: growers in the paddock, or staff running the trial. */
+  audience: FormAudience;
+  /** Plain-language cadence shown to the person filling it in. */
+  frequency: string;
+  requiresSite: boolean;
+  requiresArm: boolean;
   fields: FormField[];
   createdAt: string;
 }

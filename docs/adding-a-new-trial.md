@@ -26,7 +26,24 @@ the grower-facing entry form (replace the EXAMPLE rows).
 | `gps` | Where an observation happened | One tap captures phone coordinates |
 | `text` | Only when nothing above fits | Keep to one "notes" field at the end |
 
-## 3. Rules for grower-facing fields
+## 3. Split the protocol into forms, not one form
+
+A trial usually needs several forms, because protocol stages differ in who
+fills them in and how often. The HarvestEye trial is the worked example: one
+grower form for the per-pass harvest run, plus staff forms for site setup,
+calibration, install/removal, daily weather, portal output, observer feedback
+and the cost log.
+
+Each form declares:
+
+- **Audience** — `grower` (frictionless, reached by an entry link) or `staff`
+- **Frequency** — plain language, shown to whoever fills it in ("Daily during the trial")
+- **Requires site / requires arm** — a harvest run belongs to a site *and* a
+  practice; weather belongs to a site only; a cost log belongs to the trial
+
+Forms appear under "Trial forms" on the trial page, each with Fill in and Edit.
+
+## 4. Rules for grower-facing fields
 
 - Plain language questions, no jargon — "How long did the run take?" not "Duration (h)".
 - Prefer select/slider/boolean over free text; every extra typed field costs completion rate.
@@ -36,7 +53,7 @@ the grower-facing entry form (replace the EXAMPLE rows).
 - Staff-side data (calibration logs, cost logs, observer feedback) stays out of the
   grower form; it becomes separate templates when per-eventType templates land.
 
-## 4. Turn the protocol into configuration
+## 5. Turn the protocol into configuration
 
 Hand the filled CSV to the developer/Claude. The change is:
 

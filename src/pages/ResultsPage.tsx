@@ -529,7 +529,7 @@ function MeasuredContext({
   siteLabel,
 }: {
   trialArms: PracticeArm[];
-  events: Array<{ eventId: string; armId: string }>;
+  events: Array<{ eventId: string; armId: string | null }>;
   metrics: Array<{ eventId: string; metricName: string; value: number | string }>;
   siteLabel: string | null;
 }) {

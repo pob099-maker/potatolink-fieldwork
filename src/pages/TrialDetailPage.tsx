@@ -6,11 +6,12 @@ import {
   useEvents,
   useMetrics,
   useSites,
+  useTemplates,
   useTrials,
 } from "../hooks/useCollections";
 import { buildEntryUrl, summariseArm } from "../services/entryLinks";
 import { Card, EmptyState, ErrorState, PageTitle, Skeleton, StatusPill, SyncBadge } from "../components/ui";
-import type { PracticeArm, Site, Trial } from "../types";
+import type { FormTemplate, PracticeArm, Site, Trial } from "../types";
 
 export function TrialDetailPage() {
   const { trialId } = useParams<{ trialId: string }>();
@@ -19,6 +20,7 @@ export function TrialDetailPage() {
   const arms = useArms();
   const events = useEvents();
   const metrics = useMetrics();
+  const templates = useTemplates();
 
   const loading =
     trials.isPending || sites.isPending || arms.isPending || events.isPending || metrics.isPending;
@@ -34,6 +36,11 @@ export function TrialDetailPage() {
         .filter((arm) => arm.trialId === trialId)
         .sort((a, b) => a.sortOrder - b.sortOrder),
     [arms.data, trialId],
+  );
+
+  const trialTemplates = useMemo(
+    () => (templates.data ?? []).filter((candidate) => candidate.trialId === trialId),
+    [templates.data, trialId],
   );
 
   // null = every site combined; otherwise one site's figures only.
@@ -122,6 +129,8 @@ export function TrialDetailPage() {
           Edit entry form
         </Link>
       </div>
+
+      <TrialForms trial={trial} templates={trialTemplates} />
 
       <EntryLinks trial={trial} sites={trialSites} arms={trialArms} selectedSiteId={selectedSiteId} />
 
@@ -242,6 +251,71 @@ export function TrialDetailPage() {
         })
       )}
     </div>
+  );
+}
+
+/**
+ * Every form the trial protocol needs, not just the per-pass grower record:
+ * calibration, weather, cost logs and the rest each have their own cadence
+ * and their own place to be filled in.
+ */
+function TrialForms({ trial, templates }: { trial: Trial; templates: FormTemplate[] }) {
+  const growerForms = templates.filter((template) => template.audience === "grower");
+  const staffForms = templates.filter((template) => template.audience === "staff");
+
+  if (templates.length === 0) return null;
+
+  const row = (template: FormTemplate) => (
+    <li key={template.templateId} className="flex flex-wrap items-center gap-2 py-2">
+      <span className="flex-1">
+        <span className="font-medium">{template.name}</span>
+        {template.frequency ? (
+          <span className="block text-xs text-ink/60 dark:text-ink-dark/60">
+            {template.frequency}
+            {template.requiresSite ? " · per site" : " · whole trial"}
+            {template.requiresArm ? " · per practice" : ""}
+          </span>
+        ) : null}
+      </span>
+      <Link
+        to={`/trials/${trial.trialId}/entry?form=${template.templateId}`}
+        className="min-h-11 rounded-lg border border-primary px-3 py-2 font-medium text-primary dark:text-primary-soft"
+      >
+        Fill in
+      </Link>
+      <Link
+        to={`/trials/${trial.trialId}/template?form=${template.templateId}`}
+        className="min-h-11 rounded-lg border border-ink/20 px-3 py-2 font-medium dark:border-ink-dark/20"
+      >
+        Edit
+      </Link>
+    </li>
+  );
+
+  return (
+    <Card>
+      <h2 className="font-display text-lg font-bold">Trial forms</h2>
+      {growerForms.length > 0 ? (
+        <>
+          <h3 className="mt-2 text-sm font-semibold text-ink/60 dark:text-ink-dark/60">
+            Filled in by growers
+          </h3>
+          <ul className="divide-y divide-ink/10 dark:divide-ink-dark/10">
+            {growerForms.map(row)}
+          </ul>
+        </>
+      ) : null}
+      {staffForms.length > 0 ? (
+        <>
+          <h3 className="mt-3 text-sm font-semibold text-ink/60 dark:text-ink-dark/60">
+            Filled in by staff
+          </h3>
+          <ul className="divide-y divide-ink/10 dark:divide-ink-dark/10">
+            {staffForms.map(row)}
+          </ul>
+        </>
+      ) : null}
+    </Card>
   );
 }
 

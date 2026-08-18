@@ -62,8 +62,8 @@ export const syncStatusSchema = z.enum(["pending", "synced", "error"]);
 
 export const measurementEventSchema = z.object({
   eventId: id,
-  siteId: id,
-  armId: id,
+  siteId: id.nullable().default(null),
+  armId: id.nullable().default(null),
   eventDate: isoDate,
   eventType: z.string().min(1),
   enteredBy: z.string(),
@@ -158,6 +158,11 @@ export const formTemplateSchema = z.object({
   trialId: id,
   armId: id.nullable(),
   name: z.string().min(1),
+  eventType: z.string().min(1).default("field_record"),
+  audience: z.enum(["grower", "staff"]).default("grower"),
+  frequency: z.string().default(""),
+  requiresSite: z.boolean().default(true),
+  requiresArm: z.boolean().default(true),
   fields: z.array(formFieldSchema).min(1),
   createdAt: isoDate,
 });

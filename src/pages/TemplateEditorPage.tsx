@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Link, useParams } from "react-router-dom";
+import { Link, useParams, useSearchParams } from "react-router-dom";
 import { saveTemplate } from "../services/store";
 import {
   blankField,
@@ -18,11 +18,19 @@ const inputClass =
 
 export function TemplateEditorPage() {
   const { trialId } = useParams<{ trialId: string }>();
+  const [searchParams] = useSearchParams();
   const trials = useTrials();
   const templates = useTemplates();
 
   const trial = trials.data?.find((candidate) => candidate.trialId === trialId);
-  const stored = templates.data?.find((candidate) => candidate.trialId === trialId);
+  const trialTemplates = (templates.data ?? []).filter(
+    (candidate) => candidate.trialId === trialId,
+  );
+  // Which form to edit: named by the link, else the grower form.
+  const stored =
+    trialTemplates.find((candidate) => candidate.templateId === searchParams.get("form")) ??
+    trialTemplates.find((candidate) => candidate.audience === "grower") ??
+    trialTemplates[0];
 
   const [draft, setDraft] = useState<FormTemplate | null>(null);
   const [status, setStatus] = useState<{ kind: "saved" | "error"; message: string } | null>(
@@ -89,8 +97,14 @@ export function TemplateEditorPage() {
   return (
     <div className="space-y-4">
       <div>
-        <PageTitle>Edit entry form</PageTitle>
-        <p className="mt-1 text-ink/60 dark:text-ink-dark/60">{trial.name}</p>
+        <PageTitle>Edit form</PageTitle>
+        <p className="mt-1 text-ink/60 dark:text-ink-dark/60">
+          {trial.name} · {draft.name}
+          {stored.frequency ? ` · ${stored.frequency}` : ""}
+        </p>
+        <p className="mt-1 text-sm text-ink/50 dark:text-ink-dark/50">
+          Filled in by {stored.audience === "staff" ? "staff" : "growers"}.
+        </p>
       </div>
 
       <Card>
