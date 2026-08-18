@@ -12,7 +12,7 @@
     "strict": true,
     "noUnusedLocals": true,
     "noUnusedParameters": true,
-    "types": ["vitest"]
+    "types": ["vitest", "node"]
   },
   "include": ["vite.config.ts"]
 }
