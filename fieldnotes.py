@@ -9,8 +9,11 @@ Date, site tag, and free-text observation, separated by pipes.
 
 from __future__ import annotations
 
+import argparse
+import sys
 from dataclasses import dataclass
 from datetime import date
+from pathlib import Path
 
 
 @dataclass
@@ -44,3 +47,33 @@ def entries_for_site(lines: list[str], site: str) -> list[Entry]:
         if entry.site == site:
             entries.append(entry)
     return entries
+
+
+def main(argv: list[str] | None = None) -> None:
+    parser = argparse.ArgumentParser(
+        prog="fieldnotes",
+        description="Show entries from a plain-text field notes file.",
+    )
+    parser.add_argument("notes_file", type=Path, help="path to the notes file")
+    parser.add_argument("--site", help="only show entries for this site tag")
+    args = parser.parse_args(argv)
+
+    try:
+        lines = args.notes_file.read_text(encoding="utf-8-sig").splitlines()
+    except OSError as error:
+        sys.exit(f"error: cannot read {args.notes_file}: {error}")
+
+    try:
+        if args.site is not None:
+            entries = entries_for_site(lines, args.site)
+        else:
+            entries = [parse_entry(line) for line in lines if line.strip()]
+    except ValueError as error:
+        sys.exit(f"error: {error}")
+
+    for entry in entries:
+        print(format_entry(entry))
+
+
+if __name__ == "__main__":
+    main()
