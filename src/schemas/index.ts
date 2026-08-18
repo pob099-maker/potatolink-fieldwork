@@ -23,6 +23,9 @@ export const trialSchema = z.object({
   name: z.string().min(1, "Name is required"),
   objective: z.string(),
   status: z.enum(["draft", "active", "completed", "archived"]),
+  design: z.enum(["observational", "replicated"]).default("observational"),
+  replicates: z.number().int().min(0).default(0),
+  responseMetric: z.string().nullable().default(null),
   createdAt: isoDate,
   updatedAt: isoDate,
 });
@@ -66,6 +69,7 @@ export const measurementEventSchema = z.object({
   trialId: id.nullable().default(null),
   siteId: id.nullable().default(null),
   armId: id.nullable().default(null),
+  replicate: z.number().int().nullable().default(null),
   eventDate: isoDate,
   eventType: z.string().min(1),
   enteredBy: z.string(),

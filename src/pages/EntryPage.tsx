@@ -68,6 +68,7 @@ export function EntryPage() {
   // than guessing — a silent default files runs against the wrong site.
   const [pickedSiteId, setPickedSiteId] = useState<string | null>(null);
   const [pickedArmId, setPickedArmId] = useState<string | null>(null);
+  const [pickedReplicate, setPickedReplicate] = useState<number | null>(null);
 
   const onlySite = trialSites.length === 1 ? trialSites[0] : undefined;
   const onlyArm = trialArms.length === 1 ? trialArms[0] : undefined;
@@ -81,6 +82,10 @@ export function EntryPage() {
     trialArms.find((candidate) => candidate.armId === pickedArmId) ??
     onlyArm;
   const grower = contacts.data?.find((contact) => contact.role === "grower");
+
+  const linkRep = Number(searchParams.get("rep"));
+  const replicate =
+    Number.isInteger(linkRep) && linkRep > 0 ? linkRep : pickedReplicate;
 
   if (loading) {
     return (
@@ -104,18 +109,24 @@ export function EntryPage() {
   }
 
   // Only ask for the context this form actually needs: a cost log belongs to
-  // the trial, weather to a site, a harvest run to a site and a practice.
+  // the trial, weather to a site, a harvest run to a site and a practice — and
+  // a plot in a replicated trial also belongs to a replicate.
   const needsSite = template.requiresSite && !site;
   const needsArm = template.requiresArm && !arm;
-  if (needsSite || needsArm) {
+  const needsReplicate =
+    trial.design === "replicated" && template.requiresArm && replicate == null;
+  if (needsSite || needsArm || needsReplicate) {
     return (
       <ContextChooser
         trialName={trial.name}
         sites={trialSites}
         arms={trialArms}
         site={needsSite ? undefined : site}
+        arm={needsArm ? undefined : arm}
+        replicates={needsSite || needsArm ? 0 : trial.replicates}
         onPickSite={setPickedSiteId}
         onPickArm={setPickedArmId}
+        onPickReplicate={setPickedReplicate}
       />
     );
   }
@@ -131,6 +142,8 @@ export function EntryPage() {
       eventType={template.eventType}
       siteId={template.requiresSite && site ? site.siteId : null}
       armId={template.requiresArm && arm ? arm.armId : null}
+      replicate={trial.design === "replicated" ? replicate : null}
+      replicateLabel={trial.design === "replicated" && replicate ? `Rep ${replicate}` : null}
       enteredBy={grower?.contactId ?? ""}
       fields={[...template.fields].sort((a, b) => a.displayOrder - b.displayOrder)}
     />
@@ -147,27 +160,39 @@ function ContextChooser({
   sites,
   arms,
   site,
+  arm,
+  replicates,
   onPickSite,
   onPickArm,
+  onPickReplicate,
 }: {
   trialName: string;
   sites: Site[];
   arms: PracticeArm[];
   site: Site | undefined;
+  arm: PracticeArm | undefined;
+  replicates: number;
   onPickSite: (siteId: string) => void;
   onPickArm: (armId: string) => void;
+  onPickReplicate: (replicate: number) => void;
 }) {
-  const needsSite = !site;
+  const step = !site ? "site" : !arm ? "arm" : "replicate";
+  const title =
+    step === "site" ? "Where are you today?" : step === "arm" ? "Which practice?" : "Which replicate?";
+  const help =
+    step === "site"
+      ? "Choose the site you're recording at so this run is filed correctly."
+      : step === "arm"
+        ? "Choose the practice this run used."
+        : "Choose the replicate (plot) this record is for.";
   return (
     <Card className="mx-auto max-w-md">
-      <PageTitle>{needsSite ? "Where are you today?" : "Which practice?"}</PageTitle>
+      <PageTitle>{title}</PageTitle>
       <p className="mt-1 text-ink/60 dark:text-ink-dark/60">
-        {trialName}. {needsSite
-          ? "Choose the site you're recording at so this run is filed correctly."
-          : "Choose the practice this run used."}
+        {trialName}. {help}
       </p>
       <div className="mt-4 space-y-2">
-        {needsSite
+        {step === "site"
           ? sites.map((candidate) => (
               <button
                 key={candidate.siteId}
@@ -181,7 +206,8 @@ function ContextChooser({
                 </span>
               </button>
             ))
-          : arms.map((candidate) => (
+          : step === "arm"
+          ? arms.map((candidate) => (
               <button
                 key={candidate.armId}
                 type="button"
@@ -192,6 +218,16 @@ function ContextChooser({
                 <span className="block text-sm font-normal text-ink/60 dark:text-ink-dark/60">
                   {candidate.description}
                 </span>
+              </button>
+            ))
+          : Array.from({ length: Math.max(0, replicates) }, (_, index) => index + 1).map((rep) => (
+              <button
+                key={rep}
+                type="button"
+                onClick={() => onPickReplicate(rep)}
+                className="min-h-11 w-full rounded-lg border border-ink/20 px-4 py-3 text-left font-medium hover:border-primary dark:border-ink-dark/20"
+              >
+                Replicate {rep}
               </button>
             ))}
       </div>
@@ -264,10 +300,12 @@ function EntryForm({
   trialName,
   siteLabel,
   armLabel,
+  replicateLabel,
   frequency,
   eventType,
   siteId,
   armId,
+  replicate,
   enteredBy,
   fields,
 }: {
@@ -276,10 +314,12 @@ function EntryForm({
   trialName: string;
   siteLabel: string | null;
   armLabel: string | null;
+  replicateLabel: string | null;
   frequency: string;
   eventType: string;
   siteId: string | null;
   armId: string | null;
+  replicate: number | null;
   enteredBy: string;
   fields: FormField[];
 }) {
@@ -353,6 +393,7 @@ function EntryForm({
       trialId,
       siteId,
       armId,
+      replicate,
       eventType,
       enteredBy,
       deviceType: detectDevice(),
@@ -413,6 +454,11 @@ function EntryForm({
           {armLabel ? (
             <span className="rounded-full bg-primary/10 px-2.5 py-0.5 font-medium text-primary dark:bg-primary-soft/20 dark:text-primary-soft">
               {armLabel}
+            </span>
+          ) : null}
+          {replicateLabel ? (
+            <span className="rounded-full bg-accent/20 px-2.5 py-0.5 font-medium text-ink dark:text-ink-dark">
+              {replicateLabel}
             </span>
           ) : null}
         </p>

@@ -45,6 +45,7 @@ describe("practice-arm management", () => {
       trialId: trial.data.trialId,
       siteId: null,
       armId: added.data.armId,
+      replicate: null,
       eventType: "field_record",
       enteredBy: "grower",
       deviceType: "mobile",
