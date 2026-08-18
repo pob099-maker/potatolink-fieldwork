@@ -2,11 +2,13 @@ import { useMemo, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import {
   ASSUMPTION_UNITS,
+  blendComparisons,
   buildResultSets,
   compareArms,
   DEFAULT_SCENARIO,
   formatMoney,
   parseScenarioAssumptions,
+  scenarioForSite,
   type ScenarioAssumptions,
 } from "../services/economics";
 import { removeAssumption, saveAssumption, saveResults, saveScenario } from "../services/store";
@@ -17,6 +19,7 @@ import {
   useEvents,
   useMetrics,
   useScenarios,
+  useSites,
   useTrials,
 } from "../hooks/useCollections";
 import { Card, EmptyState, ErrorState, PageTitle, Skeleton, StatusPill } from "../components/ui";
@@ -30,6 +33,7 @@ export function ResultsPage() {
   const { trialId } = useParams<{ trialId: string }>();
   const trials = useTrials();
   const arms = useArms();
+  const sites = useSites();
   const assumptions = useAssumptions();
   const scenarios = useScenarios();
   const events = useEvents();
@@ -48,11 +52,22 @@ export function ResultsPage() {
     () => (assumptions.data ?? []).filter((assumption) => armIds.has(assumption.armId)),
     [assumptions.data, armIds],
   );
-  const scenario = scenarios.data?.find((candidate) => candidate.trialId === trialId);
+  const trialSites = useMemo(
+    () => (sites.data ?? []).filter((site) => site.trialId === trialId),
+    [sites.data, trialId],
+  );
 
-  const [scenarioDraft, setScenarioDraft] = useState<ScenarioAssumptions | null>(null);
-  const [scenarioName, setScenarioName] = useState<string | null>(null);
+  // null = every site blended into one trial-level view.
+  const [selectedSiteId, setSelectedSiteId] = useState<string | null>(null);
+  const [draft, setDraft] = useState<
+    { siteKey: string; values: ScenarioAssumptions; name: string } | null
+  >(null);
   const [saveError, setSaveError] = useState<string | null>(null);
+  const [savedMessage, setSavedMessage] = useState<string | null>(null);
+
+  const siteKey = selectedSiteId ?? "__all__";
+  const selectedSite = trialSites.find((site) => site.siteId === selectedSiteId);
+  const scenario = scenarioForSite(scenarios.data ?? [], trialId ?? "", selectedSiteId);
 
   if (trials.isPending || arms.isPending || assumptions.isPending || scenarios.isPending) {
     return (
@@ -78,18 +93,43 @@ export function ResultsPage() {
     );
   }
 
-  const activeAssumptions =
-    scenarioDraft ??
-    (scenario ? parseScenarioAssumptions(scenario.assumptionsJson) : { ...DEFAULT_SCENARIO });
-  const activeName = scenarioName ?? scenario?.name ?? "Base case";
+  const storedValues = scenario
+    ? parseScenarioAssumptions(scenario.assumptionsJson)
+    : { ...DEFAULT_SCENARIO };
+  const liveDraft = draft?.siteKey === siteKey ? draft : null;
+  const activeAssumptions = liveDraft?.values ?? storedValues;
+  const activeName = liveDraft?.name ?? scenario?.name ?? "Base case";
 
-  const comparisons = compareArms(trialArms, trialAssumptions, activeAssumptions);
+  const updateDraft = (values: ScenarioAssumptions, name = activeName): void => {
+    setDraft({ siteKey, values, name });
+    setSaveError(null);
+  };
+
+  // Viewing one site uses that site's scenario. Viewing all sites runs each
+  // site on its own assumptions and adds the outcomes together, rather than
+  // running one averaged scenario that matches no actual site.
+  const blending = selectedSiteId === null && trialSites.length > 1;
+  const comparisons = blending
+    ? blendComparisons(
+        trialSites.map((site) =>
+          compareArms(
+            trialArms,
+            trialAssumptions,
+            parseScenarioAssumptions(
+              scenarioForSite(scenarios.data ?? [], trial.trialId, site.siteId)
+                ?.assumptionsJson ?? "",
+            ),
+          ),
+        ),
+      )
+    : compareArms(trialArms, trialAssumptions, activeAssumptions);
 
   async function onSaveAndCalculate(): Promise<void> {
     setSaveError(null);
     const record = {
       scenarioId: scenario?.scenarioId ?? newId(),
       trialId: trial!.trialId,
+      siteId: selectedSiteId,
       name: activeName,
       assumptionsJson: JSON.stringify(activeAssumptions),
       createdAt: scenario?.createdAt ?? nowIso(),
@@ -99,7 +139,9 @@ export function ResultsPage() {
       setSaveError(saved.error);
       return;
     }
-    await saveResults(buildResultSets(saved.data, comparisons));
+    const stored = await saveResults(buildResultSets(record, comparisons, selectedSiteId));
+    setSaveError(stored.success ? null : stored.error);
+    setSavedMessage(stored.success ? "Scenario saved and results stored." : null);
   }
 
   return (
@@ -109,10 +151,76 @@ export function ResultsPage() {
         <p className="mt-1 text-ink/60 dark:text-ink-dark/60">{trial.name}</p>
       </div>
 
+      {trialSites.length > 1 ? (
+        <div role="group" aria-label="Choose site" className="flex flex-wrap gap-2">
+          <button
+            type="button"
+            aria-pressed={selectedSiteId === null}
+            onClick={() => setSelectedSiteId(null)}
+            className={`min-h-11 rounded-full border px-4 py-2 font-medium ${
+              selectedSiteId === null
+                ? "border-primary bg-primary text-white"
+                : "border-ink/20 dark:border-ink-dark/20"
+            }`}
+          >
+            All sites combined
+          </button>
+          {trialSites.map((site) => (
+            <button
+              key={site.siteId}
+              type="button"
+              aria-pressed={selectedSiteId === site.siteId}
+              onClick={() => setSelectedSiteId(site.siteId)}
+              className={`min-h-11 rounded-full border px-4 py-2 font-medium ${
+                selectedSiteId === site.siteId
+                  ? "border-primary bg-primary text-white"
+                  : "border-ink/20 dark:border-ink-dark/20"
+              }`}
+            >
+              📍 {site.location}
+            </button>
+          ))}
+        </div>
+      ) : null}
+
+      {blending ? (
+        <Card>
+          <h2 className="font-semibold">Scenarios in use</h2>
+          <p className="mt-1 text-sm text-ink/60 dark:text-ink-dark/60">
+            Each site is calculated on its own season assumptions, then the outcomes are
+            added together. Choose a site above to edit its numbers.
+          </p>
+          <ul className="mt-2 divide-y divide-ink/10 text-sm dark:divide-ink-dark/10">
+            {trialSites.map((site) => {
+              const siteScenario = scenarioForSite(
+                scenarios.data ?? [],
+                trial.trialId,
+                site.siteId,
+              );
+              const values = parseScenarioAssumptions(siteScenario?.assumptionsJson ?? "");
+              return (
+                <li key={site.siteId} className="py-2">
+                  <span className="font-medium">📍 {site.location}</span>
+                  <span className="text-ink/60 dark:text-ink-dark/60">
+                    {" "}
+                    — {values.seasonTonnes.toLocaleString()} t at{" "}
+                    {formatMoney(values.pricePerTonne)}/t, labour{" "}
+                    {formatMoney(values.labourRatePerHour)}/hr
+                    {siteScenario?.siteId === null ? " (trial-wide default)" : ""}
+                  </span>
+                </li>
+              );
+            })}
+          </ul>
+        </Card>
+      ) : (
       <Card>
-        <h2 className="font-semibold">Scenario</h2>
+        <h2 className="font-semibold">
+          Scenario{selectedSite ? ` — ${selectedSite.location}` : ""}
+        </h2>
         <p className="mt-1 text-sm text-ink/60 dark:text-ink-dark/60">
-          Season-level assumptions the calculations run against. Change them to test
+          Season-level assumptions the calculations run against
+          {selectedSite ? ` at ${selectedSite.location}` : ""}. Change them to test
           sensitivity — nothing is stored until you save.
         </p>
         <div className="mt-3 grid gap-3 sm:grid-cols-2">
@@ -124,35 +232,38 @@ export function ResultsPage() {
               id="scenario-name"
               className={inputClass}
               value={activeName}
-              onChange={(changeEvent) => setScenarioName(changeEvent.target.value)}
+              onChange={(changeEvent) =>
+                updateDraft(activeAssumptions, changeEvent.target.value)
+              }
             />
           </div>
           <ScenarioNumber
             id="season-tonnes"
             label="Season throughput (t)"
             value={activeAssumptions.seasonTonnes}
-            onChange={(value) =>
-              setScenarioDraft({ ...activeAssumptions, seasonTonnes: value })
-            }
+            onChange={(value) => updateDraft({ ...activeAssumptions, seasonTonnes: value })}
           />
           <ScenarioNumber
             id="price-per-tonne"
             label="Price per tonne ($)"
             value={activeAssumptions.pricePerTonne}
-            onChange={(value) =>
-              setScenarioDraft({ ...activeAssumptions, pricePerTonne: value })
-            }
+            onChange={(value) => updateDraft({ ...activeAssumptions, pricePerTonne: value })}
           />
           <ScenarioNumber
             id="labour-rate"
             label="Labour rate ($/hr)"
             value={activeAssumptions.labourRatePerHour}
             onChange={(value) =>
-              setScenarioDraft({ ...activeAssumptions, labourRatePerHour: value })
+              updateDraft({ ...activeAssumptions, labourRatePerHour: value })
             }
           />
         </div>
         {saveError ? <ErrorState message={saveError} /> : null}
+        {savedMessage ? (
+          <p role="status" className="mt-2 rounded-lg bg-success/10 p-2 text-sm font-medium text-success">
+            {savedMessage}
+          </p>
+        ) : null}
         <button
           type="button"
           onClick={() => void onSaveAndCalculate()}
@@ -161,10 +272,12 @@ export function ResultsPage() {
           Save scenario &amp; store results
         </button>
       </Card>
+      )}
 
       <section aria-label="Comparison results" className="space-y-3">
         <h2 className="font-display text-lg font-bold">
           Each alternative vs “{control.name}”
+          {selectedSite ? ` at ${selectedSite.location}` : " across all sites"}
         </h2>
         {comparisons.map((comparison) => (
           <Card key={comparison.arm.armId}>
@@ -212,8 +325,10 @@ export function ResultsPage() {
       <section aria-label="Assumptions" className="space-y-3">
         <h2 className="font-display text-lg font-bold">Assumptions per practice</h2>
         <p className="text-sm text-ink/60 dark:text-ink-dark/60">
-          Units: $ one-off · $/yr flat annual · $/t and hr/t scale with season throughput ·
-          %yield values a marketable-yield change at the scenario price.
+          These describe what each practice costs and returns, and apply across every site
+          — what differs by site is the season scenario above. Units: $ one-off · $/yr flat
+          annual · $/t and hr/t scale with season throughput · %yield values a
+          marketable-yield change at the scenario price.
         </p>
         {trialArms.map((arm) => (
           <ArmAssumptionsCard
@@ -226,7 +341,14 @@ export function ResultsPage() {
         ))}
       </section>
 
-      <MeasuredContext trialArms={trialArms} events={events.data ?? []} metrics={metrics.data ?? []} />
+      <MeasuredContext
+        trialArms={trialArms}
+        events={(events.data ?? []).filter(
+          (event) => selectedSiteId === null || event.siteId === selectedSiteId,
+        )}
+        metrics={metrics.data ?? []}
+        siteLabel={selectedSite?.location ?? null}
+      />
 
       <Link
         to={`/trials/${trial.trialId}`}
@@ -404,14 +526,18 @@ function MeasuredContext({
   trialArms,
   events,
   metrics,
+  siteLabel,
 }: {
   trialArms: PracticeArm[];
   events: Array<{ eventId: string; armId: string }>;
   metrics: Array<{ eventId: string; metricName: string; value: number | string }>;
+  siteLabel: string | null;
 }) {
   return (
     <Card>
-      <h2 className="font-semibold">Measured so far</h2>
+      <h2 className="font-semibold">
+        Measured so far{siteLabel ? ` — ${siteLabel}` : ""}
+      </h2>
       <p className="mt-1 text-sm text-ink/60 dark:text-ink-dark/60">
         Field data collected to date — use it to ground the assumptions above.
       </p>

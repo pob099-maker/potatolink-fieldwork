@@ -120,6 +120,8 @@ export interface Metric {
 export interface EconomicScenario {
   scenarioId: string;
   trialId: string;
+  /** null = applies trial-wide, and is the fallback for sites without one. */
+  siteId: string | null;
   name: string;
   assumptionsJson: string;
   createdAt: string;
@@ -129,6 +131,8 @@ export interface ResultSet {
   resultId: string;
   scenarioId: string;
   armId: string;
+  /** null = blended across every site in the trial. */
+  siteId: string | null;
   netBenefit: number;
   paybackPeriod: number | null;
   notes: string;
