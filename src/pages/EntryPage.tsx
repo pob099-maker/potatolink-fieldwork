@@ -9,14 +9,23 @@ import {
   useArms,
   useContacts,
   useEvents,
+  useMetrics,
   useSites,
   useTemplates,
   useTrials,
 } from "../hooks/useCollections";
 import { Card, EmptyState, ErrorState, PageTitle, Skeleton, SyncBadge } from "../components/ui";
 import { EntryField } from "../components/fields";
+import { RecentEntries, SyncReassurance } from "../components/EntryStatus";
 import { useAccess } from "../contexts/AccessContext";
-import type { DeviceType, FormField, MeasurementEvent, PracticeArm, Site } from "../types";
+import type {
+  DeviceType,
+  FormField,
+  MeasurementEvent,
+  Metric,
+  PracticeArm,
+  Site,
+} from "../types";
 
 const FIELDS_PER_SCREEN = 4; // brief allows at most 5 visible per screen
 
@@ -37,6 +46,8 @@ export function EntryPage() {
   const arms = useArms();
   const templates = useTemplates();
   const contacts = useContacts();
+  const metrics = useMetrics();
+  const events = useEvents();
 
   const loading =
     trials.isPending || sites.isPending || arms.isPending || templates.isPending || contacts.isPending;
@@ -155,6 +166,9 @@ export function EntryPage() {
       siteId={template.requiresSite && site ? site.siteId : null}
       armId={template.requiresArm && arm ? arm.armId : null}
       preview={preview}
+      events={events.data ?? []}
+      metrics={metrics.data ?? []}
+      arms={trialArms}
       replicate={trial.design === "replicated" ? replicate : null}
       replicateLabel={trial.design === "replicated" && replicate ? `Rep ${replicate}` : null}
       enteredBy={grower?.contactId ?? ""}
@@ -340,6 +354,9 @@ function AccessGate({
 
 function EntryForm({
   preview,
+  events,
+  metrics,
+  arms,
   formName,
   trialId,
   trialName,
@@ -355,6 +372,9 @@ function EntryForm({
   fields,
 }: {
   preview: boolean;
+  events: MeasurementEvent[];
+  metrics: Metric[];
+  arms: PracticeArm[];
   formName: string;
   trialId: string;
   trialName: string;
@@ -456,6 +476,7 @@ function EntryForm({
 
   if (saved) {
     return (
+      <>
       <Card className="mx-auto max-w-md text-center">
         <p className="text-4xl" aria-hidden>
           ✅
@@ -481,6 +502,16 @@ function EntryForm({
           Add another entry
         </button>
       </Card>
+      <div className="mx-auto mt-4 max-w-md">
+        <RecentEntries
+          events={events}
+          metrics={metrics}
+          arms={arms}
+          trialId={trialId}
+          siteId={siteId}
+        />
+      </div>
+      </>
     );
   }
 
@@ -516,6 +547,12 @@ function EntryForm({
         </p>
       </div>
 
+      {preview ? null : (
+        <SyncReassurance
+          pendingCount={events.filter((event) => event.syncStatus !== "synced").length}
+        />
+      )}
+
       <p className="text-sm text-ink/50 dark:text-ink-dark/50" aria-live="polite">
         Step {screenIndex + 1} of {screens.length}
       </p>
@@ -533,6 +570,16 @@ function EntryForm({
       </Card>
 
       {saveError ? <ErrorState message={saveError} onRetry={() => void onSubmit()} /> : null}
+
+      {preview ? null : (
+        <RecentEntries
+          events={events}
+          metrics={metrics}
+          arms={arms}
+          trialId={trialId}
+          siteId={siteId}
+        />
+      )}
 
       <div className="flex gap-2">
         {screenIndex > 0 ? (

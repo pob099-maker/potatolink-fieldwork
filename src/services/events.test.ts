@@ -3,9 +3,10 @@ import {
   describeEvent,
   describeEventScope,
   eventsForTrial,
+  recentEntriesAtSite,
   resolveTrialId,
 } from "./events";
-import type { FormTemplate, MeasurementEvent, PracticeArm, Site } from "../types";
+import type { FormTemplate, MeasurementEvent, Metric, PracticeArm, Site } from "../types";
 
 const T0 = "2026-08-18T00:00:00.000Z";
 const TRIAL = "trial-1";
@@ -113,5 +114,53 @@ describe("describing records", () => {
   it("says whole trial when a record has no site", () => {
     expect(describeEventScope(event({}), sites)).toBe("Whole trial");
     expect(describeEventScope(event({ siteId: "site-1" }), sites)).toBe("Walkers Flat");
+  });
+});
+
+describe("recentEntriesAtSite", () => {
+  function at(eventId: string, when: string, siteId = "site-1"): MeasurementEvent {
+    return event({ eventId, trialId: TRIAL, siteId, armId: "arm-1", eventDate: when });
+  }
+  function metric(eventId: string, value: number | string, unit = "", photoUrl: string | null = null): Metric {
+    return { metricId: `${eventId}-${value}`, eventId, metricName: "m", value, unit, photoUrl, createdAt: T0 };
+  }
+
+  const events = [
+    at("old", "2026-08-01T08:00:00.000Z"),
+    at("newest", "2026-08-03T08:00:00.000Z"),
+    at("middle", "2026-08-02T08:00:00.000Z"),
+    at("elsewhere", "2026-08-04T08:00:00.000Z", "site-2"),
+  ];
+  const metrics = [
+    metric("newest", 42.5, "t"),
+    metric("newest", "https://x/p.jpg", "", "https://x/p.jpg"),
+  ];
+
+  it("returns entries at the site, newest first", () => {
+    const recent = recentEntriesAtSite(events, metrics, TRIAL, "site-1");
+    expect(recent.map((r) => r.event.eventId)).toEqual(["newest", "middle", "old"]);
+  });
+
+  it("excludes other sites and other trials", () => {
+    const recent = recentEntriesAtSite(events, metrics, TRIAL, "site-1");
+    expect(recent.some((r) => r.event.eventId === "elsewhere")).toBe(false);
+    expect(recentEntriesAtSite(events, metrics, OTHER_TRIAL, "site-1")).toEqual([]);
+  });
+
+  it("summarises values with units and leaves media out", () => {
+    const recent = recentEntriesAtSite(events, metrics, TRIAL, "site-1");
+    const newest = recent.find((r) => r.event.eventId === "newest");
+    expect(newest?.summary).toBe("42.5 t");
+  });
+
+  it("renders stored booleans as Yes and No", () => {
+    const boolEvents = [at("b1", "2026-08-05T08:00:00.000Z")];
+    const boolMetrics = [metric("b1", "true"), metric("b1", "false")];
+    const [recent] = recentEntriesAtSite(boolEvents, boolMetrics, TRIAL, "site-1");
+    expect(recent.summary).toBe("Yes · No");
+  });
+
+  it("honours the limit", () => {
+    expect(recentEntriesAtSite(events, metrics, TRIAL, "site-1", 2)).toHaveLength(2);
   });
 });
