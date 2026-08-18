@@ -136,6 +136,11 @@ export function TrialDetailPage() {
                       const site = trialSites.find(
                         (candidate) => candidate.siteId === event.siteId,
                       );
+                      const media = (metrics.data ?? []).filter(
+                        (metric) =>
+                          metric.eventId === event.eventId &&
+                          metric.photoUrl?.startsWith("http"),
+                      );
                       return (
                         <li key={event.eventId} className="flex flex-wrap items-center gap-2 py-2">
                           <span>{format(new Date(event.eventDate), "d MMM yyyy")}</span>
@@ -143,6 +148,17 @@ export function TrialDetailPage() {
                             {site?.location ?? "Unknown site"}
                           </span>
                           <SyncBadge status={event.syncStatus} />
+                          {media.map((metric) => (
+                            <a
+                              key={metric.metricId}
+                              href={metric.photoUrl ?? "#"}
+                              target="_blank"
+                              rel="noreferrer"
+                              className="text-primary underline dark:text-primary-soft"
+                            >
+                              {metric.value === "video" ? "🎬 video" : "📷 photo"}
+                            </a>
+                          ))}
                         </li>
                       );
                     })}

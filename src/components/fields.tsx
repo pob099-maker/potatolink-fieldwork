@@ -1,10 +1,11 @@
 // Field renderers for FormTemplate-driven forms. Trial-specific field names
 // are never hardcoded here — everything comes from the template config.
 
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import type { Control, FieldValues, Path, UseFormRegister } from "react-hook-form";
 import { Controller } from "react-hook-form";
-import type { FormField } from "../types";
+import { getMedia, isMediaPointer, mediaIdFromPointer, saveMedia } from "../services/media";
+import type { FormField, MediaKind } from "../types";
 
 const inputClass =
   "w-full min-h-11 rounded-lg border border-ink/20 bg-surface px-3 py-2.5 text-base " +
@@ -140,62 +141,107 @@ function FieldInput<T extends FieldValues>({
         />
       );
     case "photo":
-      return <PhotoInput control={control} name={name} fieldId={field.fieldName} />;
+    case "video":
+      return (
+        <MediaInput control={control} name={name} fieldId={field.fieldName} kind={field.type} />
+      );
   }
 }
 
-function PhotoInput<T extends FieldValues>({
+function MediaInput<T extends FieldValues>({
   control,
   name,
   fieldId,
+  kind,
 }: {
   control: Control<T>;
   name: Path<T>;
   fieldId: string;
+  kind: MediaKind;
 }) {
   const fileRef = useRef<HTMLInputElement>(null);
-  const [fileName, setFileName] = useState<string | null>(null);
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+  const [captureError, setCaptureError] = useState<string | null>(null);
+
+  useEffect(() => {
+    return () => {
+      if (previewUrl) URL.revokeObjectURL(previewUrl);
+    };
+  }, [previewUrl]);
 
   return (
     <Controller
       control={control}
       name={name}
-      render={({ field: controller }) => (
-        <div>
-          <input
-            ref={fileRef}
-            id={fieldId}
-            type="file"
-            accept="image/*"
-            capture="environment"
-            className="sr-only"
-            onChange={(changeEvent) => {
-              const file = changeEvent.target.files?.[0];
-              if (!file) return;
-              const reader = new FileReader();
-              reader.onload = () => {
-                controller.onChange(typeof reader.result === "string" ? reader.result : "");
-                setFileName(file.name);
-              };
-              reader.readAsDataURL(file);
-            }}
-          />
-          <button
-            type="button"
-            onClick={() => fileRef.current?.click()}
-            className="min-h-11 w-full rounded-lg border border-dashed border-ink/30 px-4 py-2.5 font-medium text-ink/70 dark:border-ink-dark/30 dark:text-ink-dark/70"
-          >
-            📷 {fileName ? `Photo added (${fileName})` : "Take or choose a photo"}
-          </button>
-          {typeof controller.value === "string" && controller.value ? (
-            <img
-              src={controller.value}
-              alt="Preview of the captured photo"
-              className="mt-2 max-h-40 rounded-lg"
+      render={({ field: controller }) => {
+        async function onFilePicked(file: File): Promise<void> {
+          setCaptureError(null);
+          const result = await saveMedia(file, kind);
+          if (!result.success) {
+            setCaptureError(result.error);
+            return;
+          }
+          controller.onChange(result.data);
+          if (previewUrl) URL.revokeObjectURL(previewUrl);
+          setPreviewUrl(URL.createObjectURL(file));
+        }
+
+        async function restorePreview(pointer: string): Promise<void> {
+          const item = await getMedia(mediaIdFromPointer(pointer));
+          if (item) setPreviewUrl(URL.createObjectURL(item.blob));
+        }
+
+        const hasMedia =
+          typeof controller.value === "string" && isMediaPointer(controller.value);
+        if (hasMedia && !previewUrl) void restorePreview(controller.value as string);
+
+        return (
+          <div>
+            <input
+              ref={fileRef}
+              id={fieldId}
+              type="file"
+              accept={kind === "video" ? "video/*" : "image/*"}
+              capture="environment"
+              className="sr-only"
+              onChange={(changeEvent) => {
+                const file = changeEvent.target.files?.[0];
+                if (file) void onFilePicked(file);
+              }}
             />
-          ) : null}
-        </div>
-      )}
+            <button
+              type="button"
+              onClick={() => fileRef.current?.click()}
+              className="min-h-11 w-full rounded-lg border border-dashed border-ink/30 px-4 py-2.5 font-medium text-ink/70 dark:border-ink-dark/30 dark:text-ink-dark/70"
+            >
+              {kind === "video"
+                ? `🎬 ${hasMedia ? "Video added — tap to replace" : "Record or choose a video"}`
+                : `📷 ${hasMedia ? "Photo added — tap to replace" : "Take or choose a photo"}`}
+            </button>
+            {kind === "video" ? (
+              <p className="mt-1 text-xs text-ink/50 dark:text-ink-dark/50">
+                Keep clips short — under about a minute uploads best from the paddock.
+              </p>
+            ) : null}
+            {captureError ? (
+              <p role="alert" className="mt-1 text-sm text-danger">
+                {captureError}
+              </p>
+            ) : null}
+            {previewUrl && hasMedia ? (
+              kind === "video" ? (
+                <video src={previewUrl} controls className="mt-2 max-h-48 w-full rounded-lg" />
+              ) : (
+                <img
+                  src={previewUrl}
+                  alt="Preview of the captured photo"
+                  className="mt-2 max-h-40 rounded-lg"
+                />
+              )
+            ) : null}
+          </div>
+        );
+      }}
     />
   );
 }

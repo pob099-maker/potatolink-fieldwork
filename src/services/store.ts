@@ -24,6 +24,7 @@ import type {
 import { newId, nowIso } from "../lib/id";
 import { dbGetAll, dbPut, dbPutMany, type CollectionName } from "../lib/localdb";
 import { isBackendConfigured, supabase, toRow } from "../lib/supabase";
+import { fileExtension, getMedia, isMediaPointer, markUploaded, mediaIdFromPointer } from "./media";
 
 const TABLE_NAMES: Partial<Record<CollectionName, string>> = {
   projects: "projects",
@@ -194,17 +195,55 @@ export async function syncPending(): Promise<void> {
   }
 }
 
+const MEDIA_BUCKET = "media";
+
+/**
+ * Upload a metric's on-device media blob to Supabase Storage and return the
+ * metric with its pointer replaced by the public URL. Returns null when the
+ * upload fails so the whole event is retried on the next sync cycle.
+ */
+async function resolveMediaPointer(metric: Metric): Promise<Metric | null> {
+  if (!supabase || !isMediaPointer(metric.photoUrl)) return metric;
+  const item = await getMedia(mediaIdFromPointer(metric.photoUrl));
+  if (!item) {
+    // The blob is gone (cleared browser data); sync the record without media.
+    return { ...metric, photoUrl: null };
+  }
+  if (item.uploadedUrl) {
+    return { ...metric, photoUrl: item.uploadedUrl };
+  }
+  const path = `${metric.eventId}/${item.mediaId}.${fileExtension(item.mimeType)}`;
+  const upload = await supabase.storage
+    .from(MEDIA_BUCKET)
+    .upload(path, item.blob, { contentType: item.mimeType, upsert: true });
+  if (upload.error) return null;
+  const { data } = supabase.storage.from(MEDIA_BUCKET).getPublicUrl(path);
+  await markUploaded(item, data.publicUrl);
+  return { ...metric, photoUrl: data.publicUrl };
+}
+
 async function pushEvent(
   event: MeasurementEvent,
   metrics: Metric[],
   logs: DataEntryLog[],
 ): Promise<boolean> {
   if (!supabase) return false;
+
+  const resolvedMetrics: Metric[] = [];
+  for (const metric of metrics) {
+    const resolved = await resolveMediaPointer(metric);
+    if (!resolved) return false;
+    if (resolved !== metric) await dbPut("metrics", resolved);
+    resolvedMetrics.push(resolved);
+  }
+
   const eventResult = await supabase
     .from("measurement_events")
     .upsert(toRow({ ...event, syncStatus: "synced" }));
   if (eventResult.error) return false;
-  const metricsResult = await supabase.from("metrics").upsert(metrics.map((m) => toRow(m)));
+  const metricsResult = await supabase
+    .from("metrics")
+    .upsert(resolvedMetrics.map((m) => toRow(m)));
   if (metricsResult.error) return false;
   const logsResult = await supabase
     .from("data_entry_logs")

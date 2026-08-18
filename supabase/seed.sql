@@ -50,6 +50,7 @@ values ('5f0a6c1e-0006-4000-8000-000000000001', '5f0a6c1e-0002-4000-8000-0000000
           {"fieldName":"photo","label":"Photo of the run (optional)","type":"photo","required":false,"options":null,"min":null,"max":null,"unit":null,"displayOrder":4},
           {"fieldName":"sortingResult","label":"How well did the sorting work?","type":"slider","required":false,"options":null,"min":1,"max":5,"unit":null,"displayOrder":5},
           {"fieldName":"mainRemovalCategory","label":"Main thing removed","type":"select","required":false,"options":["clods/stones","damaged tubers","rot","green potatoes","misshapes","foreign material","no meaningful separation"],"min":null,"max":null,"unit":null,"displayOrder":6},
-          {"fieldName":"notes","label":"Anything else worth noting?","type":"text","required":false,"options":null,"min":null,"max":null,"unit":null,"displayOrder":7}
+          {"fieldName":"notes","label":"Anything else worth noting?","type":"text","required":false,"options":null,"min":null,"max":null,"unit":null,"displayOrder":7},
+          {"fieldName":"video","label":"Short video of the run (optional)","type":"video","required":false,"options":null,"min":null,"max":null,"unit":null,"displayOrder":8}
         ]'::jsonb)
 on conflict do nothing;

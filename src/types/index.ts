@@ -25,8 +25,21 @@ export type FieldType =
   | "select"
   | "slider"
   | "photo"
+  | "video"
   | "date"
   | "boolean";
+
+export type MediaKind = "photo" | "video";
+
+/** A photo or video captured on-device, held locally until uploaded. */
+export interface MediaItem {
+  mediaId: string;
+  kind: MediaKind;
+  mimeType: string;
+  blob: Blob;
+  uploadedUrl: string | null;
+  createdAt: string;
+}
 
 export interface Project {
   projectId: string;

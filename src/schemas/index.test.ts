@@ -51,6 +51,24 @@ describe("buildEntryFormSchema", () => {
     const schema = buildEntryFormSchema([optionalSelect]);
     expect(schema.safeParse({ mainRemovalCategory: "gold nuggets" }).success).toBe(false);
   });
+
+  it("treats video fields like photo fields: optional media pointers", () => {
+    const videoField: FormField = {
+      fieldName: "video",
+      label: "Short video of the run (optional)",
+      type: "video",
+      required: false,
+      options: null,
+      min: null,
+      max: null,
+      unit: null,
+      displayOrder: 8,
+    };
+    const schema = buildEntryFormSchema([videoField]);
+    expect(schema.safeParse({ video: "media:abc-123" }).success).toBe(true);
+    expect(schema.safeParse({ video: "" }).success).toBe(true);
+    expect(schema.safeParse({}).success).toBe(true);
+  });
 });
 
 describe("record schemas", () => {

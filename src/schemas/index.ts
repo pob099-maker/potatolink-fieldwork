@@ -130,7 +130,7 @@ export const adoptionFollowupSchema = z.object({
 export const formFieldSchema = z.object({
   fieldName: z.string().min(1),
   label: z.string().min(1),
-  type: z.enum(["number", "text", "select", "slider", "photo", "date", "boolean"]),
+  type: z.enum(["number", "text", "select", "slider", "photo", "video", "date", "boolean"]),
   required: z.boolean(),
   options: z.array(z.string()).nullable(),
   min: z.number().nullable(),
@@ -190,7 +190,8 @@ export function buildEntryFormSchema(
         value = z.string().min(1, "Pick a date");
         break;
       case "photo":
-        value = z.string(); // data URL captured from the camera
+      case "video":
+        value = z.string(); // "media:<id>" pointer to the on-device blob
         break;
       case "text":
         value = z.string();

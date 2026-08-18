@@ -199,8 +199,13 @@ function EntryForm({
       .map((field) => {
         const raw = values[field.fieldName];
         if (raw === undefined || raw === "" || raw === null) return null;
-        if (field.type === "photo") {
-          return { metricName: field.fieldName, value: "photo", unit: "", photoUrl: String(raw) };
+        if (field.type === "photo" || field.type === "video") {
+          return {
+            metricName: field.fieldName,
+            value: field.type,
+            unit: "",
+            photoUrl: String(raw),
+          };
         }
         return {
           metricName: field.fieldName,

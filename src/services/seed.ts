@@ -192,6 +192,17 @@ const template: FormTemplate = {
       displayOrder: 4,
     },
     {
+      fieldName: "video",
+      label: "Short video of the run (optional)",
+      type: "video",
+      required: false,
+      options: null,
+      min: null,
+      max: null,
+      unit: null,
+      displayOrder: 8,
+    },
+    {
       fieldName: "sortingResult",
       label: "How well did the sorting work?",
       type: "slider",
@@ -236,7 +247,7 @@ const template: FormTemplate = {
   createdAt: T0,
 };
 
-const SEED_FLAG = { key: "seeded", version: 1 };
+const SEED_FLAG = { key: "seeded", version: 2 };
 
 export async function seedIfNeeded(): Promise<void> {
   const existing = await dbGet<{ key: string; version: number }>("meta", "seeded");

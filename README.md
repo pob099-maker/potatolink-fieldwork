@@ -10,6 +10,9 @@ template configs, not schema or code changes.
 
 - **Grower data entry** — mobile-first, form-template driven, works fully offline.
   Entries save to the device (IndexedDB) and sync to Supabase when online.
+- **Photos and videos** — captured with the device camera, held on-device, and
+  uploaded to Supabase Storage during sync (photos up to 20 MB, videos up to
+  100 MB). Synced media is linked from the trial detail page.
 - **Staff dashboard** — trials with status/site/entry counts, recent entries, sync summary.
 - **Trial detail** — practice arms (control + alternatives) with per-arm summary
   metrics and measurement events.
