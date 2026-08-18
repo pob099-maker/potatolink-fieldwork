@@ -6,6 +6,7 @@ import { isBackendConfigured } from "../lib/supabase";
 const NAV_ITEMS = [
   { to: "/", label: "Dashboard" },
   { to: "/trials", label: "Trials" },
+  { to: "/trials/new", label: "New trial" },
   { to: "/settings", label: "Settings" },
 ];
 

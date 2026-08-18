@@ -16,6 +16,7 @@ import { describeEvent, describeEventScope, eventsForTrial } from "../services/e
 import { replicationStatus, responseSummary, type Completeness, type TreatmentStat } from "../services/replication";
 import { saveTrial } from "../services/store";
 import { Card, EmptyState, ErrorState, PageTitle, Skeleton, StatusPill, SyncBadge } from "../components/ui";
+import { SetupChecklist, SiteManager } from "../components/TrialSetup";
 import type { FormTemplate, MeasurementEvent, Metric, PracticeArm, Site, Trial } from "../types";
 
 export function TrialDetailPage() {
@@ -215,6 +216,15 @@ export function TrialDetailPage() {
         metrics={metrics.data ?? []}
         selectedSiteId={selectedSiteId}
       />
+
+      <SetupChecklist
+        trial={trial}
+        sites={trialSites}
+        arms={activeArms}
+        templates={trialTemplates}
+      />
+
+      <SiteManager trialId={trial.trialId} sites={trialSites} />
 
       <ArmManager trialId={trial.trialId} arms={trialArms} />
 
