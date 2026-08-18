@@ -1,6 +1,10 @@
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { parseTemplateCsv, type ParsedTrial } from "../services/templateImport";
+import {
+  downloadReferenceTemplate,
+  parseTemplateCsv,
+  type ParsedTrial,
+} from "../services/templateImport";
 import { validateTemplate, type TemplateIssue } from "../services/templateValidate";
 import { publishParsedTrial } from "../services/templatePublish";
 import { Card, ErrorState, PageTitle } from "../components/ui";
@@ -49,9 +53,16 @@ export function ImportTrialPage() {
         <PageTitle>Import a trial from CSV</PageTitle>
         <p className="mt-1 text-ink/60 dark:text-ink-dark/60">
           Upload a Fieldwork Template CSV and get a working trial — forms, screens, and
-          validation — without any coding. The reference file is{" "}
-          <code>docs/fieldwork-template-v1.csv</code> in the repository.
+          validation — without any coding. New to the format? Start from the blank
+          template: it opens in Excel or Google Sheets, one row per question.
         </p>
+        <button
+          type="button"
+          onClick={() => downloadReferenceTemplate()}
+          className="mt-3 min-h-11 rounded-lg border border-primary px-4 py-2.5 font-medium text-primary dark:text-primary-soft"
+        >
+          ⬇ Download blank template (CSV)
+        </button>
       </div>
 
       <Card>

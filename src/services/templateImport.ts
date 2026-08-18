@@ -211,3 +211,38 @@ export function parseTemplateCsv(text: string): Result<ParsedTrial> {
   if (trial.forms.length === 0) return { success: false, error: "No field rows found after the header." };
   return { success: true, data: trial };
 }
+
+/**
+ * The blank starter template offered for download on the import page, so
+ * nobody needs repository access to get the format. Kept in code (not fetched)
+ * so it works offline and always matches the parser version.
+ */
+export const REFERENCE_TEMPLATE_CSV = [
+  "# fieldwork-template v1",
+  "trial,My New Trial",
+  "objective,What this trial sets out to show.",
+  "design,observational",
+  "replicates,0",
+  "form,event_type,audience,frequency,requires_site,requires_arm,label,field_name,type,required,unit,min,max,options,response,help",
+  "Run record,run_record,grower,Each run,yes,yes,Tonnes handled,,number,yes,t,0,,,,Core throughput measure",
+  "Run record,run_record,grower,Each run,yes,yes,How well did it work?,,slider,no,,1,5,,,Quick operator rating",
+  "Run record,run_record,grower,Each run,yes,yes,Main issue seen,,select,no,,,,issue A | issue B | none,,Structured instead of free text",
+  "Run record,run_record,grower,Each run,yes,yes,Did the run go as planned?,,boolean,yes,,,,,,Flags runs to follow up",
+  "Run record,run_record,grower,Each run,yes,yes,Photo of the result (optional),,photo,no,,,,,,Visual evidence",
+  "Run record,run_record,grower,Each run,yes,yes,Anything else worth noting?,notes,text,no,,,,,,Catch-all; keep it last",
+  "Daily weather,weather,staff,Daily during the trial,yes,no,Temperature,,number,yes,°C,,,,,Confounding factor",
+  "Cost log,cost_log,staff,Once per trial,no,no,Lease or subscription cost,,number,yes,$,0,,,,Feeds the economics",
+].join("\r\n");
+
+export function downloadReferenceTemplate(): void {
+  if (typeof document === "undefined") return;
+  const blob = new Blob([REFERENCE_TEMPLATE_CSV], { type: "text/csv;charset=utf-8" });
+  const url = URL.createObjectURL(blob);
+  const anchor = document.createElement("a");
+  anchor.href = url;
+  anchor.download = "fieldwork-template-v1.csv";
+  document.body.appendChild(anchor);
+  anchor.click();
+  anchor.remove();
+  URL.revokeObjectURL(url);
+}
