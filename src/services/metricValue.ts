@@ -7,7 +7,7 @@
 // now keep their own shape in storage, and are turned into text only at the
 // edges, here.
 
-import type { Metric, MetricValue } from "../types";
+import type { FormField, Metric, MetricValue } from "../types";
 
 function asText(value: MetricValue): string {
   if (typeof value === "boolean") return value ? "Yes" : "No";
@@ -53,4 +53,32 @@ export function metricNumber(value: MetricValue): number | null {
 /** True when the metric points at an uploaded or on-device file. */
 export function isMediaMetric(metric: Metric): boolean {
   return metric.photoUrl !== null && metric.photoUrl !== "";
+}
+
+/**
+ * Turn a stored answer back into what the form control expects, so an entry
+ * being corrected opens with what was actually recorded. Records written
+ * before answers kept their type are converted on the way in, which is also
+ * how an old entry gets repaired simply by being corrected.
+ */
+export function metricFormValue(field: FormField, metric: Metric | undefined): unknown {
+  if (!metric) return undefined;
+  if (field.type === "photo" || field.type === "video" || field.type === "file") {
+    return metric.photoUrl ?? "";
+  }
+  const { value } = metric;
+  switch (field.type) {
+    case "multiselect":
+      if (Array.isArray(value)) return value;
+      return typeof value === "string" && value !== ""
+        ? value.split(/[,;]\s*/).filter(Boolean)
+        : [];
+    case "boolean":
+      return typeof value === "boolean" ? value : value === "true";
+    case "number":
+    case "slider":
+      return metricNumber(value) ?? undefined;
+    default:
+      return Array.isArray(value) ? value.join("; ") : String(value);
+  }
 }

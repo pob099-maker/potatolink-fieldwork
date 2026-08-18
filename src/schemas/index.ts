@@ -4,6 +4,12 @@
 import { z } from "zod";
 
 const isoDate = z.string().min(1, "Required");
+
+// Postgres hands back an absent timestamp as null, not undefined. Rejecting
+// null meant every row written before its updated_at column existed failed
+// validation on pull and was silently skipped — so a second device never
+// received those trials' forms and practices at all.
+const optionalDate = isoDate.nullish().transform((value) => value ?? undefined);
 const id = z.string().min(1);
 
 export const projectSchema = z.object({
@@ -50,7 +56,7 @@ export const practiceArmSchema = z.object({
   sortOrder: z.number().int(),
   archived: z.boolean().default(false),
   createdAt: isoDate,
-  updatedAt: isoDate.optional(),
+  updatedAt: optionalDate,
 });
 
 export const armAssumptionSchema = z.object({
@@ -63,7 +69,7 @@ export const armAssumptionSchema = z.object({
   // Rows written before the flag existed are placeholders by definition.
   status: z.enum(["placeholder", "confirmed"]).default("placeholder"),
   createdAt: isoDate,
-  updatedAt: isoDate.optional(),
+  updatedAt: optionalDate,
 });
 
 export const syncStatusSchema = z.enum(["pending", "synced", "error"]);
@@ -79,6 +85,7 @@ export const measurementEventSchema = z.object({
   enteredBy: z.string(),
   syncStatus: syncStatusSchema,
   createdAt: isoDate,
+  updatedAt: optionalDate,
 });
 
 export const metricSchema = z.object({
@@ -89,6 +96,7 @@ export const metricSchema = z.object({
   unit: z.string(),
   photoUrl: z.string().nullable(),
   createdAt: isoDate,
+  updatedAt: optionalDate,
 });
 
 export const economicScenarioSchema = z.object({
@@ -98,7 +106,7 @@ export const economicScenarioSchema = z.object({
   name: z.string().min(1),
   assumptionsJson: z.string(),
   createdAt: isoDate,
-  updatedAt: isoDate.optional(),
+  updatedAt: optionalDate,
 });
 
 export const resultSetSchema = z.object({
@@ -176,7 +184,7 @@ export const formTemplateSchema = z.object({
   requiresArm: z.boolean().default(true),
   fields: z.array(formFieldSchema).min(1),
   createdAt: isoDate,
-  updatedAt: isoDate.optional(),
+  updatedAt: optionalDate,
 });
 
 export const dataEntryLogSchema = z.object({

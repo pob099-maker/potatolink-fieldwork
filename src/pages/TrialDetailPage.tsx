@@ -13,6 +13,7 @@ import { addArm, removeArm, saveArm } from "../services/store";
 import { buildEntryUrl, summariseArm } from "../services/entryLinks";
 import { buildTrialCsv, csvFileName, downloadCsv } from "../services/export";
 import { describeEvent, describeEventScope, eventsForTrial } from "../services/events";
+import { metricDisplay } from "../services/metricValue";
 import { replicationStatus, responseSummary, type Completeness, type TreatmentStat } from "../services/replication";
 import { saveTrial } from "../services/store";
 import { Card, EmptyState, ErrorState, PageTitle, Skeleton, StatusPill, SyncBadge } from "../components/ui";
@@ -326,6 +327,7 @@ export function TrialDetailPage() {
                             {site?.location ?? "Unknown site"}
                           </span>
                           <SyncBadge status={event.syncStatus} />
+                          <EditEntryLink event={event} />
                           {media.map((metric) => (
                             <a
                               key={metric.metricId}
@@ -365,6 +367,24 @@ export function TrialDetailPage() {
  * They don't belong to a practice arm, so they'd otherwise be invisible on a
  * page organised by arm.
  */
+/**
+ * Opens a record for correction. Staff reviewing a trial are the ones who
+ * spot a figure that cannot be right, and until now the only options were to
+ * live with it or add a second record contradicting the first.
+ */
+function EditEntryLink({ event }: { event: MeasurementEvent }) {
+  if (!event.trialId) return null;
+  return (
+    <Link
+      to={`/trials/${event.trialId}/entry?edit=${event.eventId}`}
+      aria-label={`Correct the record from ${format(new Date(event.eventDate), "d MMM yyyy")}`}
+      className="text-primary underline dark:text-primary-soft"
+    >
+      Edit
+    </Link>
+  );
+}
+
 function StaffRecords({
   events,
   templates,
@@ -398,7 +418,7 @@ function StaffRecords({
           const readable = values
             .filter((metric) => !metric.photoUrl)
             .slice(0, 3)
-            .map((metric) => `${metric.metricName}: ${metric.value}${metric.unit ? ` ${metric.unit}` : ""}`)
+            .map((metric) => `${metric.metricName}: ${metricDisplay(metric.value, metric.unit)}`)
             .join(" · ");
           return (
             <li key={event.eventId} className="py-2">
@@ -409,6 +429,7 @@ function StaffRecords({
                   {describeEventScope(event, sites)}
                 </span>
                 <SyncBadge status={event.syncStatus} />
+                <EditEntryLink event={event} />
                 {media.map((metric) => (
                   <a
                     key={metric.metricId}

@@ -3,6 +3,7 @@
 // paddock, and until now the app only answered them after a save.
 
 import { format } from "date-fns";
+import { Link } from "react-router-dom";
 import { useOnline } from "../hooks/useOnline";
 import { isBackendConfigured } from "../lib/supabase";
 import { recentEntriesAtSite } from "../services/events";
@@ -47,6 +48,9 @@ export function SyncReassurance({ pendingCount }: { pendingCount: number }) {
  * The last few entries at this site, so a grower can confirm their run is in
  * without leaving the form. Shows everyone's entries at the site, not just this
  * device's — which also stops the same run being recorded twice.
+ *
+ * Seeing your entry listed is exactly when you notice the wrong number in it,
+ * so each row opens for correction.
  */
 export function RecentEntries({
   events,
@@ -86,6 +90,16 @@ export function RecentEntries({
                 <span className="text-ink/60 dark:text-ink-dark/60">{summary}</span>
               ) : null}
               <SyncBadge status={event.syncStatus} />
+              <Link
+                to={`/trials/${trialId}/entry?edit=${event.eventId}`}
+                aria-label={`Correct the entry from ${format(
+                  new Date(event.eventDate),
+                  "d MMM, h:mm a",
+                )}`}
+                className="ml-auto min-h-11 px-2 py-2.5 font-medium text-primary underline dark:text-primary-soft"
+              >
+                Fix
+              </Link>
             </li>
           );
         })}

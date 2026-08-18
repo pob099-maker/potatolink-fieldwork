@@ -1,9 +1,12 @@
 import { useMemo, useState } from "react";
-import { useParams, useSearchParams } from "react-router-dom";
+import { format } from "date-fns";
+import { Link, useNavigate, useParams, useSearchParams } from "react-router-dom";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { buildEntryFormSchema } from "../schemas";
-import { addEntry } from "../services/store";
+import { addEntry, removeEntry, updateEntry } from "../services/store";
+import { metricFormValue } from "../services/metricValue";
+import { templateForEvent } from "../services/events";
 import { isBackendConfigured } from "../lib/supabase";
 import {
   useArms,
@@ -50,8 +53,17 @@ export function EntryPage() {
   const metrics = useMetrics();
   const events = useEvents();
 
+  // Records are part of the gate, not an afterthought: a correction has to
+  // open on the answers it is correcting, and the form reads them once when it
+  // mounts. Waiting for them is what makes that reliable.
   const loading =
-    trials.isPending || sites.isPending || arms.isPending || templates.isPending || contacts.isPending;
+    trials.isPending ||
+    sites.isPending ||
+    arms.isPending ||
+    templates.isPending ||
+    contacts.isPending ||
+    events.isPending ||
+    metrics.isPending;
 
   const trial = trials.data?.find((candidate) => candidate.trialId === trialId);
   const trialSites = useMemo(
@@ -70,7 +82,14 @@ export function EntryPage() {
     () => (templates.data ?? []).filter((candidate) => candidate.trialId === trialId),
     [templates.data, trialId],
   );
+  // Correcting an existing entry rather than adding a new one. Everything
+  // about the record — its form, site, practice and replicate — comes from the
+  // record itself, so a correction can never quietly re-file it somewhere else.
+  const editing =
+    (events.data ?? []).find((event) => event.eventId === searchParams.get("edit")) ?? null;
+
   const template =
+    (editing ? templateForEvent(editing, trialTemplates) : undefined) ??
     trialTemplates.find((candidate) => candidate.templateId === searchParams.get("form")) ??
     trialTemplates.find((candidate) => candidate.audience === "grower") ??
     trialTemplates[0];
@@ -85,22 +104,27 @@ export function EntryPage() {
   const onlySite = trialSites.length === 1 ? trialSites[0] : undefined;
   const onlyArm = trialArms.length === 1 ? trialArms[0] : undefined;
 
-  const site =
-    trialSites.find((candidate) => candidate.siteId === searchParams.get("site")) ??
-    trialSites.find((candidate) => candidate.siteId === pickedSiteId) ??
-    onlySite;
-  const arm =
-    trialArms.find((candidate) => candidate.armId === searchParams.get("arm")) ??
-    trialArms.find((candidate) => candidate.armId === pickedArmId) ??
-    onlyArm;
+  const site = editing
+    ? trialSites.find((candidate) => candidate.siteId === editing.siteId)
+    : (trialSites.find((candidate) => candidate.siteId === searchParams.get("site")) ??
+      trialSites.find((candidate) => candidate.siteId === pickedSiteId) ??
+      onlySite);
+  const arm = editing
+    ? trialArms.find((candidate) => candidate.armId === editing.armId)
+    : (trialArms.find((candidate) => candidate.armId === searchParams.get("arm")) ??
+      trialArms.find((candidate) => candidate.armId === pickedArmId) ??
+      onlyArm);
   const grower = contacts.data?.find((contact) => contact.role === "grower");
 
   // Staff previewing what a grower sees. The real form renders, but saving is
   // disabled so a preview can never leave a record behind.
   const preview = searchParams.get("preview") === "1";
   const linkRep = Number(searchParams.get("rep"));
-  const replicate =
-    Number.isInteger(linkRep) && linkRep > 0 ? linkRep : pickedReplicate;
+  const replicate = editing
+    ? editing.replicate
+    : Number.isInteger(linkRep) && linkRep > 0
+      ? linkRep
+      : pickedReplicate;
 
   if (loading) {
     return (
@@ -119,6 +143,29 @@ export function EntryPage() {
     );
   }
 
+  // Removing an entry destroys the record this form was built from, so the
+  // form unmounts before it can say anything. The confirmation belongs to the
+  // route instead.
+  if (searchParams.get("removed") === "1") {
+    return (
+      <Card className="mx-auto max-w-md text-center">
+        <p className="text-4xl" aria-hidden>
+          🗑️
+        </p>
+        <PageTitle>Entry removed</PageTitle>
+        <p className="mt-2 text-ink/60 dark:text-ink-dark/60">
+          It is gone from this device and is being removed everywhere else.
+        </p>
+        <Link
+          to={`/trials/${trial.trialId}/entry`}
+          className="mt-4 inline-block min-h-11 w-full rounded-lg bg-primary px-4 py-2.5 font-medium text-white"
+        >
+          Back to the form
+        </Link>
+      </Card>
+    );
+  }
+
   if (!unlocked && !preview) {
     return (
       <AccessGate
@@ -132,9 +179,10 @@ export function EntryPage() {
   // Only ask for the context this form actually needs: a cost log belongs to
   // the trial, weather to a site, a harvest run to a site and a practice — and
   // a plot in a replicated trial also belongs to a replicate.
-  const needsSite = template.requiresSite && !site;
-  const needsArm = template.requiresArm && !arm;
+  const needsSite = !editing && template.requiresSite && !site;
+  const needsArm = !editing && template.requiresArm && !arm;
   const needsReplicate =
+    !editing &&
     trial.design === "replicated" &&
     trial.replicates > 0 &&
     template.requiresArm &&
@@ -157,6 +205,10 @@ export function EntryPage() {
 
   return (
     <EntryForm
+      // A fresh form per entry, so switching between adding and correcting
+      // never leaves the previous record's answers behind.
+      key={editing?.eventId ?? "new"}
+      editing={editing}
       formName={template.name}
       trialId={trial.trialId}
       trialName={trial.name}
@@ -371,6 +423,7 @@ function EntryForm({
   replicate,
   enteredBy,
   fields,
+  editing,
 }: {
   preview: boolean;
   events: MeasurementEvent[];
@@ -389,8 +442,25 @@ function EntryForm({
   replicate: number | null;
   enteredBy: string;
   fields: FormField[];
+  editing: MeasurementEvent | null;
 }) {
   const schema = useMemo(() => buildEntryFormSchema(fields), [fields]);
+
+  // Correcting an entry opens it on what was actually recorded, so a person
+  // changing one number does not have to retype the other nine.
+  const defaultValues = useMemo(() => {
+    if (!editing) return {};
+    const recorded = metrics.filter((metric) => metric.eventId === editing.eventId);
+    const values: Record<string, unknown> = {};
+    for (const field of fields) {
+      const value = metricFormValue(
+        field,
+        recorded.find((metric) => metric.metricName === field.fieldName),
+      );
+      if (value !== undefined) values[field.fieldName] = value;
+    }
+    return values;
+  }, [editing, fields, metrics]);
   const screens = useMemo(() => {
     const chunks: FormField[][] = [];
     for (let index = 0; index < fields.length; index += FIELDS_PER_SCREEN) {
@@ -402,6 +472,12 @@ function EntryForm({
   const [screenIndex, setScreenIndex] = useState(0);
   const [saved, setSaved] = useState<MeasurementEvent | null>(null);
   const [saveError, setSaveError] = useState<string | null>(null);
+  const [removing, setRemoving] = useState(false);
+  const navigate = useNavigate();
+
+  // Leaving the correction drops the ?edit, which re-keys this form and gives
+  // whoever is holding the phone a blank one rather than a dead end.
+  const doneEditing = (): void => navigate(`/trials/${trialId}/entry`);
 
   const {
     register,
@@ -413,6 +489,7 @@ function EntryForm({
   } = useForm<Record<string, unknown>>({
     resolver: zodResolver(schema),
     mode: "onTouched",
+    defaultValues,
   });
 
   const currentScreen = screens[screenIndex];
@@ -454,16 +531,18 @@ function EntryForm({
       })
       .filter((value): value is NonNullable<typeof value> => value !== null);
 
-    const result = await addEntry({
-      trialId,
-      siteId,
-      armId,
-      replicate,
-      eventType,
-      enteredBy,
-      deviceType: detectDevice(),
-      values: metricValues,
-    });
+    const result = editing
+      ? await updateEntry(editing.eventId, metricValues)
+      : await addEntry({
+          trialId,
+          siteId,
+          armId,
+          replicate,
+          eventType,
+          enteredBy,
+          deviceType: detectDevice(),
+          values: metricValues,
+        });
 
     if (result.success) {
       setSaved(result.data);
@@ -472,6 +551,14 @@ function EntryForm({
     }
   });
 
+  async function onRemove(): Promise<void> {
+    if (!editing) return;
+    setSaveError(null);
+    const result = await removeEntry(editing.eventId);
+    if (result.success) navigate(`/trials/${trialId}/entry?removed=1`);
+    else setSaveError(result.error);
+  }
+
   if (saved) {
     return (
       <>
@@ -479,25 +566,31 @@ function EntryForm({
         <p className="text-4xl" aria-hidden>
           ✅
         </p>
-        <PageTitle>Entry saved</PageTitle>
+        <PageTitle>{editing ? "Entry updated" : "Entry saved"}</PageTitle>
         <p className="mt-2">
           <SavedSyncBadge eventId={saved.eventId} />
         </p>
         <p className="mt-2 text-ink/60 dark:text-ink-dark/60">
           {isBackendConfigured()
-            ? "Your record is safe on this device and syncs automatically."
+            ? editing
+              ? "The correction is safe on this device and syncs automatically."
+              : "Your record is safe on this device and syncs automatically."
             : "Saved on this device. It will sync automatically once a connection is available."}
         </p>
         <button
           type="button"
-          onClick={() => {
-            reset();
-            setScreenIndex(0);
-            setSaved(null);
-          }}
+          onClick={
+            editing
+              ? doneEditing
+              : () => {
+                  reset();
+                  setScreenIndex(0);
+                  setSaved(null);
+                }
+          }
           className="mt-4 min-h-11 w-full rounded-lg bg-primary px-4 py-2.5 font-medium text-white"
         >
-          Add another entry
+          {editing ? "Back to the form" : "Add another entry"}
         </button>
       </Card>
       <div className="mx-auto mt-4 max-w-md">
@@ -518,6 +611,13 @@ function EntryForm({
       {preview ? (
         <p className="rounded-lg bg-accent/20 p-3 text-sm font-medium text-ink dark:text-ink-dark">
           Preview of what a grower sees. Nothing here is saved.
+        </p>
+      ) : null}
+      {editing ? (
+        <p className="rounded-lg bg-accent/20 p-3 text-sm text-ink dark:text-ink-dark">
+          <span className="font-medium">Correcting the entry from </span>
+          {format(new Date(editing.eventDate), "d MMM yyyy, h:mm a")}. Saving replaces what
+          was recorded — it does not add a second entry.
         </p>
       ) : null}
       <div>
@@ -569,7 +669,7 @@ function EntryForm({
 
       {saveError ? <ErrorState message={saveError} onRetry={() => void onSubmit()} /> : null}
 
-      {preview ? null : (
+      {preview || editing ? null : (
         <RecentEntries
           events={events}
           metrics={metrics}
@@ -595,7 +695,13 @@ function EntryForm({
             disabled={isSubmitting || preview}
             className="min-h-11 flex-1 rounded-lg bg-primary px-4 py-2.5 font-medium text-white disabled:opacity-60"
           >
-            {preview ? "Save entry (disabled in preview)" : isSubmitting ? "Saving…" : "Save entry"}
+            {preview
+              ? "Save entry (disabled in preview)"
+              : isSubmitting
+                ? "Saving…"
+                : editing
+                  ? "Save correction"
+                  : "Save entry"}
           </button>
         ) : (
           <button
@@ -607,6 +713,43 @@ function EntryForm({
           </button>
         )}
       </div>
+
+      {editing ? (
+        <div className="pt-2 text-center">
+          {removing ? (
+            <div className="rounded-xl border border-danger/40 bg-danger/5 p-3">
+              <p className="text-sm">
+                Remove this entry for good? The measurements recorded in it are deleted
+                everywhere, not just on this device.
+              </p>
+              <div className="mt-2 flex gap-2">
+                <button
+                  type="button"
+                  onClick={() => setRemoving(false)}
+                  className="min-h-11 flex-1 rounded-lg border border-ink/20 px-4 py-2.5 font-medium dark:border-ink-dark/20"
+                >
+                  Keep it
+                </button>
+                <button
+                  type="button"
+                  onClick={() => void onRemove()}
+                  className="min-h-11 flex-1 rounded-lg bg-danger px-4 py-2.5 font-medium text-white"
+                >
+                  Remove the entry
+                </button>
+              </div>
+            </div>
+          ) : (
+            <button
+              type="button"
+              onClick={() => setRemoving(true)}
+              className="min-h-11 px-4 py-2.5 text-sm font-medium text-danger underline"
+            >
+              Remove this entry
+            </button>
+          )}
+        </div>
+      ) : null}
     </form>
   );
 }
