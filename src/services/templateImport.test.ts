@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { parseTemplateCsv, readCsv } from "./templateImport";
+import { parseTemplateCsv, readCsv, REFERENCE_TEMPLATE_CSV } from "./templateImport";
 import { validateTemplate } from "./templateValidate";
 
 const HEADER = "# fieldwork-template v1";
@@ -154,5 +154,26 @@ describe("validateTemplate", () => {
       parsed(csv("Run,run,grower,Each run,yes,yes,Tonnes handled,,number,yes,t,0,,,,")),
     );
     expect(issues.filter((issue) => issue.level === "error")).toHaveLength(0);
+  });
+});
+
+describe("REFERENCE_TEMPLATE_CSV", () => {
+  it("is a valid template that parses and passes every blocking check", () => {
+    const result = parseTemplateCsv(REFERENCE_TEMPLATE_CSV);
+    expect(result.success).toBe(true);
+    if (!result.success) return;
+    expect(result.data.forms.length).toBeGreaterThan(1);
+    const errors = validateTemplate(result.data).filter((issue) => issue.level === "error");
+    expect(errors).toEqual([]);
+  });
+
+  it("demonstrates grower and staff forms with different scoping", () => {
+    const result = parseTemplateCsv(REFERENCE_TEMPLATE_CSV);
+    if (!result.success) return;
+    const audiences = new Set(result.data.forms.map((form) => form.audience));
+    expect(audiences.has("grower")).toBe(true);
+    expect(audiences.has("staff")).toBe(true);
+    const costLog = result.data.forms.find((form) => form.eventType === "cost_log");
+    expect(costLog?.requiresSite).toBe(false);
   });
 });
