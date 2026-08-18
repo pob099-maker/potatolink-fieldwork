@@ -3,15 +3,19 @@
 // when a backend is configured and the device is online.
 
 import {
+  armAssumptionSchema,
   dataEntryLogSchema,
+  economicScenarioSchema,
   formTemplateSchema,
   measurementEventSchema,
   metricSchema,
   trialSchema,
 } from "../schemas";
 import type {
+  ArmAssumption,
   Contact,
   DataEntryLog,
+  EconomicScenario,
   FormField,
   FormTemplate,
   MeasurementEvent,
@@ -19,12 +23,13 @@ import type {
   PracticeArm,
   Project,
   Result,
+  ResultSet,
   Site,
   SyncStatus,
   Trial,
 } from "../types";
 import { newId, nowIso } from "../lib/id";
-import { dbGetAll, dbPut, dbPutMany, type CollectionName } from "../lib/localdb";
+import { dbDelete, dbGetAll, dbPut, dbPutMany, type CollectionName } from "../lib/localdb";
 import { isBackendConfigured, supabase, toRow } from "../lib/supabase";
 import { fileExtension, getMedia, isMediaPointer, markUploaded, mediaIdFromPointer } from "./media";
 
@@ -33,8 +38,11 @@ const TABLE_NAMES: Partial<Record<CollectionName, string>> = {
   trials: "trials",
   sites: "sites",
   practiceArms: "practice_arms",
+  armAssumptions: "arm_assumptions",
   measurementEvents: "measurement_events",
   metrics: "metrics",
+  economicScenarios: "economic_scenarios",
+  resultSets: "result_sets",
   contacts: "contacts",
   formTemplates: "form_templates",
   dataEntryLogs: "data_entry_logs",
@@ -64,6 +72,70 @@ export const listEvents = (): Promise<MeasurementEvent[]> =>
 export const listMetrics = (): Promise<Metric[]> => dbGetAll<Metric>("metrics");
 export const listEntryLogs = (): Promise<DataEntryLog[]> =>
   dbGetAll<DataEntryLog>("dataEntryLogs");
+export const listAssumptions = (): Promise<ArmAssumption[]> =>
+  dbGetAll<ArmAssumption>("armAssumptions");
+export const listScenarios = (): Promise<EconomicScenario[]> =>
+  dbGetAll<EconomicScenario>("economicScenarios");
+export const listResults = (): Promise<ResultSet[]> => dbGetAll<ResultSet>("resultSets");
+
+async function saveRecord<T extends object>(
+  collection: CollectionName,
+  record: T,
+  failureMessage: string,
+): Promise<Result<T>> {
+  try {
+    await dbPut(collection, record);
+  } catch {
+    return { success: false, error: failureMessage };
+  }
+  const table = TABLE_NAMES[collection];
+  if (supabase && table) {
+    void supabase.from(table).upsert(toRow(record)).then();
+  }
+  notify();
+  return { success: true, data: record };
+}
+
+export async function saveAssumption(assumption: ArmAssumption): Promise<Result<ArmAssumption>> {
+  const check = armAssumptionSchema.safeParse(assumption);
+  if (!check.success) {
+    return { success: false, error: "That assumption isn't valid — check the value." };
+  }
+  return saveRecord("armAssumptions", assumption, "Could not save the assumption.");
+}
+
+/** Remove an assumption locally. Cloud rows are kept (no delete policy yet). */
+export async function removeAssumption(assumptionId: string): Promise<void> {
+  await dbDelete("armAssumptions", assumptionId);
+  if (supabase) {
+    // Best effort: mark the value zero in the cloud so calculations elsewhere match.
+    void supabase
+      .from("arm_assumptions")
+      .update({ value: 0 })
+      .eq("assumption_id", assumptionId)
+      .then();
+  }
+  notify();
+}
+
+export async function saveScenario(scenario: EconomicScenario): Promise<Result<EconomicScenario>> {
+  const check = economicScenarioSchema.safeParse(scenario);
+  if (!check.success) {
+    return { success: false, error: "The scenario isn't valid — check the numbers." };
+  }
+  return saveRecord("economicScenarios", scenario, "Could not save the scenario.");
+}
+
+export async function saveResults(results: ResultSet[]): Promise<void> {
+  await dbPutMany(results.map((result) => ({ collection: "resultSets" as const, value: result })));
+  if (supabase && results.length > 0) {
+    void supabase
+      .from("result_sets")
+      .upsert(results.map((result) => toRow(result)))
+      .then();
+  }
+  notify();
+}
 
 export interface NewEntryInput {
   siteId: string;

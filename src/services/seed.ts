@@ -2,7 +2,16 @@
 // post-harvest handling trial. IDs are fixed so seeding is idempotent and
 // local records line up with a Supabase project seeded from seed.sql.
 
-import type { Contact, FormTemplate, PracticeArm, Project, Site, Trial } from "../types";
+import type {
+  ArmAssumption,
+  Contact,
+  EconomicScenario,
+  FormTemplate,
+  PracticeArm,
+  Project,
+  Site,
+  Trial,
+} from "../types";
 import { dbGet, dbPut, dbPutMany } from "../lib/localdb";
 
 const T0 = "2026-08-01T00:00:00.000Z";
@@ -476,7 +485,52 @@ const heTemplate: FormTemplate = {
   createdAt: T0,
 };
 
-const SEED_FLAG = { key: "seeded", version: 6 };
+// Placeholder economics for the CropVision trial so the Results page
+// demonstrates the engine out of the box. Values are illustrative only and
+// fully editable in the app.
+
+type SeedAssumption = [id: string, armId: string, category: ArmAssumption["category"], fieldName: string, value: number, unit: string];
+
+const assumptionRows: SeedAssumption[] = [
+  ["5f0a6c1e-0007-4000-8000-000000000001", SEED_IDS.armControl, "labour", "Grading labour", 0.5, "hr/t"],
+  ["5f0a6c1e-0007-4000-8000-000000000002", SEED_IDS.armControl, "opex", "Line maintenance", 5000, "$/yr"],
+  ["5f0a6c1e-0007-4000-8000-000000000003", SEED_IDS.armOwned, "capex", "CropVision unit purchase & install", 450000, "$"],
+  ["5f0a6c1e-0007-4000-8000-000000000004", SEED_IDS.armOwned, "opex", "Service & consumables", 18000, "$/yr"],
+  ["5f0a6c1e-0007-4000-8000-000000000005", SEED_IDS.armOwned, "labour", "Grading labour with sorter", 0.15, "hr/t"],
+  ["5f0a6c1e-0007-4000-8000-000000000006", SEED_IDS.armOwned, "revenue", "Marketable yield uplift", 2, "%yield"],
+  ["5f0a6c1e-0007-4000-8000-000000000007", SEED_IDS.armShared, "opex", "Sorting service fee", 8, "$/t"],
+  ["5f0a6c1e-0007-4000-8000-000000000008", SEED_IDS.armShared, "labour", "Grading labour with service", 0.2, "hr/t"],
+  ["5f0a6c1e-0007-4000-8000-000000000009", SEED_IDS.armShared, "revenue", "Marketable yield uplift", 1.5, "%yield"],
+  ["5f0a6c1e-0007-4000-8000-000000000010", SEED_IDS.armImproved, "capex", "Handling upgrades", 60000, "$"],
+  ["5f0a6c1e-0007-4000-8000-000000000011", SEED_IDS.armImproved, "labour", "Grading labour after upgrades", 0.35, "hr/t"],
+  ["5f0a6c1e-0007-4000-8000-000000000012", SEED_IDS.armImproved, "revenue", "Marketable yield uplift", 0.5, "%yield"],
+];
+
+const seedAssumptions: ArmAssumption[] = assumptionRows.map(
+  ([assumptionId, armId, category, fieldName, value, unit]) => ({
+    assumptionId,
+    armId,
+    category,
+    fieldName,
+    value,
+    unit,
+    createdAt: T0,
+  }),
+);
+
+const seedScenario: EconomicScenario = {
+  scenarioId: "5f0a6c1e-0008-4000-8000-000000000001",
+  trialId: SEED_IDS.trial,
+  name: "Base case (placeholder numbers)",
+  assumptionsJson: JSON.stringify({
+    seasonTonnes: 8000,
+    pricePerTonne: 450,
+    labourRatePerHour: 40,
+  }),
+  createdAt: T0,
+};
+
+const SEED_FLAG = { key: "seeded", version: 8 };
 
 export async function seedIfNeeded(): Promise<void> {
   const existing = await dbGet<{ key: string; version: number }>("meta", "seeded");
@@ -494,6 +548,11 @@ export async function seedIfNeeded(): Promise<void> {
     ...heArms.map((arm) => ({ collection: "practiceArms" as const, value: arm })),
     { collection: "formTemplates", value: template },
     { collection: "formTemplates", value: heTemplate },
+    ...seedAssumptions.map((assumption) => ({
+      collection: "armAssumptions" as const,
+      value: assumption,
+    })),
+    { collection: "economicScenarios", value: seedScenario },
   ]);
   await dbPut("meta", SEED_FLAG);
 }
