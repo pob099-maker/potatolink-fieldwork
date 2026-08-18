@@ -51,7 +51,15 @@ export function DashboardPage() {
     <div className="space-y-4">
       <div className="flex items-center justify-between">
         <PageTitle>Dashboard</PageTitle>
-        <NewTrialButton defaultProjectId={projects.data?.[0]?.projectId ?? null} />
+        <div className="flex flex-wrap gap-2">
+          <Link
+            to="/trials/import"
+            className="min-h-11 rounded-lg border border-primary px-4 py-2 font-medium text-primary dark:text-primary-soft"
+          >
+            Import CSV
+          </Link>
+          <NewTrialButton defaultProjectId={projects.data?.[0]?.projectId ?? null} />
+        </div>
       </div>
 
       <Card>

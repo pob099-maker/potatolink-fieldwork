@@ -53,7 +53,16 @@ Forms appear under "Trial forms" on the trial page, each with Fill in and Edit.
 - Staff-side data (calibration logs, cost logs, observer feedback) stays out of the
   grower form; it becomes separate templates when per-eventType templates land.
 
-## 5. Turn the protocol into configuration
+## 5. Or skip the developer entirely: CSV import
+
+Dashboard -> **Import CSV** accepts a Fieldwork Template CSV (reference file:
+`fieldwork-template-v1.csv` in this folder) and creates the whole trial —
+forms, screens, validation — in one step. Errors block creation; warnings ask
+for a confirm. Mark one numeric field `response,yes` and set
+`design,replicated` to import a replicated trial ready for the completeness
+grid.
+
+## 6. Turn the protocol into configuration (developer path)
 
 Hand the filled CSV to the developer/Claude. The change is:
 
