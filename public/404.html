@@ -1,0 +1,25 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>PotatoLink Fieldwork</title>
+    <script>
+      // Links shared before the app moved to hash routing point at a real
+      // path, which a static host answers with this page. Send them on to the
+      // same route in its hash form so an old link still opens the right
+      // screen instead of a dead end.
+      (function () {
+        var marker = "/potatolink-fieldwork/";
+        var path = window.location.pathname;
+        var index = path.indexOf(marker);
+        var base = index === -1 ? "/" : path.slice(0, index + marker.length);
+        var route = index === -1 ? path : path.slice(index + marker.length);
+        var target = base + "#/" + route.replace(/^\/+/, "") + window.location.search;
+        window.location.replace(target);
+      })();
+    </script>
+  </head>
+  <body>
+    <p>Opening PotatoLink Fieldwork…</p>
+  </body>
+</html>
