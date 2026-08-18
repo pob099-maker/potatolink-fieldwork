@@ -33,6 +33,13 @@ jobs:
           VITE_SUPABASE_URL: ${{ vars.VITE_SUPABASE_URL }}
           VITE_SUPABASE_ANON_KEY: ${{ vars.VITE_SUPABASE_ANON_KEY }}
           VITE_ACCESS_CODE: ${{ vars.VITE_ACCESS_CODE }}
+          # Staff sign-in ships switched off, because a magic link cannot come
+          # back to this app until its address is on the Supabase redirect
+          # allow-list — turning the gate on first would lock the team out of
+          # trial setup. Once a sign-in has actually worked, delete this line
+          # (or set the repo variable to anything but "false") and the gate is
+          # live. See docs/staff-sign-in.md.
+          VITE_REQUIRE_STAFF_SIGNIN: ${{ vars.VITE_REQUIRE_STAFF_SIGNIN || 'false' }}
       # public/404.html is copied into dist by the build. It redirects any
       # pre-hash-routing link to its hash equivalent; new links never reach it.
       - uses: actions/upload-pages-artifact@v3
