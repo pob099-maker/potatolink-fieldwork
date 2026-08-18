@@ -2,13 +2,19 @@
 // written locally as "pending" and pushed to Supabase by the sync engine
 // when a backend is configured and the device is online.
 
+import type { ZodTypeAny } from "zod";
 import {
   armAssumptionSchema,
+  contactSchema,
   dataEntryLogSchema,
   economicScenarioSchema,
   formTemplateSchema,
   measurementEventSchema,
   metricSchema,
+  practiceArmSchema,
+  projectSchema,
+  resultSetSchema,
+  siteSchema,
   trialSchema,
 } from "../schemas";
 import type {
@@ -30,7 +36,7 @@ import type {
 } from "../types";
 import { newId, nowIso } from "../lib/id";
 import { dbDelete, dbGetAll, dbPut, dbPutMany, type CollectionName } from "../lib/localdb";
-import { isBackendConfigured, supabase, toRow } from "../lib/supabase";
+import { fromRow, isBackendConfigured, supabase, toRow } from "../lib/supabase";
 import { fileExtension, getMedia, isMediaPointer, markUploaded, mediaIdFromPointer } from "./media";
 
 const TABLE_NAMES: Partial<Record<CollectionName, string>> = {
@@ -407,8 +413,65 @@ export async function pushBaseData(): Promise<Result<string>> {
   return { success: true, data: `Pushed ${pushed} setup records to Supabase.` };
 }
 
+// Cloud → device. Every synced table is fetched, validated, and merged into
+// the local store by ID. Local *pending* entries are never touched — their
+// IDs don't exist in the cloud until this device pushes them.
+const PULL_SPECS: Array<{ collection: CollectionName; table: string; schema: ZodTypeAny }> = [
+  { collection: "projects", table: "projects", schema: projectSchema },
+  { collection: "contacts", table: "contacts", schema: contactSchema },
+  { collection: "trials", table: "trials", schema: trialSchema },
+  { collection: "sites", table: "sites", schema: siteSchema },
+  { collection: "practiceArms", table: "practice_arms", schema: practiceArmSchema },
+  { collection: "armAssumptions", table: "arm_assumptions", schema: armAssumptionSchema },
+  { collection: "formTemplates", table: "form_templates", schema: formTemplateSchema },
+  { collection: "measurementEvents", table: "measurement_events", schema: measurementEventSchema },
+  { collection: "metrics", table: "metrics", schema: metricSchema },
+  { collection: "economicScenarios", table: "economic_scenarios", schema: economicScenarioSchema },
+  { collection: "resultSets", table: "result_sets", schema: resultSetSchema },
+  { collection: "dataEntryLogs", table: "data_entry_logs", schema: dataEntryLogSchema },
+];
+
+let pulling = false;
+
+/** Fetch every synced table from Supabase into the local store. */
+export async function pullFromCloud(): Promise<Result<string>> {
+  if (!isBackendConfigured() || !supabase) {
+    return { success: false, error: "No Supabase project configured." };
+  }
+  if (!navigator.onLine) {
+    return { success: false, error: "Offline — will refresh when a connection returns." };
+  }
+  if (pulling) return { success: true, data: "Refresh already in progress." };
+  pulling = true;
+  try {
+    let pulled = 0;
+    for (const spec of PULL_SPECS) {
+      const { data, error } = await supabase.from(spec.table).select("*");
+      if (error) {
+        return { success: false, error: `Could not fetch ${spec.table}: ${error.message}` };
+      }
+      const valid: unknown[] = [];
+      for (const row of data ?? []) {
+        const check = spec.schema.safeParse(fromRow(row as Record<string, unknown>));
+        if (check.success) valid.push(check.data);
+      }
+      await dbPutMany(valid.map((value) => ({ collection: spec.collection, value })));
+      pulled += valid.length;
+    }
+    if (pulled > 0) notify();
+    return { success: true, data: `Refreshed ${pulled} records from the cloud.` };
+  } finally {
+    pulling = false;
+  }
+}
+
 export function startSyncLoop(): void {
-  window.addEventListener("online", () => void syncPending());
+  window.addEventListener("online", () => {
+    void syncPending();
+    void pullFromCloud();
+  });
   window.setInterval(() => void syncPending(), 30_000);
+  window.setInterval(() => void pullFromCloud(), 60_000);
   void syncPending();
+  void pullFromCloud();
 }

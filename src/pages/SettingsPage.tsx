@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useTheme } from "../contexts/ThemeContext";
 import { isBackendConfigured } from "../lib/supabase";
-import { pushBaseData, syncPending } from "../services/store";
+import { pullFromCloud, pushBaseData, syncPending } from "../services/store";
 import { Card, PageTitle } from "../components/ui";
 
 export function SettingsPage() {
@@ -35,10 +35,16 @@ export function SettingsPage() {
             <div className="mt-3 flex flex-wrap gap-2">
               <button
                 type="button"
-                onClick={() => void syncPending()}
+                onClick={() =>
+                  void syncPending().then(() =>
+                    pullFromCloud().then((result) =>
+                      setPushResult(result.success ? result.data : result.error),
+                    ),
+                  )
+                }
                 className="min-h-11 rounded-lg bg-primary px-4 py-2.5 font-medium text-white"
               >
-                Sync pending entries now
+                Sync now (push &amp; refresh)
               </button>
               <button
                 type="button"
