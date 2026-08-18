@@ -1,0 +1,239 @@
+// Local-first repository. Reads come from IndexedDB; grower entries are
+// written locally as "pending" and pushed to Supabase by the sync engine
+// when a backend is configured and the device is online.
+
+import {
+  dataEntryLogSchema,
+  measurementEventSchema,
+  metricSchema,
+  trialSchema,
+} from "../schemas";
+import type {
+  Contact,
+  DataEntryLog,
+  FormTemplate,
+  MeasurementEvent,
+  Metric,
+  PracticeArm,
+  Project,
+  Result,
+  Site,
+  SyncStatus,
+  Trial,
+} from "../types";
+import { newId, nowIso } from "../lib/id";
+import { dbGetAll, dbPut, dbPutMany, type CollectionName } from "../lib/localdb";
+import { isBackendConfigured, supabase, toRow } from "../lib/supabase";
+
+const TABLE_NAMES: Partial<Record<CollectionName, string>> = {
+  projects: "projects",
+  trials: "trials",
+  sites: "sites",
+  practiceArms: "practice_arms",
+  measurementEvents: "measurement_events",
+  metrics: "metrics",
+  contacts: "contacts",
+  formTemplates: "form_templates",
+  dataEntryLogs: "data_entry_logs",
+};
+
+type Listener = () => void;
+const listeners = new Set<Listener>();
+
+export function subscribeStore(listener: Listener): () => void {
+  listeners.add(listener);
+  return () => listeners.delete(listener);
+}
+
+function notify(): void {
+  for (const listener of listeners) listener();
+}
+
+export const listProjects = (): Promise<Project[]> => dbGetAll<Project>("projects");
+export const listTrials = (): Promise<Trial[]> => dbGetAll<Trial>("trials");
+export const listSites = (): Promise<Site[]> => dbGetAll<Site>("sites");
+export const listArms = (): Promise<PracticeArm[]> => dbGetAll<PracticeArm>("practiceArms");
+export const listContacts = (): Promise<Contact[]> => dbGetAll<Contact>("contacts");
+export const listTemplates = (): Promise<FormTemplate[]> =>
+  dbGetAll<FormTemplate>("formTemplates");
+export const listEvents = (): Promise<MeasurementEvent[]> =>
+  dbGetAll<MeasurementEvent>("measurementEvents");
+export const listMetrics = (): Promise<Metric[]> => dbGetAll<Metric>("metrics");
+export const listEntryLogs = (): Promise<DataEntryLog[]> =>
+  dbGetAll<DataEntryLog>("dataEntryLogs");
+
+export interface NewEntryInput {
+  siteId: string;
+  armId: string;
+  eventType: string;
+  enteredBy: string;
+  deviceType: DataEntryLog["deviceType"];
+  values: Array<{
+    metricName: string;
+    value: number | string;
+    unit: string;
+    photoUrl: string | null;
+  }>;
+}
+
+/** Save a grower entry locally (event + metrics + entry log), then try to sync. */
+export async function addEntry(input: NewEntryInput): Promise<Result<MeasurementEvent>> {
+  const createdAt = nowIso();
+  const event: MeasurementEvent = {
+    eventId: newId(),
+    siteId: input.siteId,
+    armId: input.armId,
+    eventDate: createdAt,
+    eventType: input.eventType,
+    enteredBy: input.enteredBy,
+    syncStatus: "pending",
+    createdAt,
+  };
+  const metrics: Metric[] = input.values.map((value) => ({
+    metricId: newId(),
+    eventId: event.eventId,
+    metricName: value.metricName,
+    value: value.value,
+    unit: value.unit,
+    photoUrl: value.photoUrl,
+    createdAt,
+  }));
+  const log: DataEntryLog = {
+    entryId: newId(),
+    eventId: event.eventId,
+    enteredBy: input.enteredBy,
+    entryDate: createdAt,
+    deviceType: input.deviceType,
+    syncStatus: "pending",
+    createdAt,
+  };
+
+  const eventCheck = measurementEventSchema.safeParse(event);
+  const metricsCheck = metrics.map((metric) => metricSchema.safeParse(metric));
+  const logCheck = dataEntryLogSchema.safeParse(log);
+  if (!eventCheck.success || !logCheck.success || metricsCheck.some((check) => !check.success)) {
+    return { success: false, error: "Entry failed validation and was not saved." };
+  }
+
+  try {
+    await dbPutMany([
+      { collection: "measurementEvents", value: event },
+      ...metrics.map((metric) => ({ collection: "metrics" as const, value: metric })),
+      { collection: "dataEntryLogs", value: log },
+    ]);
+  } catch {
+    return { success: false, error: "Could not save the entry on this device." };
+  }
+
+  notify();
+  void syncPending();
+  return { success: true, data: event };
+}
+
+export async function addTrial(input: {
+  projectId: string;
+  name: string;
+  objective: string;
+}): Promise<Result<Trial>> {
+  const createdAt = nowIso();
+  const trial: Trial = {
+    trialId: newId(),
+    projectId: input.projectId,
+    name: input.name,
+    objective: input.objective,
+    status: "draft",
+    createdAt,
+    updatedAt: createdAt,
+  };
+  const check = trialSchema.safeParse(trial);
+  if (!check.success) {
+    return { success: false, error: "Trial failed validation." };
+  }
+  try {
+    await dbPut("trials", trial);
+  } catch {
+    return { success: false, error: "Could not save the trial on this device." };
+  }
+  if (supabase) {
+    void supabase.from("trials").upsert(toRow(trial)).then();
+  }
+  notify();
+  return { success: true, data: trial };
+}
+
+let syncing = false;
+
+/** Push all pending measurement events (with metrics and logs) to Supabase. */
+export async function syncPending(): Promise<void> {
+  if (syncing || !isBackendConfigured() || !navigator.onLine) return;
+  syncing = true;
+  try {
+    const [events, metrics, logs] = await Promise.all([
+      listEvents(),
+      listMetrics(),
+      listEntryLogs(),
+    ]);
+    const pending = events.filter((event) => event.syncStatus !== "synced");
+    for (const event of pending) {
+      const eventMetrics = metrics.filter((metric) => metric.eventId === event.eventId);
+      const eventLogs = logs.filter((log) => log.eventId === event.eventId);
+      const status: SyncStatus = (await pushEvent(event, eventMetrics, eventLogs))
+        ? "synced"
+        : "error";
+      await dbPutMany([
+        { collection: "measurementEvents", value: { ...event, syncStatus: status } },
+        ...eventLogs.map((log) => ({
+          collection: "dataEntryLogs" as const,
+          value: { ...log, syncStatus: status },
+        })),
+      ]);
+    }
+    if (pending.length > 0) notify();
+  } finally {
+    syncing = false;
+  }
+}
+
+async function pushEvent(
+  event: MeasurementEvent,
+  metrics: Metric[],
+  logs: DataEntryLog[],
+): Promise<boolean> {
+  if (!supabase) return false;
+  const eventResult = await supabase
+    .from("measurement_events")
+    .upsert(toRow({ ...event, syncStatus: "synced" }));
+  if (eventResult.error) return false;
+  const metricsResult = await supabase.from("metrics").upsert(metrics.map((m) => toRow(m)));
+  if (metricsResult.error) return false;
+  const logsResult = await supabase
+    .from("data_entry_logs")
+    .upsert(logs.map((log) => toRow({ ...log, syncStatus: "synced" })));
+  return !logsResult.error;
+}
+
+/** Mirror seed/base records up to Supabase so a fresh backend matches local. */
+export async function pushBaseData(): Promise<void> {
+  if (!supabase) return;
+  const pairs: Array<[CollectionName, unknown[]]> = [
+    ["projects", await listProjects()],
+    ["trials", await listTrials()],
+    ["sites", await listSites()],
+    ["practiceArms", await listArms()],
+    ["contacts", await listContacts()],
+    ["formTemplates", await listTemplates()],
+  ];
+  for (const [collection, records] of pairs) {
+    const table = TABLE_NAMES[collection];
+    if (!table || records.length === 0) continue;
+    await supabase
+      .from(table)
+      .upsert(records.map((record) => toRow(record as Record<string, unknown>)));
+  }
+}
+
+export function startSyncLoop(): void {
+  window.addEventListener("online", () => void syncPending());
+  window.setInterval(() => void syncPending(), 30_000);
+  void syncPending();
+}

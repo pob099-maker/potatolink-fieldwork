@@ -1,0 +1,173 @@
+// Domain types for PotatoLink Fieldwork, adapted from docs/schema.md.
+// The schema is project-agnostic: new trial types only need new FormTemplate
+// configs, never new types. Arms are never hardcoded as A/B.
+
+export type Result<T> =
+  | { success: true; data: T }
+  | { success: false; error: string };
+
+export type ProjectStatus = "active" | "completed" | "archived";
+export type TrialStatus = "draft" | "active" | "completed" | "archived";
+export type ArmType = "control" | "alternative";
+export type SyncStatus = "pending" | "synced" | "error";
+export type ContactRole = "grower" | "staff" | "cooperator" | "vendor";
+export type AssumptionCategory = "capex" | "opex" | "labour" | "revenue" | "other";
+export type AdoptionStatus =
+  | "not_started"
+  | "considering"
+  | "trialling"
+  | "adopted"
+  | "rejected";
+export type DeviceType = "mobile" | "tablet" | "desktop";
+export type FieldType =
+  | "number"
+  | "text"
+  | "select"
+  | "slider"
+  | "photo"
+  | "date"
+  | "boolean";
+
+export interface Project {
+  projectId: string;
+  name: string;
+  funder: string;
+  startDate: string;
+  endDate: string;
+  status: ProjectStatus;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface Trial {
+  trialId: string;
+  projectId: string;
+  name: string;
+  objective: string;
+  status: TrialStatus;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface Site {
+  siteId: string;
+  trialId: string;
+  contactId: string;
+  location: string;
+  region: string;
+  soilType: string;
+  coordinates: { lat: number; lng: number } | null;
+  createdAt: string;
+}
+
+export interface PracticeArm {
+  armId: string;
+  trialId: string;
+  name: string;
+  type: ArmType;
+  description: string;
+  sortOrder: number;
+  createdAt: string;
+}
+
+export interface ArmAssumption {
+  assumptionId: string;
+  armId: string;
+  category: AssumptionCategory;
+  fieldName: string;
+  value: number | string;
+  unit: string;
+  createdAt: string;
+}
+
+export interface MeasurementEvent {
+  eventId: string;
+  siteId: string;
+  armId: string;
+  eventDate: string;
+  eventType: string;
+  enteredBy: string;
+  syncStatus: SyncStatus;
+  createdAt: string;
+}
+
+export interface Metric {
+  metricId: string;
+  eventId: string;
+  metricName: string;
+  value: number | string;
+  unit: string;
+  photoUrl: string | null;
+  createdAt: string;
+}
+
+export interface EconomicScenario {
+  scenarioId: string;
+  trialId: string;
+  name: string;
+  assumptionsJson: string;
+  createdAt: string;
+}
+
+export interface ResultSet {
+  resultId: string;
+  scenarioId: string;
+  armId: string;
+  netBenefit: number;
+  paybackPeriod: number | null;
+  notes: string;
+  calculatedAt: string;
+}
+
+export interface Contact {
+  contactId: string;
+  name: string;
+  business: string;
+  role: ContactRole;
+  region: string;
+  email: string;
+  phone: string;
+  tags: string[];
+  createdAt: string;
+}
+
+export interface AdoptionFollowup {
+  followupId: string;
+  trialId: string;
+  contactId: string;
+  adoptionStatus: AdoptionStatus;
+  behaviourNotes: string;
+  followupDate: string;
+  createdAt: string;
+}
+
+export interface FormField {
+  fieldName: string;
+  label: string;
+  type: FieldType;
+  required: boolean;
+  options: string[] | null;
+  min: number | null;
+  max: number | null;
+  unit: string | null;
+  displayOrder: number;
+}
+
+export interface FormTemplate {
+  templateId: string;
+  trialId: string;
+  armId: string | null;
+  name: string;
+  fields: FormField[];
+  createdAt: string;
+}
+
+export interface DataEntryLog {
+  entryId: string;
+  eventId: string;
+  enteredBy: string;
+  entryDate: string;
+  deviceType: DeviceType;
+  syncStatus: SyncStatus;
+  createdAt: string;
+}
