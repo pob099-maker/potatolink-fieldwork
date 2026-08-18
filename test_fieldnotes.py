@@ -1,0 +1,64 @@
+import unittest
+from datetime import date
+
+from fieldnotes import Entry, entries_for_site, format_entry, parse_entry
+
+
+class ParseEntryTests(unittest.TestCase):
+    def test_parses_well_formed_line(self):
+        entry = parse_entry("2026-08-18 | site-A | Soil moisture higher than last visit.")
+        self.assertEqual(entry.day, date(2026, 8, 18))
+        self.assertEqual(entry.site, "site-A")
+        self.assertEqual(entry.observation, "Soil moisture higher than last visit.")
+
+    def test_strips_whitespace_around_fields(self):
+        entry = parse_entry("  2026-08-18|site-B|  Frost overnight.  ")
+        self.assertEqual(entry.site, "site-B")
+        self.assertEqual(entry.observation, "Frost overnight.")
+
+    def test_observation_may_contain_pipes(self):
+        entry = parse_entry("2026-08-18 | site-A | Reading: 4 | retest tomorrow")
+        self.assertEqual(entry.observation, "Reading: 4 | retest tomorrow")
+
+    def test_rejects_missing_fields(self):
+        with self.assertRaises(ValueError):
+            parse_entry("2026-08-18 | site-A")
+
+    def test_rejects_empty_field(self):
+        with self.assertRaises(ValueError):
+            parse_entry("2026-08-18 |  | Something happened.")
+
+    def test_rejects_bad_date(self):
+        with self.assertRaises(ValueError):
+            parse_entry("18/08/2026 | site-A | Something happened.")
+
+
+class FormatEntryTests(unittest.TestCase):
+    def test_round_trips_through_parse(self):
+        line = "2026-08-18 | site-C | Drainage channel cleared."
+        self.assertEqual(format_entry(parse_entry(line)), line)
+
+    def test_formats_entry(self):
+        entry = Entry(day=date(2026, 1, 5), site="site-A", observation="First visit.")
+        self.assertEqual(format_entry(entry), "2026-01-05 | site-A | First visit.")
+
+
+class EntriesForSiteTests(unittest.TestCase):
+    LINES = [
+        "2026-08-17 | site-A | Rows planted.",
+        "",
+        "2026-08-18 | site-B | Irrigation line repaired.",
+        "2026-08-18 | site-A | Soil moisture higher than last visit.",
+    ]
+
+    def test_filters_by_site_and_skips_blank_lines(self):
+        entries = entries_for_site(self.LINES, "site-A")
+        self.assertEqual(len(entries), 2)
+        self.assertTrue(all(e.site == "site-A" for e in entries))
+
+    def test_no_matches_returns_empty_list(self):
+        self.assertEqual(entries_for_site(self.LINES, "site-Z"), [])
+
+
+if __name__ == "__main__":
+    unittest.main()
