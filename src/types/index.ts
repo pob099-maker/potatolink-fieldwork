@@ -98,6 +98,8 @@ export interface PracticeArm {
   /** Retired: kept for its data, but not offered for new entries. */
   archived: boolean;
   createdAt: string;
+  /** Bumped on every edit; drives last-writer-wins on sync. */
+  updatedAt?: string;
 }
 
 export interface ArmAssumption {
@@ -108,6 +110,7 @@ export interface ArmAssumption {
   value: number | string;
   unit: string;
   createdAt: string;
+  updatedAt?: string;
 }
 
 export interface MeasurementEvent {
@@ -149,6 +152,7 @@ export interface EconomicScenario {
   name: string;
   assumptionsJson: string;
   createdAt: string;
+  updatedAt?: string;
 }
 
 export interface ResultSet {
@@ -214,6 +218,7 @@ export interface FormTemplate {
   requiresArm: boolean;
   fields: FormField[];
   createdAt: string;
+  updatedAt?: string;
 }
 
 export interface DataEntryLog {
