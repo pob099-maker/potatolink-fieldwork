@@ -11,6 +11,7 @@ import {
 } from "../hooks/useCollections";
 import { addArm, removeArm, saveArm } from "../services/store";
 import { buildEntryUrl, summariseArm } from "../services/entryLinks";
+import { buildTrialCsv, csvFileName, downloadCsv } from "../services/export";
 import { describeEvent, describeEventScope, eventsForTrial } from "../services/events";
 import { Card, EmptyState, ErrorState, PageTitle, Skeleton, StatusPill, SyncBadge } from "../components/ui";
 import type { FormTemplate, MeasurementEvent, Metric, PracticeArm, Site, Trial } from "../types";
@@ -146,6 +147,25 @@ export function TrialDetailPage() {
         >
           Results &amp; economics
         </Link>
+        <button
+          type="button"
+          onClick={() =>
+            downloadCsv(
+              csvFileName(trial),
+              buildTrialCsv(
+                trial,
+                trialSites,
+                trialArms,
+                trialTemplates,
+                trialEvents,
+                metrics.data ?? [],
+              ),
+            )
+          }
+          className="min-h-11 rounded-lg border border-ink/20 px-4 py-2.5 font-medium dark:border-ink-dark/20"
+        >
+          Export data (CSV)
+        </button>
       </div>
 
       <StaffRecords
