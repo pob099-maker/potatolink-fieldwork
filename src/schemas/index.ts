@@ -50,6 +50,7 @@ export const practiceArmSchema = z.object({
   sortOrder: z.number().int(),
   archived: z.boolean().default(false),
   createdAt: isoDate,
+  updatedAt: isoDate.optional(),
 });
 
 export const armAssumptionSchema = z.object({
@@ -60,6 +61,7 @@ export const armAssumptionSchema = z.object({
   value: z.union([z.number(), z.string()]),
   unit: z.string(),
   createdAt: isoDate,
+  updatedAt: isoDate.optional(),
 });
 
 export const syncStatusSchema = z.enum(["pending", "synced", "error"]);
@@ -94,6 +96,7 @@ export const economicScenarioSchema = z.object({
   name: z.string().min(1),
   assumptionsJson: z.string(),
   createdAt: isoDate,
+  updatedAt: isoDate.optional(),
 });
 
 export const resultSetSchema = z.object({
@@ -171,6 +174,7 @@ export const formTemplateSchema = z.object({
   requiresArm: z.boolean().default(true),
   fields: z.array(formFieldSchema).min(1),
   createdAt: isoDate,
+  updatedAt: isoDate.optional(),
 });
 
 export const dataEntryLogSchema = z.object({

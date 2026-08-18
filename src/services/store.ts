@@ -35,7 +35,7 @@ import type {
   Trial,
 } from "../types";
 import { newId, nowIso } from "../lib/id";
-import { dbDelete, dbGetAll, dbPut, dbPutMany, type CollectionName } from "../lib/localdb";
+import { dbDelete, dbGet, dbGetAll, dbPut, dbPutMany, type CollectionName } from "../lib/localdb";
 import { fromRow, isBackendConfigured, supabase, toRow } from "../lib/supabase";
 import { fileExtension, getMedia, isMediaPointer, markUploaded, mediaIdFromPointer } from "./media";
 
@@ -92,29 +92,126 @@ export const listResults = (): Promise<ResultSet[]> => dbGetAll<ResultSet>("resu
  * The local copy is authoritative, so a failed cloud write is reported without
  * losing the record.
  */
+// Editable config records — stable IDs that already exist in the cloud, so
+// they need last-writer-wins on pull and a retry path when a save can't reach
+// the cloud. (Append-only records like measurement events don't.)
+const EDITABLE: Partial<Record<CollectionName, string>> = {
+  trials: "trialId",
+  formTemplates: "templateId",
+  practiceArms: "armId",
+  armAssumptions: "assumptionId",
+  economicScenarios: "scenarioId",
+};
+
+function recordId(collection: CollectionName, record: Record<string, unknown>): string {
+  return String(record[EDITABLE[collection] ?? "id"]);
+}
+
+function recordTimestamp(record: { updatedAt?: string; createdAt?: string }): string {
+  return record.updatedAt ?? record.createdAt ?? "";
+}
+
+interface OutboxItem {
+  collection: CollectionName;
+  id: string;
+}
+
+async function readOutbox(): Promise<OutboxItem[]> {
+  const stored = await dbGet<{ key: string; items: OutboxItem[] }>("meta", "outbox");
+  return stored?.items ?? [];
+}
+
+async function writeOutbox(items: OutboxItem[]): Promise<void> {
+  await dbPut("meta", { key: "outbox", items });
+}
+
+async function enqueueOutbox(collection: CollectionName, id: string): Promise<void> {
+  const items = await readOutbox();
+  if (!items.some((item) => item.collection === collection && item.id === id)) {
+    await writeOutbox([...items, { collection, id }]);
+  }
+}
+
+async function dequeueOutbox(collection: CollectionName, id: string): Promise<void> {
+  const items = await readOutbox();
+  await writeOutbox(
+    items.filter((item) => !(item.collection === collection && item.id === id)),
+  );
+}
+
+/**
+ * Save a config record locally, stamp updatedAt for last-writer-wins, then push
+ * to Supabase. If the push can't happen (offline) or fails, the record is
+ * queued in the outbox and retried by syncPending — so an edit made with no
+ * signal is never stranded on one device.
+ */
 async function saveRecord<T extends object>(
   collection: CollectionName,
   record: T,
   failureMessage: string,
 ): Promise<Result<T>> {
+  const stamped = (
+    EDITABLE[collection] ? { ...record, updatedAt: nowIso() } : record
+  ) as T & Record<string, unknown>;
   try {
-    await dbPut(collection, record);
+    await dbPut(collection, stamped);
   } catch {
     return { success: false, error: failureMessage };
   }
   notify();
 
   const table = TABLE_NAMES[collection];
-  if (supabase && table && navigator.onLine) {
-    const { error } = await supabase.from(table).upsert(toRow(record));
-    if (error) {
-      return {
-        success: false,
-        error: `Saved on this device, but the cloud copy failed: ${error.message}`,
-      };
-    }
+  const id = recordId(collection, stamped);
+  if (!supabase || !table) return { success: true, data: stamped };
+
+  if (!navigator.onLine) {
+    await enqueueOutbox(collection, id);
+    return { success: true, data: stamped };
   }
-  return { success: true, data: record };
+  const { error } = await supabase.from(table).upsert(toRow(stamped));
+  if (error) {
+    await enqueueOutbox(collection, id);
+    return {
+      success: true,
+      data: stamped,
+      // Not surfaced as failure: the record is safe locally and queued to retry.
+    };
+  }
+  await dequeueOutbox(collection, id);
+  return { success: true, data: stamped };
+}
+
+/** Push every queued config record to Supabase, in foreign-key-safe order. */
+const OUTBOX_ORDER: CollectionName[] = [
+  "trials",
+  "practiceArms",
+  "formTemplates",
+  "economicScenarios",
+  "armAssumptions",
+];
+
+async function drainOutbox(): Promise<void> {
+  if (!supabase || !navigator.onLine) return;
+  const items = await readOutbox();
+  if (items.length === 0) return;
+  const ordered = [...items].sort(
+    (a, b) => OUTBOX_ORDER.indexOf(a.collection) - OUTBOX_ORDER.indexOf(b.collection),
+  );
+  for (const item of ordered) {
+    const table = TABLE_NAMES[item.collection];
+    if (!table) {
+      await dequeueOutbox(item.collection, item.id);
+      continue;
+    }
+    const all = await dbGetAll<Record<string, unknown>>(item.collection);
+    const record = all.find((candidate) => recordId(item.collection, candidate) === item.id);
+    if (!record) {
+      await dequeueOutbox(item.collection, item.id);
+      continue;
+    }
+    const { error } = await supabase.from(table).upsert(toRow(record));
+    if (!error) await dequeueOutbox(item.collection, item.id);
+  }
 }
 
 export async function saveAssumption(assumption: ArmAssumption): Promise<Result<ArmAssumption>> {
@@ -406,16 +503,7 @@ export async function saveTemplate(template: FormTemplate): Promise<Result<FormT
   if (new Set(names).size !== names.length) {
     return { success: false, error: "Two fields ended up with the same internal name." };
   }
-  try {
-    await dbPut("formTemplates", template);
-  } catch {
-    return { success: false, error: "Could not save the form on this device." };
-  }
-  if (supabase) {
-    void supabase.from("form_templates").upsert(toRow(template)).then();
-  }
-  notify();
-  return { success: true, data: template };
+  return saveRecord("formTemplates", template, "Could not save the form on this device.");
 }
 
 let syncing = false;
@@ -446,6 +534,7 @@ export async function syncPending(): Promise<void> {
       ]);
     }
     if (pending.length > 0) notify();
+    await drainOutbox();
   } finally {
     syncing = false;
   }
@@ -568,19 +657,39 @@ export async function pullFromCloud(): Promise<Result<string>> {
   if (pulling) return { success: true, data: "Refresh already in progress." };
   pulling = true;
   try {
+    const outbox = await readOutbox();
     let pulled = 0;
     for (const spec of PULL_SPECS) {
       const { data, error } = await supabase.from(spec.table).select("*");
       if (error) {
         return { success: false, error: `Could not fetch ${spec.table}: ${error.message}` };
       }
-      const valid: unknown[] = [];
+      const valid: Record<string, unknown>[] = [];
       for (const row of data ?? []) {
         const check = spec.schema.safeParse(fromRow(row as Record<string, unknown>));
-        if (check.success) valid.push(check.data);
+        if (check.success) valid.push(check.data as Record<string, unknown>);
       }
-      await dbPutMany(valid.map((value) => ({ collection: spec.collection, value })));
-      pulled += valid.length;
+
+      let toWrite = valid;
+      // For editable records, never overwrite a newer or still-queued local
+      // edit — that is the silent-loss the timestamp guard prevents (S-1).
+      if (EDITABLE[spec.collection]) {
+        const local = await dbGetAll<Record<string, unknown>>(spec.collection);
+        const localById = new Map(local.map((row) => [recordId(spec.collection, row), row]));
+        const queued = new Set(
+          outbox.filter((item) => item.collection === spec.collection).map((item) => item.id),
+        );
+        toWrite = valid.filter((row) => {
+          const id = recordId(spec.collection, row);
+          if (queued.has(id)) return false;
+          const existing = localById.get(id);
+          if (!existing) return true;
+          return recordTimestamp(row) >= recordTimestamp(existing);
+        });
+      }
+
+      await dbPutMany(toWrite.map((value) => ({ collection: spec.collection, value })));
+      pulled += toWrite.length;
     }
     if (pulled > 0) notify();
     return { success: true, data: `Refreshed ${pulled} records from the cloud.` };
