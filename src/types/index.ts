@@ -23,13 +23,16 @@ export type FieldType =
   | "number"
   | "text"
   | "select"
+  | "multiselect"
   | "slider"
   | "photo"
   | "video"
+  | "file"
+  | "gps"
   | "date"
   | "boolean";
 
-export type MediaKind = "photo" | "video";
+export type MediaKind = "photo" | "video" | "file";
 
 /** A photo or video captured on-device, held locally until uploaded. */
 export interface MediaItem {

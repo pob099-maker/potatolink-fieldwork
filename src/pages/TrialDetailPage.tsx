@@ -162,7 +162,11 @@ export function TrialDetailPage() {
                               rel="noreferrer"
                               className="text-primary underline dark:text-primary-soft"
                             >
-                              {metric.value === "video" ? "🎬 video" : "📷 photo"}
+                              {metric.value === "video"
+                                ? "🎬 video"
+                                : metric.value === "file"
+                                  ? "📎 file"
+                                  : "📷 photo"}
                             </a>
                           ))}
                         </li>

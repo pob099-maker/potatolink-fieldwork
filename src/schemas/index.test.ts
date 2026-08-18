@@ -52,6 +52,62 @@ describe("buildEntryFormSchema", () => {
     expect(schema.safeParse({ mainRemovalCategory: "gold nuggets" }).success).toBe(false);
   });
 
+  it("validates multiselect against options and honours required", () => {
+    const defects: FormField = {
+      fieldName: "defects",
+      label: "Defects graded out",
+      type: "multiselect",
+      required: true,
+      options: ["rot", "greening"],
+      min: null,
+      max: null,
+      unit: null,
+      displayOrder: 0,
+    };
+    const schema = buildEntryFormSchema([defects]);
+    expect(schema.safeParse({ defects: ["rot", "greening"] }).success).toBe(true);
+    expect(schema.safeParse({ defects: [] }).success).toBe(false);
+    expect(schema.safeParse({ defects: ["mud"] }).success).toBe(false);
+
+    const optional = buildEntryFormSchema([{ ...defects, required: false }]);
+    expect(optional.safeParse({ defects: [] }).success).toBe(true);
+    expect(optional.safeParse({}).success).toBe(true);
+  });
+
+  it("validates gps fields as lat,lng strings", () => {
+    const location: FormField = {
+      fieldName: "passLocation",
+      label: "Where was this pass?",
+      type: "gps",
+      required: true,
+      options: null,
+      min: null,
+      max: null,
+      unit: null,
+      displayOrder: 0,
+    };
+    const schema = buildEntryFormSchema([location]);
+    expect(schema.safeParse({ passLocation: "-17.268900,145.478100" }).success).toBe(true);
+    expect(schema.safeParse({ passLocation: "somewhere north" }).success).toBe(false);
+  });
+
+  it("treats file fields like photo fields: optional media pointers", () => {
+    const attachment: FormField = {
+      fieldName: "csvExport",
+      label: "HarvestEye CSV export (optional)",
+      type: "file",
+      required: false,
+      options: null,
+      min: null,
+      max: null,
+      unit: null,
+      displayOrder: 0,
+    };
+    const schema = buildEntryFormSchema([attachment]);
+    expect(schema.safeParse({ csvExport: "media:abc-123" }).success).toBe(true);
+    expect(schema.safeParse({}).success).toBe(true);
+  });
+
   it("treats video fields like photo fields: optional media pointers", () => {
     const videoField: FormField = {
       fieldName: "video",

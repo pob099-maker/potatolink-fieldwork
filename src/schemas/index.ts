@@ -130,7 +130,19 @@ export const adoptionFollowupSchema = z.object({
 export const formFieldSchema = z.object({
   fieldName: z.string().min(1),
   label: z.string().min(1),
-  type: z.enum(["number", "text", "select", "slider", "photo", "video", "date", "boolean"]),
+  type: z.enum([
+    "number",
+    "text",
+    "select",
+    "multiselect",
+    "slider",
+    "photo",
+    "video",
+    "file",
+    "gps",
+    "date",
+    "boolean",
+  ]),
   required: z.boolean(),
   options: z.array(z.string()).nullable(),
   min: z.number().nullable(),
@@ -186,12 +198,27 @@ export function buildEntryFormSchema(
       case "select":
         value = field.options ? z.enum(field.options as [string, ...string[]]) : z.string();
         break;
+      case "multiselect": {
+        const choice = field.options
+          ? z.enum(field.options as [string, ...string[]])
+          : z.string();
+        value = field.required
+          ? z.array(choice).min(1, "Choose at least one")
+          : z.array(choice);
+        break;
+      }
       case "date":
         value = z.string().min(1, "Pick a date");
         break;
       case "photo":
       case "video":
+      case "file":
         value = z.string(); // "media:<id>" pointer to the on-device blob
+        break;
+      case "gps":
+        value = z
+          .string()
+          .regex(/^-?\d+(\.\d+)?,\s*-?\d+(\.\d+)?$/, "Capture a location first");
         break;
       case "text":
         value = z.string();
