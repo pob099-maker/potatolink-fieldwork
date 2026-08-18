@@ -43,6 +43,8 @@ export function TrialDetailPage() {
     [templates.data, trialId],
   );
 
+  const growerForm = trialTemplates.find((template) => template.audience === "grower");
+
   // null = every site combined; otherwise one site's figures only.
   const [selectedSiteId, setSelectedSiteId] = useState<string | null>(null);
   const selectedSite = trialSites.find((site) => site.siteId === selectedSiteId);
@@ -116,17 +118,21 @@ export function TrialDetailPage() {
       ) : null}
 
       <div className="flex flex-wrap gap-2">
+        {growerForm ? (
+          <Link
+            to={`/trials/${trial.trialId}/entry?form=${growerForm.templateId}${
+              selectedSiteId ? `&site=${selectedSiteId}` : ""
+            }`}
+            className="min-h-11 rounded-lg bg-primary px-4 py-2.5 font-medium text-white"
+          >
+            + Add an entry
+          </Link>
+        ) : null}
         <Link
           to={`/trials/${trial.trialId}/results`}
-          className="min-h-11 rounded-lg bg-primary px-4 py-2.5 font-medium text-white"
+          className="min-h-11 rounded-lg border border-primary px-4 py-2.5 font-medium text-primary dark:text-primary-soft"
         >
           Results &amp; economics
-        </Link>
-        <Link
-          to={`/trials/${trial.trialId}/template`}
-          className="min-h-11 rounded-lg border border-ink/20 px-4 py-2.5 font-medium dark:border-ink-dark/20"
-        >
-          Edit entry form
         </Link>
       </div>
 
