@@ -88,3 +88,17 @@ NEVER hardcode trial arms as A/B. Always use the PracticeArm collection.
 - Photo capture is a first-class input type, not an afterthought.
 - Pre-fill site, trial, and arm context. Growers should never select these manually.
 - Plain language only. No technical jargon in grower-facing UI.
+
+## Brand
+
+Follow the PotatoLink brand guidelines, not the placeholder palette in
+`docs/PROMPT.md` (that teal was a stand-in before the guidelines were available).
+
+- Colours are defined once as tokens in `src/index.css`. Use the token names
+  (`primary`, `accent`, `paper`, `ink`, …), never raw hex in components.
+- Primary is rich brown; gold/tan is the accent for keylines, panels, and
+  highlights; backgrounds are warm cream, not neutral grey.
+- `h1`/`h2` render bold uppercase — write headings in sentence case and let the
+  stylesheet do it.
+- The logo mark is overlapping potato outlines; the header carries the
+  "Australian Potato Industry Extension Project" descriptor.
