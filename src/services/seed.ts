@@ -454,7 +454,7 @@ const heTemplate: FormTemplate = {
   createdAt: T0,
 };
 
-const SEED_FLAG = { key: "seeded", version: 4 };
+const SEED_FLAG = { key: "seeded", version: 5 };
 
 export async function seedIfNeeded(): Promise<void> {
   const existing = await dbGet<{ key: string; version: number }>("meta", "seeded");

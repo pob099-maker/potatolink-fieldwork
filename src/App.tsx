@@ -6,6 +6,7 @@ import { ThemeProvider } from "./contexts/ThemeContext";
 import { useStoreInvalidation } from "./hooks/useCollections";
 import { DashboardPage } from "./pages/DashboardPage";
 import { EntryPage } from "./pages/EntryPage";
+import { TemplateEditorPage } from "./pages/TemplateEditorPage";
 import { ResultsPage } from "./pages/ResultsPage";
 import { SettingsPage } from "./pages/SettingsPage";
 import { TrialDetailPage } from "./pages/TrialDetailPage";
@@ -22,6 +23,7 @@ function AppRoutes() {
         <Route path="/trials" element={<TrialsPage />} />
         <Route path="/trials/:trialId" element={<TrialDetailPage />} />
         <Route path="/trials/:trialId/entry" element={<EntryPage />} />
+        <Route path="/trials/:trialId/template" element={<TemplateEditorPage />} />
         <Route path="/trials/:trialId/results" element={<ResultsPage />} />
         <Route path="/settings" element={<SettingsPage />} />
       </Routes>
