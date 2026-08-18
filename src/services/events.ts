@@ -1,7 +1,7 @@
 // Working out which trial a record belongs to, and describing it in plain
 // language for the trial page and dashboard.
 
-import type { FormTemplate, MeasurementEvent, PracticeArm, Site } from "../types";
+import type { FormTemplate, MeasurementEvent, Metric, PracticeArm, Site } from "../types";
 
 /**
  * The trial a record belongs to. New records carry it directly; older ones
@@ -53,4 +53,41 @@ export function describeEvent(event: MeasurementEvent, templates: FormTemplate[]
 export function describeEventScope(event: MeasurementEvent, sites: Site[]): string {
   if (!event.siteId) return "Whole trial";
   return sites.find((site) => site.siteId === event.siteId)?.location ?? "Unknown site";
+}
+
+export interface RecentEntry {
+  event: MeasurementEvent;
+  /** A short, readable summary of what was recorded. */
+  summary: string;
+}
+
+/**
+ * The last few entries recorded at a site, newest first — what a grower sees
+ * to confirm their run went in. Media metrics are left out of the summary;
+ * they add length without telling anyone whether the right numbers landed.
+ */
+export function recentEntriesAtSite(
+  events: MeasurementEvent[],
+  metrics: Metric[],
+  trialId: string,
+  siteId: string,
+  limit = 5,
+): RecentEntry[] {
+  return events
+    .filter((event) => event.trialId === trialId && event.siteId === siteId)
+    .sort((a, b) => b.eventDate.localeCompare(a.eventDate))
+    .slice(0, limit)
+    .map((event) => {
+      const summary = metrics
+        .filter((metric) => metric.eventId === event.eventId && !metric.photoUrl)
+        .slice(0, 3)
+        .map((metric) => {
+          // Booleans are stored as strings; show them the way they were asked.
+          if (metric.value === "true") return "Yes";
+          if (metric.value === "false") return "No";
+          return `${metric.value}${metric.unit ? ` ${metric.unit}` : ""}`;
+        })
+        .join(" · ");
+      return { event, summary };
+    });
 }
