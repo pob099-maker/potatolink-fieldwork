@@ -3,6 +3,7 @@
 // data; they never assert a statistical difference — that is the biometrician's
 // job (see docs/replicated-trials-design.md).
 
+import { metricNumber } from "./metricValue";
 import type { MeasurementEvent, Metric, PracticeArm, Site, Trial } from "../types";
 
 export interface PlotCell {
@@ -102,8 +103,8 @@ export function responseSummary(
     );
     const values = metrics
       .filter((metric) => eventIds.has(metric.eventId) && metric.metricName === response)
-      .map((metric) => Number(metric.value))
-      .filter((value) => Number.isFinite(value));
+      .map((metric) => metricNumber(metric.value))
+      .filter((value): value is number => value !== null);
 
     const n = values.length;
     if (n === 0) return { armId: arm.armId, armName: arm.name, n, mean: null, se: null };

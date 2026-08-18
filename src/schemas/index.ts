@@ -60,6 +60,8 @@ export const armAssumptionSchema = z.object({
   fieldName: z.string().min(1),
   value: z.union([z.number(), z.string()]),
   unit: z.string(),
+  // Rows written before the flag existed are placeholders by definition.
+  status: z.enum(["placeholder", "confirmed"]).default("placeholder"),
   createdAt: isoDate,
   updatedAt: isoDate.optional(),
 });
@@ -83,7 +85,7 @@ export const metricSchema = z.object({
   metricId: id,
   eventId: id,
   metricName: z.string().min(1),
-  value: z.union([z.number(), z.string()]),
+  value: z.union([z.number(), z.string(), z.boolean(), z.array(z.string())]),
   unit: z.string(),
   photoUrl: z.string().nullable(),
   createdAt: isoDate,

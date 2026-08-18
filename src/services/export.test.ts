@@ -4,6 +4,7 @@ import type {
   FormTemplate,
   MeasurementEvent,
   Metric,
+  MetricValue,
   PracticeArm,
   Site,
   Trial,
@@ -82,7 +83,7 @@ function event(id: string, over: Partial<MeasurementEvent> = {}): MeasurementEve
   };
 }
 
-function metric(id: string, eventId: string, name: string, value: number | string, over: Partial<Metric> = {}): Metric {
+function metric(id: string, eventId: string, name: string, value: MetricValue, over: Partial<Metric> = {}): Metric {
   return {
     metricId: id,
     eventId,
@@ -129,6 +130,26 @@ describe("buildTrialCsv", () => {
     expect(row[4]).toBe(""); // practice
     expect(csv).toContain("cost_log");
     expect(csv).toContain("leaseCost");
+  });
+
+  it("gives a multi-choice answer one row per selection", () => {
+    // Long format means one observation per row. Three defects seen is three
+    // observations — joining them into one cell hands the analyst a parsing job.
+    const events = [event("e1")];
+    const metrics = [metric("m1", "e1", "defects", ["Scab", "Greening", "Rot"])];
+    const csv = buildTrialCsv(trial, sites, arms, templates, events, metrics);
+    const lines = csv.split("\r\n");
+    expect(lines).toHaveLength(4); // header + one row per defect
+    expect(lines.filter((line) => line.includes("defects"))).toHaveLength(3);
+    expect(csv).toContain("Scab");
+    expect(csv).toContain("Rot");
+  });
+
+  it("exports a yes/no answer as a boolean, not the word", () => {
+    const events = [event("e1")];
+    const metrics = [metric("m1", "e1", "blockageOccurred", false)];
+    const csv = buildTrialCsv(trial, sites, arms, templates, events, metrics);
+    expect(csv.split("\r\n")[1]).toContain("false");
   });
 
   it("puts a media URL in its own column", () => {

@@ -1,7 +1,14 @@
 import "fake-indexeddb/auto";
 import { beforeEach, describe, expect, it } from "vitest";
 import { dbGet, dbPut } from "../lib/localdb";
-import { addTrial, listTemplates, saveTemplate } from "./store";
+import {
+  addTrial,
+  listAssumptions,
+  listTemplates,
+  removeAssumption,
+  saveAssumption,
+  saveTemplate,
+} from "./store";
 import type { FormTemplate } from "../types";
 
 // The store is exercised without a Supabase client (env unset in tests), so
@@ -74,5 +81,40 @@ describe("sync hardening (S-1/S-2)", () => {
     });
     const outbox = await dbGet<{ key: string; items: unknown[] }>("meta", "outbox");
     expect(outbox?.items).toHaveLength(1);
+  });
+});
+
+describe("assumption deletes (S-4)", () => {
+  beforeEach(async () => {
+    await dbPut("meta", { key: "deletions", items: [] });
+  });
+
+  it("removes the assumption and queues the cloud delete", async () => {
+    const saved = await saveAssumption({
+      assumptionId: "assumption-1",
+      armId: "arm-1",
+      category: "opex",
+      fieldName: "Service contract",
+      value: 18000,
+      unit: "$/yr",
+      status: "placeholder",
+      createdAt: "2026-08-01T00:00:00.000Z",
+    });
+    expect(saved.success).toBe(true);
+
+    const removed = await removeAssumption("assumption-1");
+    expect(removed.success).toBe(true);
+
+    // Gone locally...
+    const remaining = await listAssumptions();
+    expect(remaining.some((item) => item.assumptionId === "assumption-1")).toBe(false);
+
+    // ...and queued to be deleted in the cloud rather than zeroed, which used
+    // to leave a live $0 line that the next pull brought back.
+    const queue = await dbGet<{ key: string; items: Array<{ id: string }> }>(
+      "meta",
+      "deletions",
+    );
+    expect(queue?.items.map((item) => item.id)).toContain("assumption-1");
   });
 });

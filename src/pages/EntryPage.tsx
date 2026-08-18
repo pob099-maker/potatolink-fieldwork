@@ -23,6 +23,7 @@ import type {
   FormField,
   MeasurementEvent,
   Metric,
+  MetricValue,
   PracticeArm,
   Site,
 } from "../types";
@@ -438,18 +439,15 @@ function EntryForm({
           };
         }
         if (field.type === "multiselect") {
-          const chosen = Array.isArray(raw) ? raw : [];
+          const chosen = Array.isArray(raw) ? (raw as string[]) : [];
           if (chosen.length === 0) return null;
-          return {
-            metricName: field.fieldName,
-            value: chosen.join(", "),
-            unit: "",
-            photoUrl: null,
-          };
+          // Stored as the list it is, not joined into one cell — the export
+          // splits it back into one row per choice.
+          return { metricName: field.fieldName, value: chosen, unit: "", photoUrl: null };
         }
         return {
           metricName: field.fieldName,
-          value: typeof raw === "boolean" ? String(raw) : (raw as number | string),
+          value: raw as MetricValue,
           unit: field.unit ?? "",
           photoUrl: null,
         };

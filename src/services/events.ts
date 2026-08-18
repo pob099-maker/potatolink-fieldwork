@@ -1,6 +1,7 @@
 // Working out which trial a record belongs to, and describing it in plain
 // language for the trial page and dashboard.
 
+import { metricDisplay } from "./metricValue";
 import type { FormTemplate, MeasurementEvent, Metric, PracticeArm, Site } from "../types";
 
 /**
@@ -39,7 +40,13 @@ export function templateForEvent(
   event: MeasurementEvent,
   templates: FormTemplate[],
 ): FormTemplate | undefined {
-  return templates.find((template) => template.eventType === event.eventType);
+  // Event types are only unique within a trial — nearly every trial has a
+  // "field_record" — so the trial has to be matched first. Without it a record
+  // is labelled with whichever trial's form happened to come first in the
+  // list, which put another trial's form name in the export.
+  const sameTrial = templates.filter((template) => template.trialId === event.trialId);
+  const search = sameTrial.length > 0 ? sameTrial : templates;
+  return search.find((template) => template.eventType === event.eventType);
 }
 
 /** Plain-language name for a record: its form's name, else its event type. */
@@ -81,12 +88,7 @@ export function recentEntriesAtSite(
       const summary = metrics
         .filter((metric) => metric.eventId === event.eventId && !metric.photoUrl)
         .slice(0, 3)
-        .map((metric) => {
-          // Booleans are stored as strings; show them the way they were asked.
-          if (metric.value === "true") return "Yes";
-          if (metric.value === "false") return "No";
-          return `${metric.value}${metric.unit ? ` ${metric.unit}` : ""}`;
-        })
+        .map((metric) => metricDisplay(metric.value, metric.unit))
         .join(" · ");
       return { event, summary };
     });

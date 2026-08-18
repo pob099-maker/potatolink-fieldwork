@@ -5,6 +5,7 @@ import {
   blendComparisons,
   buildResultSets,
   compareArms,
+  assumptionConfidence,
   DEFAULT_SCENARIO,
   formatMoney,
   parseScenarioAssumptions,
@@ -12,6 +13,7 @@ import {
   type ScenarioAssumptions,
 } from "../services/economics";
 import { removeAssumption, saveAssumption, saveResults, saveScenario } from "../services/store";
+import { metricNumber } from "../services/metricValue";
 import { newId, nowIso } from "../lib/id";
 import {
   useArms,
@@ -23,7 +25,7 @@ import {
   useTrials,
 } from "../hooks/useCollections";
 import { Card, EmptyState, ErrorState, PageTitle, Skeleton, StatusPill } from "../components/ui";
-import type { ArmAssumption, AssumptionCategory, PracticeArm } from "../types";
+import type { ArmAssumption, AssumptionCategory, Metric, PracticeArm } from "../types";
 
 const inputClass =
   "w-full min-h-11 rounded-lg border border-ink/20 bg-surface px-3 py-2 " +
@@ -274,6 +276,8 @@ export function ResultsPage() {
       </Card>
       )}
 
+      <ConfidenceBanner assumptions={trialAssumptions} />
+
       <section aria-label="Comparison results" className="space-y-3">
         <h2 className="font-display text-lg font-bold">
           Each alternative vs “{control.name}”
@@ -412,6 +416,9 @@ function ArmAssumptionsCard({
       fieldName: label.trim() || "assumption",
       value: Number(value) || 0,
       unit,
+      // Everything starts indicative. Confirming is a deliberate act, because
+      // it is what turns a modelled figure into one the grower can rely on.
+      status: "placeholder",
       createdAt: nowIso(),
     });
     if (!result.success) {
@@ -436,14 +443,18 @@ function ArmAssumptionsCard({
       ) : (
         <ul className="mt-2 divide-y divide-ink/10 text-sm dark:divide-ink-dark/10">
           {assumptions.map((assumption) => (
-            <li key={assumption.assumptionId} className="flex items-center gap-2 py-2">
+            <li
+              key={assumption.assumptionId}
+              className="flex flex-wrap items-center gap-2 py-2"
+            >
               <span className="rounded-full bg-primary/10 px-2 py-0.5 text-xs font-medium capitalize text-primary dark:bg-primary-soft/20 dark:text-primary-soft">
                 {assumption.category}
               </span>
-              <span className="flex-1">{assumption.fieldName}</span>
+              <span className="min-w-[9rem] flex-1">{assumption.fieldName}</span>
               <span className="font-medium">
                 {String(assumption.value)} {assumption.unit}
               </span>
+              <ConfirmToggle assumption={assumption} />
               <button
                 type="button"
                 aria-label={`Remove ${assumption.fieldName}`}
@@ -522,6 +533,76 @@ function ArmAssumptionsCard({
   );
 }
 
+/**
+ * Whether a figure is a stand-in or the grower's real number. Kept as one tap
+ * on the row itself: chasing down a cost happens one line at a time, usually
+ * with an invoice in the other hand.
+ */
+function ConfirmToggle({ assumption }: { assumption: ArmAssumption }) {
+  const confirmed = (assumption.status ?? "placeholder") === "confirmed";
+  return (
+    <button
+      type="button"
+      aria-pressed={confirmed}
+      aria-label={`Mark ${assumption.fieldName} as ${
+        confirmed ? "a placeholder" : "confirmed"
+      }`}
+      onClick={() =>
+        void saveAssumption({
+          ...assumption,
+          status: confirmed ? "placeholder" : "confirmed",
+        })
+      }
+      className={`min-h-11 rounded-full border px-3 text-xs font-medium ${
+        confirmed
+          ? "border-success/40 bg-success/10 text-success"
+          : "border-warning/40 bg-warning/10 text-warning"
+      }`}
+    >
+      {confirmed ? "✓ Confirmed" : "Placeholder"}
+    </button>
+  );
+}
+
+/**
+ * Says out loud how much of the result below is modelled. Every figure starts
+ * as a placeholder, so without this a demonstration number reads exactly like
+ * a grower's own — and gets quoted as if it were.
+ */
+function ConfidenceBanner({ assumptions }: { assumptions: ArmAssumption[] }) {
+  const confidence = assumptionConfidence(assumptions);
+  if (confidence.total === 0) return null;
+
+  if (confidence.placeholder === 0) {
+    return (
+      <p className="rounded-xl border border-success/30 bg-success/10 p-3 text-sm text-success">
+        ✓ Every figure below is confirmed against real costs.
+      </p>
+    );
+  }
+
+  const names = [...new Set(confidence.placeholderNames)];
+  return (
+    <section
+      aria-label="How reliable these figures are"
+      className="rounded-xl border border-warning/40 bg-warning/10 p-3"
+    >
+      <h2 className="font-semibold text-warning">
+        Indicative only — {confidence.placeholder} of {confidence.total}{" "}
+        {confidence.total === 1 ? "figure is" : "figures are"} still a placeholder
+      </h2>
+      <p className="mt-1 text-sm text-ink/70 dark:text-ink-dark/70">
+        The results below are worked out from stand-in numbers, not this grower's costs.
+        Replace them with real figures and mark each one confirmed before the payback is
+        quoted to anyone.
+      </p>
+      <p className="mt-1 text-sm text-ink/60 dark:text-ink-dark/60">
+        Still to confirm: {names.join(", ")}.
+      </p>
+    </section>
+  );
+}
+
 function MeasuredContext({
   trialArms,
   events,
@@ -530,7 +611,7 @@ function MeasuredContext({
 }: {
   trialArms: PracticeArm[];
   events: Array<{ eventId: string; armId: string | null }>;
-  metrics: Array<{ eventId: string; metricName: string; value: number | string }>;
+  metrics: Metric[];
   siteLabel: string | null;
 }) {
   return (
@@ -549,8 +630,8 @@ function MeasuredContext({
           const numbersFor = (name: string) =>
             metrics
               .filter((metric) => eventIds.has(metric.eventId) && metric.metricName === name)
-              .map((metric) => Number(metric.value))
-              .filter((value) => Number.isFinite(value));
+              .map((metric) => metricNumber(metric.value))
+              .filter((value): value is number => value !== null);
           const tonnes = numbersFor("tonnesHandled").reduce((sum, value) => sum + value, 0);
           const hours = numbersFor("runDuration").reduce((sum, value) => sum + value, 0);
           return (
