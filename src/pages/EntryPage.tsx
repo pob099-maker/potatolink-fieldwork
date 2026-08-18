@@ -49,7 +49,7 @@ export function EntryPage() {
   const trialArms = useMemo(
     () =>
       (arms.data ?? [])
-        .filter((arm) => arm.trialId === trialId)
+        .filter((arm) => arm.trialId === trialId && !arm.archived)
         .sort((a, b) => a.sortOrder - b.sortOrder),
     [arms.data, trialId],
   );

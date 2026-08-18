@@ -9,6 +9,7 @@ import {
   useTemplates,
   useTrials,
 } from "../hooks/useCollections";
+import { addArm, removeArm, saveArm } from "../services/store";
 import { buildEntryUrl, summariseArm } from "../services/entryLinks";
 import { describeEvent, describeEventScope, eventsForTrial } from "../services/events";
 import { Card, EmptyState, ErrorState, PageTitle, Skeleton, StatusPill, SyncBadge } from "../components/ui";
@@ -37,6 +38,12 @@ export function TrialDetailPage() {
         .filter((arm) => arm.trialId === trialId)
         .sort((a, b) => a.sortOrder - b.sortOrder),
     [arms.data, trialId],
+  );
+  // Archived practices keep their data but drop out of the live comparison,
+  // the entry links, and the per-arm stat cards.
+  const activeArms = useMemo(
+    () => trialArms.filter((arm) => !arm.archived),
+    [trialArms],
   );
 
   const trialTemplates = useMemo(
@@ -154,14 +161,16 @@ export function TrialDetailPage() {
         selectedSiteId={selectedSiteId}
       />
 
+      <ArmManager trialId={trial.trialId} arms={trialArms} />
+
       <TrialForms trial={trial} templates={trialTemplates} />
 
-      <EntryLinks trial={trial} sites={trialSites} arms={trialArms} selectedSiteId={selectedSiteId} />
+      <EntryLinks trial={trial} sites={trialSites} arms={activeArms} selectedSiteId={selectedSiteId} />
 
-      {trialArms.length === 0 ? (
+      {activeArms.length === 0 ? (
         <EmptyState message="No practice arms configured for this trial yet." />
       ) : (
-        trialArms.map((arm) => {
+        activeArms.map((arm) => {
           const armEvents = (events.data ?? []).filter(
             (event) =>
               event.armId === arm.armId &&
@@ -346,6 +355,168 @@ function StaffRecords({
           );
         })}
       </ul>
+    </Card>
+  );
+}
+
+/**
+ * Add, rename, reorder and retire the practices being compared in a trial.
+ * Removing a practice with data archives it (kept but hidden from new entry
+ * and the live comparison); one with no data yet is deleted outright.
+ */
+function ArmManager({ trialId, arms }: { trialId: string; arms: PracticeArm[] }) {
+  const [newName, setNewName] = useState("");
+  const [newType, setNewType] = useState<PracticeArm["type"]>("alternative");
+  const [message, setMessage] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
+
+  const active = arms.filter((arm) => !arm.archived);
+  const archived = arms.filter((arm) => arm.archived);
+
+  async function reorder(index: number, delta: -1 | 1): Promise<void> {
+    const target = index + delta;
+    if (target < 0 || target >= active.length) return;
+    const a = active[index];
+    const b = active[target];
+    await saveArm({ ...a, sortOrder: b.sortOrder });
+    await saveArm({ ...b, sortOrder: a.sortOrder });
+  }
+
+  async function onRemove(arm: PracticeArm): Promise<void> {
+    setError(null);
+    const result = await removeArm(arm);
+    if (!result.success) {
+      setError(result.error);
+      return;
+    }
+    setMessage(
+      result.data === "deleted"
+        ? `Removed "${arm.name}".`
+        : `Archived "${arm.name}" — its records are kept and can be restored.`,
+    );
+  }
+
+  async function onAdd(): Promise<void> {
+    setError(null);
+    setMessage(null);
+    const result = await addArm({ trialId, name: newName.trim(), type: newType });
+    if (!result.success) {
+      setError(result.error);
+      return;
+    }
+    setNewName("");
+    setMessage(`Added "${result.data.name}".`);
+  }
+
+  return (
+    <Card>
+      <h2 className="font-display text-lg font-bold">Practices</h2>
+      <p className="mt-1 text-sm text-ink/60 dark:text-ink-dark/60">
+        The practices this trial compares. Every trial keeps one control; the rest are
+        the alternatives being tested against it.
+      </p>
+
+      <ul className="mt-3 divide-y divide-ink/10 dark:divide-ink-dark/10">
+        {active.map((arm, index) => (
+          <li key={arm.armId} className="flex flex-wrap items-center gap-2 py-2">
+            <input
+              aria-label={`Rename ${arm.name}`}
+              defaultValue={arm.name}
+              onBlur={(changeEvent) => {
+                const name = changeEvent.target.value.trim();
+                if (name && name !== arm.name) void saveArm({ ...arm, name });
+              }}
+              className="min-h-11 flex-1 rounded-lg border border-ink/20 bg-surface px-3 dark:border-ink-dark/20 dark:bg-surface-dark"
+            />
+            <StatusPill status={arm.type} />
+            <button
+              type="button"
+              aria-label={`Move ${arm.name} up`}
+              disabled={index === 0}
+              onClick={() => void reorder(index, -1)}
+              className="min-h-11 min-w-11 rounded-lg border border-ink/15 disabled:opacity-30 dark:border-ink-dark/15"
+            >
+              ↑
+            </button>
+            <button
+              type="button"
+              aria-label={`Move ${arm.name} down`}
+              disabled={index === active.length - 1}
+              onClick={() => void reorder(index, 1)}
+              className="min-h-11 min-w-11 rounded-lg border border-ink/15 disabled:opacity-30 dark:border-ink-dark/15"
+            >
+              ↓
+            </button>
+            <button
+              type="button"
+              aria-label={`Remove ${arm.name}`}
+              onClick={() => void onRemove(arm)}
+              className="min-h-11 rounded-lg border border-danger/40 px-3 font-medium text-danger"
+            >
+              Remove
+            </button>
+          </li>
+        ))}
+      </ul>
+
+      {archived.length > 0 ? (
+        <div className="mt-3">
+          <h3 className="text-sm font-semibold text-ink/60 dark:text-ink-dark/60">Archived</h3>
+          <ul className="divide-y divide-ink/10 text-sm dark:divide-ink-dark/10">
+            {archived.map((arm) => (
+              <li key={arm.armId} className="flex flex-wrap items-center gap-2 py-2">
+                <span className="flex-1 text-ink/60 dark:text-ink-dark/60">{arm.name}</span>
+                <button
+                  type="button"
+                  onClick={() => void saveArm({ ...arm, archived: false })}
+                  className="min-h-11 rounded-lg border border-primary px-3 font-medium text-primary dark:text-primary-soft"
+                >
+                  Restore
+                </button>
+              </li>
+            ))}
+          </ul>
+        </div>
+      ) : null}
+
+      <form
+        className="mt-3 flex flex-wrap gap-2"
+        onSubmit={(submitEvent) => {
+          submitEvent.preventDefault();
+          void onAdd();
+        }}
+      >
+        <input
+          aria-label="New practice name"
+          placeholder="e.g. Improved handling"
+          value={newName}
+          onChange={(changeEvent) => setNewName(changeEvent.target.value)}
+          required
+          className="min-h-11 flex-1 rounded-lg border border-ink/20 bg-surface px-3 dark:border-ink-dark/20 dark:bg-surface-dark"
+        />
+        <select
+          aria-label="Practice type"
+          value={newType}
+          onChange={(changeEvent) => setNewType(changeEvent.target.value as PracticeArm["type"])}
+          className="min-h-11 rounded-lg border border-ink/20 bg-surface px-3 dark:border-ink-dark/20 dark:bg-surface-dark"
+        >
+          <option value="alternative">Alternative</option>
+          <option value="control">Control</option>
+        </select>
+        <button type="submit" className="min-h-11 rounded-lg bg-primary px-4 font-medium text-white">
+          Add practice
+        </button>
+      </form>
+      {error ? (
+        <p role="alert" className="mt-2 text-sm text-danger">
+          {error}
+        </p>
+      ) : null}
+      {message ? (
+        <p role="status" className="mt-2 text-sm text-success">
+          {message}
+        </p>
+      ) : null}
     </Card>
   );
 }

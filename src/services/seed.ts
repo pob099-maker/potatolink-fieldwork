@@ -115,6 +115,7 @@ const arms: PracticeArm[] = [
     type: "control",
     description: "Current practice without an optical sorter.",
     sortOrder: 0,
+    archived: false,
     createdAt: T0,
   },
   {
@@ -124,6 +125,7 @@ const arms: PracticeArm[] = [
     type: "alternative",
     description: "Optical sorter owned and operated on farm.",
     sortOrder: 1,
+    archived: false,
     createdAt: T0,
   },
   {
@@ -133,6 +135,7 @@ const arms: PracticeArm[] = [
     type: "alternative",
     description: "Optical sorter accessed through a shared or contracted service.",
     sortOrder: 2,
+    archived: false,
     createdAt: T0,
   },
   {
@@ -142,6 +145,7 @@ const arms: PracticeArm[] = [
     type: "alternative",
     description: "Upgraded conventional handling practices, no optical sorter.",
     sortOrder: 3,
+    archived: false,
     createdAt: T0,
   },
 ];
@@ -314,6 +318,7 @@ const heArms: PracticeArm[] = [
     type: "control",
     description: "Hand-graded samples only; no in-field sensing.",
     sortOrder: 0,
+    archived: false,
     createdAt: T0,
   },
   {
@@ -323,6 +328,7 @@ const heArms: PracticeArm[] = [
     type: "alternative",
     description: "HarvestEye unit mounted on the harvester, validated against hand grading.",
     sortOrder: 1,
+    archived: false,
     createdAt: T0,
   },
 ];

@@ -45,6 +45,7 @@ export const practiceArmSchema = z.object({
   type: z.enum(["control", "alternative"]),
   description: z.string(),
   sortOrder: z.number().int(),
+  archived: z.boolean().default(false),
   createdAt: isoDate,
 });
 

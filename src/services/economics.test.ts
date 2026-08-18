@@ -21,6 +21,7 @@ function arm(armId: string, type: PracticeArm["type"], sortOrder: number): Pract
     type,
     description: "",
     sortOrder,
+    archived: false,
     createdAt: "2026-08-18T00:00:00.000Z",
   };
 }
