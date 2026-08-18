@@ -1,5 +1,5 @@
 import type { ReactNode } from "react";
-import { NavLink } from "react-router-dom";
+import { NavLink, useLocation } from "react-router-dom";
 import { useTheme } from "../contexts/ThemeContext";
 import { isBackendConfigured } from "../lib/supabase";
 
@@ -35,6 +35,10 @@ function PotatoMark() {
 
 export function Layout({ children }: { children: ReactNode }) {
   const { theme, toggleTheme } = useTheme();
+  // A grower opens a link straight to a form. Showing them the staff
+  // navigation invites taps into trial setup and makes a one-job screen look
+  // like an admin console, so the entry route runs without it.
+  const focused = /\/trials\/[^/]+\/entry/.test(useLocation().pathname);
 
   return (
     <div className="min-h-screen bg-paper text-ink dark:bg-paper-dark dark:text-ink-dark">
@@ -61,6 +65,7 @@ export function Layout({ children }: { children: ReactNode }) {
             {theme === "dark" ? "☀️" : "🌙"}
           </button>
         </div>
+        {focused ? null : (
         <nav className="mx-auto flex max-w-4xl gap-1 px-4 pb-2">
           {NAV_ITEMS.map((item) => (
             <NavLink
@@ -79,6 +84,7 @@ export function Layout({ children }: { children: ReactNode }) {
             </NavLink>
           ))}
         </nav>
+        )}
       </header>
       {!isBackendConfigured() ? (
         <p className="mx-auto max-w-4xl px-4 pt-3 text-sm text-ink/50 dark:text-ink-dark/50">

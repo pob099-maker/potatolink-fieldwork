@@ -83,6 +83,9 @@ export function EntryPage() {
     onlyArm;
   const grower = contacts.data?.find((contact) => contact.role === "grower");
 
+  // Staff previewing what a grower sees. The real form renders, but saving is
+  // disabled so a preview can never leave a record behind.
+  const preview = searchParams.get("preview") === "1";
   const linkRep = Number(searchParams.get("rep"));
   const replicate =
     Number.isInteger(linkRep) && linkRep > 0 ? linkRep : pickedReplicate;
@@ -104,8 +107,14 @@ export function EntryPage() {
     );
   }
 
-  if (!unlocked) {
-    return <AccessGate onSubmit={tryUnlock} />;
+  if (!unlocked && !preview) {
+    return (
+      <AccessGate
+        onSubmit={tryUnlock}
+        trialName={trial.name}
+        siteName={site?.location ?? null}
+      />
+    );
   }
 
   // Only ask for the context this form actually needs: a cost log belongs to
@@ -145,6 +154,7 @@ export function EntryPage() {
       eventType={template.eventType}
       siteId={template.requiresSite && site ? site.siteId : null}
       armId={template.requiresArm && arm ? arm.armId : null}
+      preview={preview}
       replicate={trial.design === "replicated" ? replicate : null}
       replicateLabel={trial.design === "replicated" && replicate ? `Rep ${replicate}` : null}
       enteredBy={grower?.contactId ?? ""}
@@ -268,15 +278,28 @@ function SavedSyncBadge({ eventId }: { eventId: string }) {
   return <SyncBadge status={status ?? "pending"} />;
 }
 
-function AccessGate({ onSubmit }: { onSubmit: (code: string) => boolean }) {
+function AccessGate({
+  onSubmit,
+  trialName,
+  siteName,
+}: {
+  onSubmit: (code: string) => boolean;
+  trialName: string;
+  siteName: string | null;
+}) {
   const [code, setCode] = useState("");
   const [failed, setFailed] = useState(false);
 
   return (
     <Card className="mx-auto max-w-sm">
-      <PageTitle>Enter access code</PageTitle>
-      <p className="mt-1 text-ink/60 dark:text-ink-dark/60">
-        Use the code from your PotatoLink contact to record trial data.
+      <PageTitle>Record an observation</PageTitle>
+      <p className="mt-1 font-medium">{trialName}</p>
+      {siteName ? (
+        <p className="text-sm text-ink/60 dark:text-ink-dark/60">📍 {siteName}</p>
+      ) : null}
+      <p className="mt-2 text-ink/60 dark:text-ink-dark/60">
+        Enter the access code from your PotatoLink contact to continue. This device will
+        remember it.
       </p>
       <form
         className="mt-4 space-y-3"
@@ -316,6 +339,7 @@ function AccessGate({ onSubmit }: { onSubmit: (code: string) => boolean }) {
 }
 
 function EntryForm({
+  preview,
   formName,
   trialId,
   trialName,
@@ -330,6 +354,7 @@ function EntryForm({
   enteredBy,
   fields,
 }: {
+  preview: boolean;
   formName: string;
   trialId: string;
   trialName: string;
@@ -378,6 +403,7 @@ function EntryForm({
   }
 
   const onSubmit = handleSubmit(async (values) => {
+    if (preview) return;
     setSaveError(null);
     const metricValues = fields
       .map((field) => {
@@ -460,6 +486,11 @@ function EntryForm({
 
   return (
     <form onSubmit={onSubmit} className="mx-auto max-w-md space-y-4">
+      {preview ? (
+        <p className="rounded-lg bg-accent/20 p-3 text-sm font-medium text-ink dark:text-ink-dark">
+          Preview of what a grower sees. Nothing here is saved.
+        </p>
+      ) : null}
       <div>
         <PageTitle>{formName}</PageTitle>
         <p className="mt-1 text-sm text-ink/60 dark:text-ink-dark/60">
@@ -516,10 +547,10 @@ function EntryForm({
         {isLastScreen ? (
           <button
             type="submit"
-            disabled={isSubmitting}
+            disabled={isSubmitting || preview}
             className="min-h-11 flex-1 rounded-lg bg-primary px-4 py-2.5 font-medium text-white disabled:opacity-60"
           >
-            {isSubmitting ? "Saving…" : "Save entry"}
+            {preview ? "Save entry (disabled in preview)" : isSubmitting ? "Saving…" : "Save entry"}
           </button>
         ) : (
           <button

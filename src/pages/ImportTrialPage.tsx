@@ -99,6 +99,25 @@ export function ImportTrialPage() {
             {parsed.objective ? (
               <p className="text-sm text-ink/60 dark:text-ink-dark/60">{parsed.objective}</p>
             ) : null}
+            <p className="mt-2 flex flex-wrap gap-1 text-xs">
+              {parsed.sites.map((site) => (
+                <span
+                  key={site.location}
+                  className="rounded-full bg-accent/20 px-2 py-0.5 text-ink dark:text-ink-dark"
+                >
+                  📍 {site.location}
+                </span>
+              ))}
+              {parsed.practices.map((practice) => (
+                <span
+                  key={practice.name}
+                  className="rounded-full bg-primary/10 px-2 py-0.5 text-primary dark:bg-primary-soft/20 dark:text-primary-soft"
+                >
+                  {practice.name}
+                  {practice.type === "control" ? " (control)" : ""}
+                </span>
+              ))}
+            </p>
             <ul className="mt-3 divide-y divide-ink/10 dark:divide-ink-dark/10">
               {parsed.forms.map((form) => (
                 <li key={form.name} className="py-2">

@@ -177,3 +177,72 @@ describe("REFERENCE_TEMPLATE_CSV", () => {
     expect(costLog?.requiresSite).toBe(false);
   });
 });
+
+const NEWLINE = String.fromCharCode(10);
+
+describe("sites and practices from the CSV", () => {
+  it("parses site and practice rows", () => {
+    const result = parseTemplateCsv(
+      [
+        HEADER,
+        "trial,Demosite Trial",
+        "site,Gatton,Queensland,Alluvial loam",
+        "site,Tolga,North Queensland,Red ferrosol",
+        "practice,Current practice,control,What the grower does now.",
+        "practice,New practice,alternative,The change being tested.",
+        FIELD_HEADER,
+        "Run,run,grower,,yes,yes,Tonnes handled,,number,yes,t,0,,,,",
+      ].join(NEWLINE),
+    );
+    expect(result.success).toBe(true);
+    if (!result.success) return;
+    expect(result.data.sites).toHaveLength(2);
+    expect(result.data.sites[0]).toEqual({
+      location: "Gatton",
+      region: "Queensland",
+      soilType: "Alluvial loam",
+    });
+    expect(result.data.practices.filter((p) => p.type === "control")).toHaveLength(1);
+  });
+
+  it("rejects a practice with an unknown type", () => {
+    const result = parseTemplateCsv(
+      [HEADER, "trial,T", "practice,Odd,sideways,", FIELD_HEADER,
+       "Run,run,grower,,yes,yes,Yield,,number,yes,t,,,,,"].join(NEWLINE),
+    );
+    expect(result.success).toBe(false);
+    if (!result.success) expect(result.error).toMatch(/control.*alternative/i);
+  });
+
+  it("errors on two controls and warns when only one practice is given", () => {
+    const two = parseTemplateCsv(
+      [HEADER, "trial,T", "practice,A,control,", "practice,B,control,", FIELD_HEADER,
+       "Run,run,grower,,yes,yes,Yield,,number,yes,t,,,,,"].join(NEWLINE),
+    );
+    if (!two.success) throw new Error(two.error);
+    const issues = validateTemplate(two.data);
+    expect(issues.some((i) => i.level === "error" && /marked as the control/.test(i.message))).toBe(true);
+
+    const one = parseTemplateCsv(
+      [HEADER, "trial,T", "practice,A,control,", FIELD_HEADER,
+       "Run,run,grower,,yes,yes,Yield,,number,yes,t,,,,,"].join(NEWLINE),
+    );
+    if (!one.success) throw new Error(one.error);
+    expect(validateTemplate(one.data).some((i) => i.level === "warning" && /Only one practice/.test(i.message))).toBe(true);
+  });
+
+  it("warns when the file defines no sites", () => {
+    const result = parseTemplateCsv(csv("Run,run,grower,,yes,yes,Yield,,number,yes,t,,,,,"));
+    if (!result.success) throw new Error(result.error);
+    expect(validateTemplate(result.data).some((i) => /No sites in the file/.test(i.message))).toBe(true);
+  });
+
+  it("ships a reference template that already includes sites and practices", () => {
+    const result = parseTemplateCsv(REFERENCE_TEMPLATE_CSV);
+    expect(result.success).toBe(true);
+    if (!result.success) return;
+    expect(result.data.sites.length).toBeGreaterThan(0);
+    expect(result.data.practices.some((p) => p.type === "control")).toBe(true);
+    expect(validateTemplate(result.data).filter((i) => i.level === "error")).toEqual([]);
+  });
+});

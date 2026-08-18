@@ -3,6 +3,10 @@ trial,Example Demosite Trial
 objective,Show every part of the template format in one working example.
 design,observational
 replicates,0
+site,Gatton,Queensland,Alluvial loam
+site,Tolga,North Queensland,Red ferrosol
+practice,Current practice,control,What the grower does now.
+practice,New practice,alternative,The change being tested.
 form,event_type,audience,frequency,requires_site,requires_arm,label,field_name,type,required,unit,min,max,options,response,help
 Run record,run_record,grower,Each run,yes,yes,Tonnes handled,tonnesHandled,number,yes,t,0,,,,Core throughput measure
 Run record,run_record,grower,Each run,yes,yes,How well did it work?,,slider,no,,1,5,,,Quick operator rating

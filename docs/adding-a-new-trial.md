@@ -55,9 +55,11 @@ Forms appear under "Trial forms" on the trial page, each with Fill in and Edit.
 
 ## 5. Or skip the developer entirely: CSV import
 
-Dashboard -> **Import CSV** accepts a Fieldwork Template CSV (reference file:
-`fieldwork-template-v1.csv` in this folder) and creates the whole trial —
-forms, screens, validation — in one step. Errors block creation; warnings ask
+**New trial** (in the menu) -> download the blank template -> fill it in ->
+upload. The template covers the whole trial in one file: `trial` / `objective`
+/ `design` / `replicates` rows, one `site` row per site, one `practice` row
+per practice (`control` or `alternative`), then one row per question. The
+trial arrives ready to record — no manual setup afterwards. Errors block creation; warnings ask
 for a confirm. Mark one numeric field `response,yes` and set
 `design,replicated` to import a replicated trial ready for the completeness
 grid.
