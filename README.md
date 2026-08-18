@@ -10,6 +10,15 @@ A note is one line per observation:
 
 ## Usage
 
+Show every entry in a notes file, or filter to one site:
+
+```
+python fieldnotes.py notes.txt
+python fieldnotes.py notes.txt --site site-A
+```
+
+Or use it as a library:
+
 ```python
 from fieldnotes import parse_entry, entries_for_site
 
