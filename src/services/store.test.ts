@@ -15,7 +15,8 @@ describe("seed", () => {
     const templates = await listTemplates();
     const template = templates.find((candidate) => candidate.trialId === SEED_IDS.trial);
     expect(template).toBeDefined();
-    expect(template?.fields).toHaveLength(8);
+    expect(template?.fields).toHaveLength(9);
+    expect(template?.fields.some((field) => field.type === "video")).toBe(true);
   });
 
   it("is idempotent", async () => {

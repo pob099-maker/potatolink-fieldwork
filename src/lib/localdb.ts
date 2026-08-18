@@ -15,13 +15,14 @@ export const COLLECTIONS = [
   "adoptionFollowups",
   "formTemplates",
   "dataEntryLogs",
+  "media",
   "meta",
 ] as const;
 
 export type CollectionName = (typeof COLLECTIONS)[number];
 
 const DB_NAME = "potatolink-fieldwork";
-const DB_VERSION = 1;
+const DB_VERSION = 2;
 
 const KEY_FIELDS: Record<string, string> = {
   projects: "projectId",
@@ -37,6 +38,7 @@ const KEY_FIELDS: Record<string, string> = {
   adoptionFollowups: "followupId",
   formTemplates: "templateId",
   dataEntryLogs: "entryId",
+  media: "mediaId",
   meta: "key",
 };
 
