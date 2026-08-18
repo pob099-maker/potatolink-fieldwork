@@ -1,0 +1,13 @@
+Stage,Data Point,Question shown in the app,Type,Required,Unit,Options (select only),Min,Max,Frequency,Purpose (why it proves the case)
+Trial Setup,Trial name,,n/a,yes,,,,,Once,Name shown to staff and growers
+Trial Setup,Objective,,n/a,yes,,,,,Once,One sentence: what the trial proves
+Trial Setup,Sites,"Location, region, soil type, host contact",n/a,yes,,,,,Once per site,Where the trial runs and who hosts it
+Trial Setup,Control arm,Current practice being compared against,n/a,yes,,,,,Once,Every comparison needs a baseline
+Trial Setup,Alternative arms,One row per new practice/equipment/model,n/a,yes,,,,,Once per arm,The practices being tested
+Field Record,EXAMPLE Tonnes handled,Tonnes handled,number,yes,t,,0,,Per run,Core throughput measure
+Field Record,EXAMPLE Ease rating,How well did it work?,slider,no,,,1,5,Per run,Quick operator sentiment
+Field Record,EXAMPLE Main issue,Main issue seen,select,no,,"issue A, issue B, none",,,Per run,Structured instead of free text
+Field Record,EXAMPLE Went as planned,Did the run go as planned?,boolean,yes,,,,,Per run,Flags runs to follow up
+Field Record,EXAMPLE Evidence photo,Photo of the result (optional),photo,no,,,,,Per run,Visual evidence (max 20 MB)
+Field Record,EXAMPLE Evidence video,Short video of the run (optional),video,no,,,,,Per run,Demo material (max 100 MB / ~1 min)
+Field Record,EXAMPLE Notes,Anything else worth noting?,text,no,,,,,Per run,Catch-all; keep it last
