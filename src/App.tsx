@@ -36,7 +36,10 @@ export function App() {
     <QueryClientProvider client={queryClient}>
       <ThemeProvider>
         <AccessProvider>
-          <BrowserRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
+          <BrowserRouter
+            basename={import.meta.env.BASE_URL.replace(/\/$/, "")}
+            future={{ v7_startTransition: true, v7_relativeSplatPath: true }}
+          >
             <AppRoutes />
           </BrowserRouter>
         </AccessProvider>
