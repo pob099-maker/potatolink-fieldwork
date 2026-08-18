@@ -88,6 +88,12 @@ export function TrialDetailPage() {
         >
           Results &amp; economics
         </Link>
+        <Link
+          to={`/trials/${trial.trialId}/template`}
+          className="min-h-11 rounded-lg border border-ink/20 px-4 py-2.5 font-medium dark:border-ink-dark/20"
+        >
+          Edit entry form
+        </Link>
       </div>
 
       {trialArms.length === 0 ? (

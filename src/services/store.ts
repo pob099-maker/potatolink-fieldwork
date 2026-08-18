@@ -4,6 +4,7 @@
 
 import {
   dataEntryLogSchema,
+  formTemplateSchema,
   measurementEventSchema,
   metricSchema,
   trialSchema,
@@ -11,6 +12,7 @@ import {
 import type {
   Contact,
   DataEntryLog,
+  FormField,
   FormTemplate,
   MeasurementEvent,
   Metric,
@@ -150,16 +152,68 @@ export async function addTrial(input: {
   if (!check.success) {
     return { success: false, error: "Trial failed validation." };
   }
+  // Every trial starts with an editable form so setup continues in the app.
+  const starterFields: FormField[] = [
+    {
+      fieldName: "notes",
+      label: "What did you observe?",
+      type: "text",
+      required: true,
+      options: null,
+      min: null,
+      max: null,
+      unit: null,
+      displayOrder: 0,
+    },
+  ];
+  const starterTemplate: FormTemplate = {
+    templateId: newId(),
+    trialId: trial.trialId,
+    armId: null,
+    name: `${input.name} record`,
+    fields: starterFields,
+    createdAt,
+  };
   try {
-    await dbPut("trials", trial);
+    await dbPutMany([
+      { collection: "trials", value: trial },
+      { collection: "formTemplates", value: starterTemplate },
+    ]);
   } catch {
     return { success: false, error: "Could not save the trial on this device." };
   }
   if (supabase) {
     void supabase.from("trials").upsert(toRow(trial)).then();
+    void supabase.from("form_templates").upsert(toRow(starterTemplate)).then();
   }
   notify();
   return { success: true, data: trial };
+}
+
+/** Validate and persist an edited form template, locally and to Supabase. */
+export async function saveTemplate(template: FormTemplate): Promise<Result<FormTemplate>> {
+  const check = formTemplateSchema.safeParse(template);
+  if (!check.success) {
+    const firstIssue = check.error.issues[0];
+    return {
+      success: false,
+      error: `The form isn't valid yet: ${firstIssue?.message ?? "check the fields"}.`,
+    };
+  }
+  const names = template.fields.map((field) => field.fieldName);
+  if (new Set(names).size !== names.length) {
+    return { success: false, error: "Two fields ended up with the same internal name." };
+  }
+  try {
+    await dbPut("formTemplates", template);
+  } catch {
+    return { success: false, error: "Could not save the form on this device." };
+  }
+  if (supabase) {
+    void supabase.from("form_templates").upsert(toRow(template)).then();
+  }
+  notify();
+  return { success: true, data: template };
 }
 
 let syncing = false;
