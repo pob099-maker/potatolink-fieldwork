@@ -124,16 +124,73 @@ export function compareArms(
     });
 }
 
-/** Materialise comparisons as ResultSet records for a scenario. */
+/**
+ * The scenario that applies at a site: its own if it has one, otherwise the
+ * trial-wide scenario, otherwise the defaults.
+ */
+export function scenarioForSite(
+  scenarios: EconomicScenario[],
+  trialId: string,
+  siteId: string | null,
+): EconomicScenario | undefined {
+  const forTrial = scenarios.filter((scenario) => scenario.trialId === trialId);
+  return (
+    (siteId ? forTrial.find((scenario) => scenario.siteId === siteId) : undefined) ??
+    forTrial.find((scenario) => scenario.siteId === null)
+  );
+}
+
+/**
+ * Combine per-site comparisons into one trial-level view: benefits and capital
+ * outlay add up across sites, and payback is recomputed from those totals
+ * rather than averaged (averaging paybacks would weight a tiny site equally
+ * with a large one).
+ */
+export function blendComparisons(perSite: ArmComparison[][]): ArmComparison[] {
+  const byArm = new Map<string, ArmComparison>();
+  for (const comparisons of perSite) {
+    for (const comparison of comparisons) {
+      const existing = byArm.get(comparison.arm.armId);
+      if (!existing) {
+        byArm.set(comparison.arm.armId, { ...comparison });
+        continue;
+      }
+      existing.netBenefit += comparison.netBenefit;
+      existing.extraCapex += comparison.extraCapex;
+      existing.economics = {
+        armId: existing.economics.armId,
+        capex: existing.economics.capex + comparison.economics.capex,
+        annualCost: existing.economics.annualCost + comparison.economics.annualCost,
+        annualRevenue: existing.economics.annualRevenue + comparison.economics.annualRevenue,
+        netAnnual: existing.economics.netAnnual + comparison.economics.netAnnual,
+      };
+    }
+  }
+  return [...byArm.values()]
+    .map((comparison) => ({
+      ...comparison,
+      paybackYears:
+        comparison.netBenefit > 0
+          ? comparison.extraCapex > 0
+            ? comparison.extraCapex / comparison.netBenefit
+            : 0
+          : null,
+    }))
+    .sort((a, b) => a.arm.sortOrder - b.arm.sortOrder);
+}
+
+/** Materialise comparisons as ResultSet records for a scenario and site. */
 export function buildResultSets(
   scenario: EconomicScenario,
   comparisons: ArmComparison[],
+  siteId: string | null,
 ): ResultSet[] {
   const calculatedAt = nowIso();
   return comparisons.map((comparison) => ({
     resultId: newId(),
     scenarioId: scenario.scenarioId,
     armId: comparison.arm.armId,
+    siteId,
     netBenefit: Math.round(comparison.netBenefit),
     paybackPeriod:
       comparison.paybackYears === null

@@ -84,6 +84,7 @@ export const metricSchema = z.object({
 export const economicScenarioSchema = z.object({
   scenarioId: id,
   trialId: id,
+  siteId: id.nullable().default(null),
   name: z.string().min(1),
   assumptionsJson: z.string(),
   createdAt: isoDate,
@@ -93,6 +94,7 @@ export const resultSetSchema = z.object({
   resultId: id,
   scenarioId: id,
   armId: id,
+  siteId: id.nullable().default(null),
   netBenefit: z.number(),
   paybackPeriod: z.number().nullable(),
   notes: z.string(),

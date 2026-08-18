@@ -518,19 +518,49 @@ const seedAssumptions: ArmAssumption[] = assumptionRows.map(
   }),
 );
 
-const seedScenario: EconomicScenario = {
-  scenarioId: "5f0a6c1e-0008-4000-8000-000000000001",
-  trialId: SEED_IDS.trial,
-  name: "Base case (placeholder numbers)",
-  assumptionsJson: JSON.stringify({
-    seasonTonnes: 8000,
-    pricePerTonne: 450,
-    labourRatePerHour: 40,
-  }),
-  createdAt: T0,
-};
+// One scenario per site: season throughput, price and labour rates genuinely
+// differ between the Murraylands and Tasmania. The trial-wide scenario stays
+// as the fallback for any site that hasn't been given its own.
+const seedScenarios: EconomicScenario[] = [
+  {
+    scenarioId: "5f0a6c1e-0008-4000-8000-000000000001",
+    trialId: SEED_IDS.trial,
+    siteId: null,
+    name: "Trial-wide default (placeholder numbers)",
+    assumptionsJson: JSON.stringify({
+      seasonTonnes: 8000,
+      pricePerTonne: 450,
+      labourRatePerHour: 40,
+    }),
+    createdAt: T0,
+  },
+  {
+    scenarioId: "5f0a6c1e-0008-4000-8000-000000000002",
+    trialId: SEED_IDS.trial,
+    siteId: SEED_IDS.siteWalkersFlat,
+    name: "Walkers Flat base case (placeholder numbers)",
+    assumptionsJson: JSON.stringify({
+      seasonTonnes: 8000,
+      pricePerTonne: 450,
+      labourRatePerHour: 40,
+    }),
+    createdAt: T0,
+  },
+  {
+    scenarioId: "5f0a6c1e-0008-4000-8000-000000000003",
+    trialId: SEED_IDS.trial,
+    siteId: SEED_IDS.siteTasmania,
+    name: "Tasmania base case (placeholder numbers)",
+    assumptionsJson: JSON.stringify({
+      seasonTonnes: 5000,
+      pricePerTonne: 420,
+      labourRatePerHour: 45,
+    }),
+    createdAt: T0,
+  },
+];
 
-const SEED_FLAG = { key: "seeded", version: 8 };
+const SEED_FLAG = { key: "seeded", version: 9 };
 
 export async function seedIfNeeded(): Promise<void> {
   const existing = await dbGet<{ key: string; version: number }>("meta", "seeded");
@@ -552,7 +582,10 @@ export async function seedIfNeeded(): Promise<void> {
       collection: "armAssumptions" as const,
       value: assumption,
     })),
-    { collection: "economicScenarios", value: seedScenario },
+    ...seedScenarios.map((scenario) => ({
+      collection: "economicScenarios" as const,
+      value: scenario,
+    })),
   ]);
   await dbPut("meta", SEED_FLAG);
 }

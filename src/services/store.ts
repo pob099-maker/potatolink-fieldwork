@@ -84,6 +84,14 @@ export const listScenarios = (): Promise<EconomicScenario[]> =>
   dbGetAll<EconomicScenario>("economicScenarios");
 export const listResults = (): Promise<ResultSet[]> => dbGetAll<ResultSet>("resultSets");
 
+/**
+ * Save locally, then mirror to Supabase. The cloud write is awaited rather
+ * than fired and forgotten: callers that save related records in sequence
+ * (a scenario, then the results referencing it) depend on that order, and an
+ * unawaited push can reach Postgres first and be rejected by a foreign key.
+ * The local copy is authoritative, so a failed cloud write is reported without
+ * losing the record.
+ */
 async function saveRecord<T extends object>(
   collection: CollectionName,
   record: T,
@@ -94,11 +102,18 @@ async function saveRecord<T extends object>(
   } catch {
     return { success: false, error: failureMessage };
   }
-  const table = TABLE_NAMES[collection];
-  if (supabase && table) {
-    void supabase.from(table).upsert(toRow(record)).then();
-  }
   notify();
+
+  const table = TABLE_NAMES[collection];
+  if (supabase && table && navigator.onLine) {
+    const { error } = await supabase.from(table).upsert(toRow(record));
+    if (error) {
+      return {
+        success: false,
+        error: `Saved on this device, but the cloud copy failed: ${error.message}`,
+      };
+    }
+  }
   return { success: true, data: record };
 }
 
@@ -132,15 +147,21 @@ export async function saveScenario(scenario: EconomicScenario): Promise<Result<E
   return saveRecord("economicScenarios", scenario, "Could not save the scenario.");
 }
 
-export async function saveResults(results: ResultSet[]): Promise<void> {
+export async function saveResults(results: ResultSet[]): Promise<Result<string>> {
   await dbPutMany(results.map((result) => ({ collection: "resultSets" as const, value: result })));
-  if (supabase && results.length > 0) {
-    void supabase
-      .from("result_sets")
-      .upsert(results.map((result) => toRow(result)))
-      .then();
-  }
   notify();
+  if (supabase && navigator.onLine && results.length > 0) {
+    const { error } = await supabase
+      .from("result_sets")
+      .upsert(results.map((result) => toRow(result)));
+    if (error) {
+      return {
+        success: false,
+        error: `Results saved on this device, but the cloud copy failed: ${error.message}`,
+      };
+    }
+  }
+  return { success: true, data: `Stored ${results.length} results.` };
 }
 
 export interface NewEntryInput {
