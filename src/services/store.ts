@@ -421,6 +421,89 @@ export async function saveTrial(trial: Trial): Promise<Result<Trial>> {
   return saveRecord("trials", next, "Could not save the trial.");
 }
 
+/**
+ * Add a site to a trial. A site needs a host contact for the database
+ * relationship; an existing cooperator/grower is reused when there is one,
+ * otherwise a placeholder is created that staff can rename later.
+ */
+export async function addSite(input: {
+  trialId: string;
+  location: string;
+  region?: string;
+  soilType?: string;
+}): Promise<Result<Site>> {
+  const contacts = await listContacts();
+  let contact =
+    contacts.find((candidate) => candidate.role === "cooperator") ??
+    contacts.find((candidate) => candidate.role === "grower") ??
+    contacts[0];
+
+  if (!contact) {
+    contact = {
+      contactId: newId(),
+      name: "Site host (to be confirmed)",
+      business: "",
+      role: "cooperator",
+      region: input.region ?? "",
+      email: "",
+      phone: "",
+      tags: [],
+      createdAt: nowIso(),
+    };
+    const savedContact = await saveRecord("contacts", contact, "Could not save the site host.");
+    if (!savedContact.success) return { success: false, error: savedContact.error };
+  }
+
+  const site: Site = {
+    siteId: newId(),
+    trialId: input.trialId,
+    contactId: contact.contactId,
+    location: input.location,
+    region: input.region ?? "",
+    soilType: input.soilType ?? "",
+    coordinates: null,
+    createdAt: nowIso(),
+  };
+  const check = siteSchema.safeParse(site);
+  if (!check.success) {
+    return { success: false, error: "That site isn't valid — check the location." };
+  }
+  return saveRecord("sites", site, "Could not save the site.");
+}
+
+export async function saveSite(site: Site): Promise<Result<Site>> {
+  const check = siteSchema.safeParse(site);
+  if (!check.success) {
+    return { success: false, error: "That site isn't valid — check the location." };
+  }
+  return saveRecord("sites", site, "Could not save the site.");
+}
+
+/** Whether any record has been filed against a site. */
+export async function siteHasData(siteId: string): Promise<boolean> {
+  const events = await listEvents();
+  return events.some((event) => event.siteId === siteId);
+}
+
+/**
+ * Remove a site. Only a site with no records is deleted; one that already has
+ * data is kept, because deleting it would orphan those records.
+ */
+export async function removeSite(site: Site): Promise<Result<"deleted" | "kept">> {
+  if (await siteHasData(site.siteId)) {
+    return {
+      success: false,
+      error: `"${site.location}" has records against it, so it cannot be removed.`,
+    };
+  }
+  await dbDelete("sites", site.siteId);
+  if (supabase) {
+    void supabase.from("sites").delete().eq("site_id", site.siteId).then();
+  }
+  notify();
+  return { success: true, data: "deleted" };
+}
+
 /** Add a practice arm to a trial. New arms sort after the existing ones. */
 export async function addArm(input: {
   trialId: string;

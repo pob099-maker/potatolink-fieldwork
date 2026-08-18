@@ -114,7 +114,10 @@ export function EntryPage() {
   const needsSite = template.requiresSite && !site;
   const needsArm = template.requiresArm && !arm;
   const needsReplicate =
-    trial.design === "replicated" && template.requiresArm && replicate == null;
+    trial.design === "replicated" &&
+    trial.replicates > 0 &&
+    template.requiresArm &&
+    replicate == null;
   if (needsSite || needsArm || needsReplicate) {
     return (
       <ContextChooser
@@ -177,6 +180,24 @@ function ContextChooser({
   onPickReplicate: (replicate: number) => void;
 }) {
   const step = !site ? "site" : !arm ? "arm" : "replicate";
+  const optionCount =
+    step === "site" ? sites.length : step === "arm" ? arms.length : Math.max(0, replicates);
+
+  // Nothing to choose from means the trial is not set up yet. Say so, rather
+  // than showing a question with no answers.
+  if (optionCount === 0) {
+    const missing =
+      step === "site" ? "a site" : step === "arm" ? "a practice" : "its replicate count";
+    return (
+      <Card className="mx-auto max-w-md">
+        <PageTitle>Not ready for entries yet</PageTitle>
+        <p className="mt-2 text-ink/60 dark:text-ink-dark/60">
+          {trialName} still needs {missing} before anything can be recorded. A staff member
+          can add it on the trial page.
+        </p>
+      </Card>
+    );
+  }
   const title =
     step === "site" ? "Where are you today?" : step === "arm" ? "Which practice?" : "Which replicate?";
   const help =
