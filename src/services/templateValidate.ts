@@ -23,6 +23,31 @@ export function validateTemplate(trial: ParsedTrial): TemplateIssue[] {
     error(`A replicated trial needs at least 2 replicates (got ${trial.replicates}).`);
   }
 
+  if (trial.sites.length === 0) {
+    warn("No sites in the file — add at least one on the trial page before entries can be recorded.");
+  }
+  const controls = trial.practices.filter((practice) => practice.type === "control");
+  if (controls.length > 1) {
+    error(`${controls.length} practices are marked as the control; a trial compares against one.`);
+  }
+  if (trial.practices.length === 1) {
+    warn("Only one practice in the file — a comparison needs a control plus at least one alternative.");
+  }
+  const practiceNames = new Set<string>();
+  for (const practice of trial.practices) {
+    if (practiceNames.has(practice.name)) {
+      error(`Two practices are both called "${practice.name}".`);
+    }
+    practiceNames.add(practice.name);
+  }
+  const siteNames = new Set<string>();
+  for (const site of trial.sites) {
+    if (siteNames.has(site.location)) {
+      error(`Two sites are both called "${site.location}".`);
+    }
+    siteNames.add(site.location);
+  }
+
   const eventTypes = new Map<string, string>();
   let growerForms = 0;
   let responseFields = 0;

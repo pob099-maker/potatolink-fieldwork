@@ -144,6 +144,14 @@ export function TrialDetailPage() {
             + Add an entry
           </Link>
         ) : null}
+        {growerForm && trialSites.length > 0 && activeArms.length > 0 ? (
+          <Link
+            to={`/trials/${trial.trialId}/entry?form=${growerForm.templateId}&site=${trialSites[0].siteId}&arm=${activeArms[0].armId}&preview=1`}
+            className="min-h-11 rounded-lg border border-ink/20 px-4 py-2.5 font-medium dark:border-ink-dark/20"
+          >
+            Preview as grower
+          </Link>
+        ) : null}
         <Link
           to={`/trials/${trial.trialId}/results`}
           className="min-h-11 rounded-lg border border-primary px-4 py-2.5 font-medium text-primary dark:text-primary-soft"

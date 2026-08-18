@@ -5,6 +5,7 @@
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { addTrial } from "../services/store";
+import { downloadReferenceTemplate } from "../services/templateImport";
 import { useProjects } from "../hooks/useCollections";
 import { Card, ErrorState, PageTitle } from "../components/ui";
 
@@ -49,17 +50,25 @@ export function NewTrialPage() {
       <Card>
         <h2 className="font-display text-lg font-bold">Import a template</h2>
         <p className="mt-1 text-sm text-ink/60 dark:text-ink-dark/60">
-          Best when the protocol is already written. Fill in the template spreadsheet —
-          one row per question — and the whole trial is created at once: every form, every
-          screen, with the answers checked before it goes to the field. Download the blank
-          template from the import page.
+          Best when the protocol is already written. The template covers the whole trial —
+          sites, practices and one row per question — so everything is created at once,
+          checked before it goes to the field.
         </p>
-        <Link
-          to="/trials/import"
-          className="mt-3 inline-block min-h-11 rounded-lg bg-primary px-4 py-2.5 font-medium text-white"
-        >
-          Import a trial from CSV
-        </Link>
+        <div className="mt-3 flex flex-wrap gap-2">
+          <button
+            type="button"
+            onClick={() => downloadReferenceTemplate()}
+            className="min-h-11 rounded-lg bg-primary px-4 py-2.5 font-medium text-white"
+          >
+            1. Download the blank template
+          </button>
+          <Link
+            to="/trials/import"
+            className="min-h-11 rounded-lg border border-primary px-4 py-2.5 font-medium text-primary dark:text-primary-soft"
+          >
+            2. Upload the filled-in file
+          </Link>
+        </div>
       </Card>
 
       <Card>

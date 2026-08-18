@@ -4,7 +4,16 @@
 
 import type { FormTemplate, Result, Trial } from "../types";
 import { newId, nowIso } from "../lib/id";
-import { addArm, addTrial, listTemplates, saveTemplate, saveTrial } from "./store";
+import {
+  addArm,
+  addSite,
+  addTrial,
+  listArms,
+  listTemplates,
+  saveArm,
+  saveTemplate,
+  saveTrial,
+} from "./store";
 import type { ParsedTrial } from "./templateImport";
 import { validateTemplate } from "./templateValidate";
 
@@ -78,9 +87,48 @@ export async function publishParsedTrial(parsed: ParsedTrial): Promise<Result<Tr
     if (!saved.success) return { success: false, error: saved.error };
   }
 
-  // A second practice so the trial is comparable out of the box; staff rename
-  // or extend in Practices.
-  await addArm({ trialId: trial.trialId, name: "Alternative practice", type: "alternative" });
+  // Sites from the CSV, so a demosite trial arrives ready to record rather
+  // than needing them typed in afterwards.
+  for (const site of parsed.sites) {
+    const saved = await addSite({
+      trialId: trial.trialId,
+      location: site.location,
+      region: site.region,
+      soilType: site.soilType,
+    });
+    if (!saved.success) return { success: false, error: saved.error };
+  }
+
+  // Practices from the CSV. addTrial already created a control arm, so the
+  // first control in the file renames it rather than adding a duplicate.
+  const existingArms = (await listArms()).filter((arm) => arm.trialId === trial.trialId);
+  let starterControl = existingArms.find((arm) => arm.type === "control");
+
+  for (const practice of parsed.practices) {
+    if (practice.type === "control" && starterControl) {
+      const renamed = await saveArm({
+        ...starterControl,
+        name: practice.name,
+        description: practice.description,
+      });
+      if (!renamed.success) return { success: false, error: renamed.error };
+      starterControl = undefined;
+      continue;
+    }
+    const added = await addArm({
+      trialId: trial.trialId,
+      name: practice.name,
+      type: practice.type,
+      description: practice.description,
+    });
+    if (!added.success) return { success: false, error: added.error };
+  }
+
+  // Nothing in the file: leave a second practice so the trial is comparable
+  // out of the box, and staff rename it in Practices.
+  if (parsed.practices.length === 0) {
+    await addArm({ trialId: trial.trialId, name: "Alternative practice", type: "alternative" });
+  }
 
   return { success: true, data: trial };
 }

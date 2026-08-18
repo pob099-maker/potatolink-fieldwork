@@ -33,11 +33,25 @@ export interface ParsedForm {
   fields: ParsedField[];
 }
 
+export interface ParsedSite {
+  location: string;
+  region: string;
+  soilType: string;
+}
+
+export interface ParsedPractice {
+  name: string;
+  type: "control" | "alternative";
+  description: string;
+}
+
 export interface ParsedTrial {
   name: string;
   objective: string;
   design: TrialDesign;
   replicates: number;
+  sites: ParsedSite[];
+  practices: ParsedPractice[];
   forms: ParsedForm[];
 }
 
@@ -114,6 +128,8 @@ export function parseTemplateCsv(text: string): Result<ParsedTrial> {
     objective: "",
     design: "observational",
     replicates: 0,
+    sites: [],
+    practices: [],
     forms: [],
   };
 
@@ -130,8 +146,29 @@ export function parseTemplateCsv(text: string): Result<ParsedTrial> {
       }
       trial.design = (value || "observational") as TrialDesign;
     } else if (key === "replicates") trial.replicates = numberOrNull(value) ?? 0;
-    else if (key) {
-      return { success: false, error: `Row ${i + 1}: unknown setting "${rows[i][0]}". Expected trial, objective, design, replicates, or the form header.` };
+    else if (key === "site") {
+      if (!value) return { success: false, error: `Row ${i + 1}: a site row needs a location.` };
+      trial.sites.push({
+        location: value,
+        region: (rows[i][2] ?? "").trim(),
+        soilType: (rows[i][3] ?? "").trim(),
+      });
+    } else if (key === "practice") {
+      if (!value) return { success: false, error: `Row ${i + 1}: a practice row needs a name.` };
+      const practiceType = (rows[i][2] ?? "alternative").trim().toLowerCase();
+      if (practiceType !== "control" && practiceType !== "alternative") {
+        return {
+          success: false,
+          error: `Row ${i + 1}: practice type must be "control" or "alternative", got "${practiceType}".`,
+        };
+      }
+      trial.practices.push({
+        name: value,
+        type: practiceType,
+        description: (rows[i][3] ?? "").trim(),
+      });
+    } else if (key) {
+      return { success: false, error: `Row ${i + 1}: unknown setting "${rows[i][0]}". Expected trial, objective, design, replicates, site, practice, or the form header.` };
     }
   }
   if (headerIndex === -1) {
@@ -223,6 +260,10 @@ export const REFERENCE_TEMPLATE_CSV = [
   "objective,What this trial sets out to show.",
   "design,observational",
   "replicates,0",
+  "site,Gatton,Queensland,Alluvial loam",
+  "site,Tolga,North Queensland,Red ferrosol",
+  "practice,Current practice,control,What the grower does now.",
+  "practice,New practice,alternative,The change being tested.",
   "form,event_type,audience,frequency,requires_site,requires_arm,label,field_name,type,required,unit,min,max,options,response,help",
   "Run record,run_record,grower,Each run,yes,yes,Tonnes handled,,number,yes,t,0,,,,Core throughput measure",
   "Run record,run_record,grower,Each run,yes,yes,How well did it work?,,slider,no,,1,5,,,Quick operator rating",
