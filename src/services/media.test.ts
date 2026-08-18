@@ -40,6 +40,16 @@ describe("saveMedia", () => {
     expect(tooBig.success).toBe(false);
   });
 
+  it("allows attachments up to 25 MB but not beyond", async () => {
+    const okay = await saveMedia(makeFile(1024, "export.csv", "text/csv"), "file");
+    expect(okay.success).toBe(true);
+
+    const tooBig = await saveMedia(makeFile(26 * 1024 * 1024, "big.csv", "text/csv"), "file");
+    expect(tooBig.success).toBe(false);
+    if (tooBig.success) return;
+    expect(tooBig.error).toContain("25 MB");
+  });
+
   it("rejects empty files", async () => {
     const result = await saveMedia(makeFile(0, "empty.jpg", "image/jpeg"), "photo");
     expect(result.success).toBe(false);

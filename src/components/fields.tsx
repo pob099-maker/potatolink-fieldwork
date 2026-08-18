@@ -142,10 +142,117 @@ function FieldInput<T extends FieldValues>({
       );
     case "photo":
     case "video":
+    case "file":
       return (
         <MediaInput control={control} name={name} fieldId={field.fieldName} kind={field.type} />
       );
+    case "multiselect":
+      return (
+        <Controller
+          control={control}
+          name={name}
+          render={({ field: controller }) => {
+            const selected: string[] = Array.isArray(controller.value) ? controller.value : [];
+            return (
+              <div role="group" aria-labelledby={labelId} className="flex flex-wrap gap-2">
+                {(field.options ?? []).map((option) => {
+                  const isOn = selected.includes(option);
+                  return (
+                    <button
+                      key={option}
+                      type="button"
+                      aria-pressed={isOn}
+                      onClick={() =>
+                        controller.onChange(
+                          isOn
+                            ? selected.filter((current) => current !== option)
+                            : [...selected, option],
+                        )
+                      }
+                      className={`min-h-11 rounded-full border px-4 py-2 font-medium ${
+                        isOn
+                          ? "border-primary bg-primary text-white"
+                          : "border-ink/20 dark:border-ink-dark/20"
+                      }`}
+                    >
+                      {isOn ? "✓ " : ""}
+                      {option}
+                    </button>
+                  );
+                })}
+              </div>
+            );
+          }}
+        />
+      );
+    case "gps":
+      return <GpsInput control={control} name={name} />;
   }
+}
+
+function GpsInput<T extends FieldValues>({
+  control,
+  name,
+}: {
+  control: Control<T>;
+  name: Path<T>;
+}) {
+  const [busy, setBusy] = useState(false);
+  const [gpsError, setGpsError] = useState<string | null>(null);
+
+  return (
+    <Controller
+      control={control}
+      name={name}
+      render={({ field: controller }) => {
+        const captured = typeof controller.value === "string" && controller.value !== "";
+        return (
+          <div>
+            <button
+              type="button"
+              disabled={busy}
+              onClick={() => {
+                setGpsError(null);
+                if (!("geolocation" in navigator)) {
+                  setGpsError("This device can't provide a location.");
+                  return;
+                }
+                setBusy(true);
+                navigator.geolocation.getCurrentPosition(
+                  (position) => {
+                    controller.onChange(
+                      `${position.coords.latitude.toFixed(6)},${position.coords.longitude.toFixed(6)}`,
+                    );
+                    setBusy(false);
+                  },
+                  () => {
+                    setGpsError(
+                      "Couldn't get a location. Check location permission and try again.",
+                    );
+                    setBusy(false);
+                  },
+                  { enableHighAccuracy: true, timeout: 15_000 },
+                );
+              }}
+              className="min-h-11 w-full rounded-lg border border-dashed border-ink/30 px-4 py-2.5 font-medium text-ink/70 disabled:opacity-60 dark:border-ink-dark/30 dark:text-ink-dark/70"
+            >
+              📍 {busy ? "Getting location…" : captured ? "Location captured — tap to update" : "Capture this location"}
+            </button>
+            {captured ? (
+              <p className="mt-1 text-sm text-ink/60 dark:text-ink-dark/60">
+                {String(controller.value)}
+              </p>
+            ) : null}
+            {gpsError ? (
+              <p role="alert" className="mt-1 text-sm text-danger">
+                {gpsError}
+              </p>
+            ) : null}
+          </div>
+        );
+      }}
+    />
+  );
 }
 
 function MediaInput<T extends FieldValues>({
@@ -201,8 +308,8 @@ function MediaInput<T extends FieldValues>({
               ref={fileRef}
               id={fieldId}
               type="file"
-              accept={kind === "video" ? "video/*" : "image/*"}
-              capture="environment"
+              accept={kind === "video" ? "video/*" : kind === "photo" ? "image/*" : undefined}
+              capture={kind === "file" ? undefined : "environment"}
               className="sr-only"
               onChange={(changeEvent) => {
                 const file = changeEvent.target.files?.[0];
@@ -216,11 +323,18 @@ function MediaInput<T extends FieldValues>({
             >
               {kind === "video"
                 ? `🎬 ${hasMedia ? "Video added — tap to replace" : "Record or choose a video"}`
-                : `📷 ${hasMedia ? "Photo added — tap to replace" : "Take or choose a photo"}`}
+                : kind === "photo"
+                  ? `📷 ${hasMedia ? "Photo added — tap to replace" : "Take or choose a photo"}`
+                  : `📎 ${hasMedia ? "File attached — tap to replace" : "Attach a file"}`}
             </button>
             {kind === "video" ? (
               <p className="mt-1 text-xs text-ink/50 dark:text-ink-dark/50">
                 Keep clips short — under about a minute uploads best from the paddock.
+              </p>
+            ) : null}
+            {kind === "file" ? (
+              <p className="mt-1 text-xs text-ink/50 dark:text-ink-dark/50">
+                CSV exports, PDFs, spreadsheets — up to 25 MB.
               </p>
             ) : null}
             {captureError ? (
@@ -228,7 +342,7 @@ function MediaInput<T extends FieldValues>({
                 {captureError}
               </p>
             ) : null}
-            {previewUrl && hasMedia ? (
+            {previewUrl && hasMedia && kind !== "file" ? (
               kind === "video" ? (
                 <video src={previewUrl} controls className="mt-2 max-h-48 w-full rounded-lg" />
               ) : (

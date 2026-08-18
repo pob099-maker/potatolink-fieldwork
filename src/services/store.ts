@@ -305,24 +305,34 @@ async function pushEvent(
   return !logsResult.error;
 }
 
-/** Mirror seed/base records up to Supabase so a fresh backend matches local. */
-export async function pushBaseData(): Promise<void> {
-  if (!supabase) return;
+/**
+ * Mirror seed/base records up to Supabase so a fresh backend matches local.
+ * Order matters: referenced tables (projects, contacts) go before the tables
+ * that point at them.
+ */
+export async function pushBaseData(): Promise<Result<string>> {
+  if (!supabase) return { success: false, error: "No Supabase project configured." };
   const pairs: Array<[CollectionName, unknown[]]> = [
     ["projects", await listProjects()],
+    ["contacts", await listContacts()],
     ["trials", await listTrials()],
     ["sites", await listSites()],
     ["practiceArms", await listArms()],
-    ["contacts", await listContacts()],
     ["formTemplates", await listTemplates()],
   ];
+  let pushed = 0;
   for (const [collection, records] of pairs) {
     const table = TABLE_NAMES[collection];
     if (!table || records.length === 0) continue;
-    await supabase
+    const { error } = await supabase
       .from(table)
       .upsert(records.map((record) => toRow(record as Record<string, unknown>)));
+    if (error) {
+      return { success: false, error: `Could not push ${table}: ${error.message}` };
+    }
+    pushed += records.length;
   }
+  return { success: true, data: `Pushed ${pushed} setup records to Supabase.` };
 }
 
 export function startSyncLoop(): void {

@@ -4,6 +4,7 @@ import { saveTemplate } from "../services/store";
 import {
   blankField,
   FIELD_TYPE_HELP,
+  hasOptions,
   moveField,
   normaliseField,
 } from "../services/templates";
@@ -224,7 +225,7 @@ export function TemplateEditorPage() {
             </div>
           ) : null}
 
-          {field.type === "select" ? (
+          {hasOptions(field.type) ? (
             <div>
               <label htmlFor={`options-${index}`} className="mb-1 block text-sm font-medium">
                 Choices (one per line)

@@ -8,6 +8,7 @@ import { isBackendConfigured } from "../lib/supabase";
 import {
   useArms,
   useContacts,
+  useEvents,
   useSites,
   useTemplates,
   useTrials,
@@ -94,6 +95,13 @@ export function EntryPage() {
       fields={[...template.fields].sort((a, b) => a.displayOrder - b.displayOrder)}
     />
   );
+}
+
+/** Live badge for a just-saved entry: reads the event's real sync status. */
+function SavedSyncBadge({ eventId }: { eventId: string }) {
+  const events = useEvents();
+  const status = events.data?.find((event) => event.eventId === eventId)?.syncStatus;
+  return <SyncBadge status={status ?? "pending"} />;
 }
 
 function AccessGate({ onSubmit }: { onSubmit: (code: string) => boolean }) {
@@ -199,12 +207,22 @@ function EntryForm({
       .map((field) => {
         const raw = values[field.fieldName];
         if (raw === undefined || raw === "" || raw === null) return null;
-        if (field.type === "photo" || field.type === "video") {
+        if (field.type === "photo" || field.type === "video" || field.type === "file") {
           return {
             metricName: field.fieldName,
             value: field.type,
             unit: "",
             photoUrl: String(raw),
+          };
+        }
+        if (field.type === "multiselect") {
+          const chosen = Array.isArray(raw) ? raw : [];
+          if (chosen.length === 0) return null;
+          return {
+            metricName: field.fieldName,
+            value: chosen.join(", "),
+            unit: "",
+            photoUrl: null,
           };
         }
         return {
@@ -240,11 +258,11 @@ function EntryForm({
         </p>
         <PageTitle>Entry saved</PageTitle>
         <p className="mt-2">
-          <SyncBadge status={isBackendConfigured() && navigator.onLine ? "synced" : "pending"} />
+          <SavedSyncBadge eventId={saved.eventId} />
         </p>
         <p className="mt-2 text-ink/60 dark:text-ink-dark/60">
           {isBackendConfigured()
-            ? "Your record is saved and syncing."
+            ? "Your record is safe on this device and syncs automatically."
             : "Saved on this device. It will sync automatically once a connection is available."}
         </p>
         <button

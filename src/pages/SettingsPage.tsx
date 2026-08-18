@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { useTheme } from "../contexts/ThemeContext";
 import { isBackendConfigured } from "../lib/supabase";
 import { pushBaseData, syncPending } from "../services/store";
@@ -5,6 +6,7 @@ import { Card, PageTitle } from "../components/ui";
 
 export function SettingsPage() {
   const { theme, toggleTheme } = useTheme();
+  const [pushResult, setPushResult] = useState<string | null>(null);
 
   return (
     <div className="space-y-4">
@@ -40,12 +42,22 @@ export function SettingsPage() {
               </button>
               <button
                 type="button"
-                onClick={() => void pushBaseData()}
+                onClick={() =>
+                  void pushBaseData().then((result) => {
+                    setPushResult(result.success ? result.data : result.error);
+                    void syncPending();
+                  })
+                }
                 className="min-h-11 rounded-lg border border-primary px-4 py-2.5 font-medium text-primary dark:text-primary-soft"
               >
                 Push trial setup to Supabase
               </button>
             </div>
+            {pushResult ? (
+              <p role="status" className="mt-2 text-sm text-ink/70 dark:text-ink-dark/70">
+                {pushResult}
+              </p>
+            ) : null}
           </>
         ) : (
           <p className="mt-1 text-sm text-ink/60 dark:text-ink-dark/60">

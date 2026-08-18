@@ -48,10 +48,12 @@ export function moveField(fields: FormField[], index: number, delta: -1 | 1): Fo
   return next.map((field, order) => ({ ...field, displayOrder: order }));
 }
 
+const OPTION_TYPES: FieldType[] = ["select", "multiselect"];
+
 /** Clear the attributes that don't apply to a field's (possibly new) type. */
 export function normaliseField(field: FormField, type: FieldType): FormField {
   const next: FormField = { ...field, type };
-  if (type !== "select") next.options = null;
+  if (!OPTION_TYPES.includes(type)) next.options = null;
   if (type !== "number" && type !== "slider") {
     next.min = null;
     next.max = null;
@@ -61,19 +63,30 @@ export function normaliseField(field: FormField, type: FieldType): FormField {
     next.max = next.max ?? 5;
   }
   if (type !== "number") next.unit = null;
-  if (type === "select" && (!next.options || next.options.length === 0)) {
+  if (OPTION_TYPES.includes(type) && (!next.options || next.options.length === 0)) {
     next.options = ["option 1", "option 2"];
   }
   return next;
 }
 
+export function hasOptions(type: FieldType): boolean {
+  return OPTION_TYPES.includes(type);
+}
+
 export const FIELD_TYPE_HELP: Array<{ type: FieldType; label: string; hint: string }> = [
   { type: "number", label: "Number", hint: "Measured or counted values — set a unit and limits" },
-  { type: "select", label: "Choice list", hint: "A known list of outcomes; better than free text" },
+  { type: "select", label: "Choice list (pick one)", hint: "A known list of outcomes; better than free text" },
+  {
+    type: "multiselect",
+    label: "Choice list (pick many)",
+    hint: "Tap-all-that-apply chips — e.g. every defect seen",
+  },
   { type: "slider", label: "Rating slider", hint: "Gut-feel scores, 1–5 works best" },
   { type: "boolean", label: "Yes / no", hint: "Two big buttons" },
   { type: "date", label: "Date", hint: "Only when it differs from the entry date" },
   { type: "photo", label: "Photo", hint: "Camera capture, up to 20 MB" },
   { type: "video", label: "Video", hint: "Camera capture, up to 100 MB (~1 min)" },
+  { type: "file", label: "File attachment", hint: "CSV exports, PDFs, spreadsheets — up to 25 MB" },
+  { type: "gps", label: "GPS location", hint: "One tap captures the phone's coordinates" },
   { type: "text", label: "Free text", hint: "Last resort — keep one notes field at the end" },
 ];

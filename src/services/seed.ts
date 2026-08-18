@@ -408,8 +408,8 @@ const heTemplate: FormTemplate = {
     },
     {
       fieldName: "mainDefect",
-      label: "Main defect graded out",
-      type: "select",
+      label: "Defects graded out (choose all that apply)",
+      type: "multiselect",
       required: false,
       options: ["none", "rot", "greening", "misshapen", "cracking", "mechanical damage"],
       min: null,
@@ -440,6 +440,28 @@ const heTemplate: FormTemplate = {
       displayOrder: 10,
     },
     {
+      fieldName: "csvExport",
+      label: "HarvestEye CSV export (optional)",
+      type: "file",
+      required: false,
+      options: null,
+      min: null,
+      max: null,
+      unit: null,
+      displayOrder: 11,
+    },
+    {
+      fieldName: "passLocation",
+      label: "Where was this pass? (optional)",
+      type: "gps",
+      required: false,
+      options: null,
+      min: null,
+      max: null,
+      unit: null,
+      displayOrder: 12,
+    },
+    {
       fieldName: "notes",
       label: "Anything else worth noting?",
       type: "text",
@@ -448,13 +470,13 @@ const heTemplate: FormTemplate = {
       min: null,
       max: null,
       unit: null,
-      displayOrder: 11,
+      displayOrder: 13,
     },
   ],
   createdAt: T0,
 };
 
-const SEED_FLAG = { key: "seeded", version: 5 };
+const SEED_FLAG = { key: "seeded", version: 6 };
 
 export async function seedIfNeeded(): Promise<void> {
   const existing = await dbGet<{ key: string; version: number }>("meta", "seeded");

@@ -15,12 +15,15 @@ the grower-facing entry form (replace the EXAMPLE rows).
 | Type | Use for | Notes |
 |---|---|---|
 | `number` | Anything measured or counted | Set unit, min/max where sensible |
-| `select` | A known list of outcomes | Always prefer over free text |
+| `select` | A known list of outcomes, pick one | Always prefer over free text |
+| `multiselect` | Pick all that apply | Tap-chips — e.g. every defect seen |
 | `slider` | Ratings and gut-feel scores | 1–5 works best |
 | `boolean` | Yes/no questions | Rendered as two big buttons |
 | `date` | A date other than the entry date | Entry date is captured automatically |
 | `photo` | Visual evidence | Max 20 MB, uploads on sync |
 | `video` | Demos, moving equipment | Max 100 MB (~1 min), uploads on sync |
+| `file` | System exports, PDFs, spreadsheets | Max 25 MB, uploads on sync |
+| `gps` | Where an observation happened | One tap captures phone coordinates |
 | `text` | Only when nothing above fits | Keep to one "notes" field at the end |
 
 ## 3. Rules for grower-facing fields
