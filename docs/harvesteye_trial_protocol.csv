@@ -1,0 +1,19 @@
+Stage,Data Point,Detail/Fields to Capture,Format,Frequency,Purpose (Why it proves viability)
+Site Setup,Site ID & GPS boundary,"Field/plot name, GPS polygon, variety layout map",Text/GPS,Once per site,Confirms trial block traceability
+Site Setup,Pre-harvest crop stage,"Row spacing, planting date, days to harvest, irrigation regime",Text/numeric,Once per site,Context for size/yield variation
+Site Setup,Weather at harvest,"Temp, rainfall (7-day), soil moisture",Numeric,Daily during trial,Confounding factor for yield/quality
+Equipment,Unit calibration record,"Calibration method, technician, timestamp",Text/photo,Start of each session,Required to validate data integrity
+Equipment,Install/fit photos,Photos of unit mounted on harvester,Image,Once per install,Proof of non-disruptive fit-up (grower concern)
+Equipment,Install time log,Minutes to fit/remove unit,Numeric,Each install/removal,Direct input to hassle-vs-value assessment
+Harvest Run,Variety & plot ID,"Variety name, plot/row number, replicate number",Text,Per pass,Links HarvestEye output to variety trial design
+Harvest Run,HarvestEye live count/size output,"Size distribution, count, marketable yield %",System export (CSV),Per pass,Core system output for accuracy testing
+Harvest Run,Manual grading sample,Hand-graded sample from same plot (size/weight/defects),Numeric,"Per plot, min 3 reps",Ground-truth to validate HarvestEye accuracy
+Harvest Run,Harvest video clip,Short video of tubers passing sensor,Video (30-60s),Per plot or per variety change,Visual QA and grower demo material
+Harvest Run,Defect/quality photos,"Photos of graded-out tubers (rot, greening, misshapen)",Image,Per plot with notable defects,Tests defect-detection claims
+Harvest Run,Throughput/speed log,"Harvester speed, any slow-downs attributed to unit",Numeric,Per pass,Tests operational disruption claim
+Data Output,Portal export screenshot,Field map with yield/size overlay,Image/PDF,End of each harvest day,Evidence of usable grower-facing output
+Data Output,Data lag time,Time from harvest to portal-ready data,Numeric (minutes),Per session,Tests 'real-time' claim relevant to processors
+Commercial Case,Grading/labour time comparison,Time for manual grading vs HarvestEye-assisted,Numeric,Once per site (paired test),Direct labour-cost ROI evidence
+Commercial Case,Processor/grower observer feedback,Structured feedback form (5-point scale + comments),Text/form,End of each site visit,Captures buyer-side relevance and interest
+Commercial Case,Cost log,"Lease/subscription cost, technician time, freight",Numeric,Once per trial,Feeds ROI/cost-per-tonne calculation
+Wrap-up,Summary photo/video reel,"3-5 min highlight video, before/after grading photos",Video/Image,End of trial,Extension/communication asset for PotatoLink
