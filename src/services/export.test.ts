@@ -17,6 +17,9 @@ const trial: Trial = {
   name: "CropVision Comparison",
   objective: "",
   status: "active",
+  design: "observational",
+  replicates: 0,
+  responseMetric: null,
   createdAt: T0,
   updatedAt: T0,
 };
@@ -69,6 +72,7 @@ function event(id: string, over: Partial<MeasurementEvent> = {}): MeasurementEve
     trialId: "trial-1",
     siteId: "site-1",
     armId: "arm-1",
+    replicate: null,
     eventDate: T0,
     eventType: "field_record",
     enteredBy: "grower",

@@ -168,6 +168,7 @@ export interface NewEntryInput {
   trialId: string;
   siteId: string | null;
   armId: string | null;
+  replicate: number | null;
   eventType: string;
   enteredBy: string;
   deviceType: DataEntryLog["deviceType"];
@@ -187,6 +188,7 @@ export async function addEntry(input: NewEntryInput): Promise<Result<Measurement
     trialId: input.trialId,
     siteId: input.siteId,
     armId: input.armId,
+    replicate: input.replicate,
     eventDate: createdAt,
     eventType: input.eventType,
     enteredBy: input.enteredBy,
@@ -246,6 +248,9 @@ export async function addTrial(input: {
     name: input.name,
     objective: input.objective,
     status: "draft",
+    design: "observational",
+    replicates: 0,
+    responseMetric: null,
     createdAt,
     updatedAt: createdAt,
   };
@@ -307,6 +312,16 @@ export async function addTrial(input: {
   }
   notify();
   return { success: true, data: trial };
+}
+
+/** Persist trial changes, including its design mode. */
+export async function saveTrial(trial: Trial): Promise<Result<Trial>> {
+  const next = { ...trial, updatedAt: nowIso() };
+  const check = trialSchema.safeParse(next);
+  if (!check.success) {
+    return { success: false, error: "That trial isn't valid — check the design settings." };
+  }
+  return saveRecord("trials", next, "Could not save the trial.");
 }
 
 /** Add a practice arm to a trial. New arms sort after the existing ones. */

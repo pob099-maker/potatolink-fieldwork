@@ -8,6 +8,8 @@ import type {
   EconomicScenario,
   FormField,
   FormTemplate,
+  MeasurementEvent,
+  Metric,
   PracticeArm,
   Project,
   Site,
@@ -55,6 +57,9 @@ const trial: Trial = {
   objective:
     "Compare existing post-harvest handling against optical sorter practices across sites in Walkers Flat (SA) and Tasmania.",
   status: "active",
+  design: "observational",
+  replicates: 0,
+  responseMetric: null,
   createdAt: T0,
   updatedAt: T0,
 };
@@ -283,6 +288,9 @@ const heTrial: Trial = {
   objective:
     "Validate HarvestEye in-field size and count accuracy against manual grading, and assess fit-up effort, operational disruption, and labour ROI on North Queensland harvest conditions.",
   status: "draft",
+  design: "observational",
+  replicates: 0,
+  responseMetric: null,
   createdAt: T0,
   updatedAt: T0,
 };
@@ -730,7 +738,190 @@ const seedScenarios: EconomicScenario[] = [
   },
 ];
 
-const SEED_FLAG = { key: "seeded", version: 10 };
+// A worked REPLICATED trial so colleagues can see the "proper trial" support:
+// a nitrogen-rate response experiment, 3 treatments x 3 replicates at one site,
+// with yield (t/ha) as the response variable. Eight of the nine plots are
+// recorded so the completeness grid shows an outstanding plot.
+
+const NT = {
+  trial: "5f0a6c1e-0002-4000-8000-000000000003",
+  site: "5f0a6c1e-0003-4000-8000-000000000004",
+  contact: "5f0a6c1e-0005-4000-8000-000000000004",
+  armStd: "5f0a6c1e-0004-4000-8000-000000000007",
+  armHigh: "5f0a6c1e-0004-4000-8000-000000000008",
+  armSplit: "5f0a6c1e-0004-4000-8000-000000000009",
+  template: "5f0a6c1e-0006-4000-8000-000000000020",
+} as const;
+
+const ntTrial: Trial = {
+  trialId: NT.trial,
+  projectId: SEED_IDS.project,
+  name: "Nitrogen Rate Response Trial",
+  objective:
+    "Measure the yield response to three nitrogen strategies under a replicated design, for statistical comparison.",
+  status: "active",
+  design: "replicated",
+  replicates: 3,
+  responseMetric: "yield",
+  createdAt: T0,
+  updatedAt: T0,
+};
+
+const ntContact: Contact = {
+  contactId: NT.contact,
+  name: "Trial Cooperator",
+  business: "",
+  role: "cooperator",
+  region: "South Australia",
+  email: "",
+  phone: "",
+  tags: ["nitrogen-trial"],
+  createdAt: T0,
+};
+
+const ntSite: Site = {
+  siteId: NT.site,
+  trialId: NT.trial,
+  contactId: NT.contact,
+  location: "Mallee block",
+  region: "South Australia",
+  soilType: "Sandy loam",
+  coordinates: null,
+  createdAt: T0,
+};
+
+const ntArms: PracticeArm[] = [
+  {
+    armId: NT.armStd,
+    trialId: NT.trial,
+    name: "Standard N",
+    type: "control",
+    description: "District-standard nitrogen rate.",
+    sortOrder: 0,
+    archived: false,
+    createdAt: T0,
+  },
+  {
+    armId: NT.armHigh,
+    trialId: NT.trial,
+    name: "High N",
+    type: "alternative",
+    description: "Elevated nitrogen rate.",
+    sortOrder: 1,
+    archived: false,
+    createdAt: T0,
+  },
+  {
+    armId: NT.armSplit,
+    trialId: NT.trial,
+    name: "Split N",
+    type: "alternative",
+    description: "Standard total nitrogen, split across the season.",
+    sortOrder: 2,
+    archived: false,
+    createdAt: T0,
+  },
+];
+
+const ntTemplate: FormTemplate = {
+  templateId: NT.template,
+  trialId: NT.trial,
+  armId: null,
+  name: "Plot yield record",
+  eventType: "field_record",
+  audience: "grower",
+  frequency: "Once per plot at harvest",
+  requiresSite: true,
+  requiresArm: true,
+  fields: [
+    {
+      fieldName: "plotId",
+      label: "Plot number",
+      type: "text",
+      required: true,
+      options: null,
+      min: null,
+      max: null,
+      unit: null,
+      displayOrder: 0,
+    },
+    {
+      fieldName: "yield",
+      label: "Plot yield",
+      type: "number",
+      required: true,
+      options: null,
+      min: 0,
+      max: null,
+      unit: "t/ha",
+      displayOrder: 1,
+    },
+    {
+      fieldName: "notes",
+      label: "Anything worth noting?",
+      type: "text",
+      required: false,
+      options: null,
+      min: null,
+      max: null,
+      unit: null,
+      displayOrder: 2,
+    },
+  ],
+  createdAt: T0,
+};
+
+// Plot yields (t/ha): each treatment across three reps. High N rep 3 not yet in.
+const ntPlots: Array<[arm: string, rep: number, plot: string, yieldValue: number]> = [
+  [NT.armStd, 1, "101", 46.2],
+  [NT.armStd, 2, "102", 44.8],
+  [NT.armStd, 3, "103", 45.5],
+  [NT.armHigh, 1, "201", 49.1],
+  [NT.armHigh, 2, "202", 50.3],
+  // High N rep 3 (plot 203) deliberately missing
+  [NT.armSplit, 1, "301", 48.0],
+  [NT.armSplit, 2, "302", 47.4],
+  [NT.armSplit, 3, "303", 48.9],
+];
+
+const ntEvents: MeasurementEvent[] = ntPlots.map(([armId, rep], index) => ({
+  eventId: `5f0a6c1e-00e0-4000-8000-0000000000${(index + 10).toString().padStart(2, "0")}`,
+  trialId: NT.trial,
+  siteId: NT.site,
+  armId,
+  replicate: rep,
+  eventDate: T0,
+  eventType: "field_record",
+  enteredBy: NT.contact,
+  syncStatus: "synced",
+  createdAt: T0,
+}));
+
+const ntMetrics: Metric[] = ntPlots.flatMap(([, , plot, yieldValue], index) => {
+  const eventId = ntEvents[index].eventId;
+  return [
+    {
+      metricId: `5f0a6c1e-00e1-4000-8000-0000000000${(index + 10).toString().padStart(2, "0")}`,
+      eventId,
+      metricName: "plotId",
+      value: plot,
+      unit: "",
+      photoUrl: null,
+      createdAt: T0,
+    },
+    {
+      metricId: `5f0a6c1e-00e2-4000-8000-0000000000${(index + 10).toString().padStart(2, "0")}`,
+      eventId,
+      metricName: "yield",
+      value: yieldValue,
+      unit: "t/ha",
+      photoUrl: null,
+      createdAt: T0,
+    },
+  ];
+});
+
+const SEED_FLAG = { key: "seeded", version: 11 };
 
 export async function seedIfNeeded(): Promise<void> {
   const existing = await dbGet<{ key: string; version: number }>("meta", "seeded");
@@ -749,6 +940,13 @@ export async function seedIfNeeded(): Promise<void> {
     { collection: "formTemplates", value: template },
     { collection: "formTemplates", value: heTemplate },
     ...heStaffForms.map((form) => ({ collection: "formTemplates" as const, value: form })),
+    { collection: "trials", value: ntTrial },
+    { collection: "contacts", value: ntContact },
+    { collection: "sites", value: ntSite },
+    ...ntArms.map((arm) => ({ collection: "practiceArms" as const, value: arm })),
+    { collection: "formTemplates", value: ntTemplate },
+    ...ntEvents.map((event) => ({ collection: "measurementEvents" as const, value: event })),
+    ...ntMetrics.map((metric) => ({ collection: "metrics" as const, value: metric })),
     ...seedAssumptions.map((assumption) => ({
       collection: "armAssumptions" as const,
       value: assumption,

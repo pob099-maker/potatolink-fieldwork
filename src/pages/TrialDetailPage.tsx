@@ -13,6 +13,8 @@ import { addArm, removeArm, saveArm } from "../services/store";
 import { buildEntryUrl, summariseArm } from "../services/entryLinks";
 import { buildTrialCsv, csvFileName, downloadCsv } from "../services/export";
 import { describeEvent, describeEventScope, eventsForTrial } from "../services/events";
+import { replicationStatus, responseSummary, type Completeness, type TreatmentStat } from "../services/replication";
+import { saveTrial } from "../services/store";
 import { Card, EmptyState, ErrorState, PageTitle, Skeleton, StatusPill, SyncBadge } from "../components/ui";
 import type { FormTemplate, MeasurementEvent, Metric, PracticeArm, Site, Trial } from "../types";
 
@@ -167,6 +169,39 @@ export function TrialDetailPage() {
           Export data (CSV)
         </button>
       </div>
+
+      <TrialDesignCard trial={trial} templates={trialTemplates} />
+
+      {trial.design === "replicated" ? (
+        <ReplicationStatusCard
+          status={replicationStatus(trial, activeArms, trialSites, trialEvents)}
+          arms={activeArms}
+        />
+      ) : null}
+
+      {trial.design === "replicated" ? (
+        <ResponseSummaryCard
+          stats={responseSummary(
+            trial,
+            activeArms,
+            trialEvents,
+            metrics.data ?? [],
+            selectedSiteId ?? undefined,
+          )}
+          responseLabel={
+            trialTemplates
+              .flatMap((template) => template.fields)
+              .find((field) => field.fieldName === trial.responseMetric)?.label ??
+            trial.responseMetric ??
+            "response"
+          }
+          responseUnit={
+            trialTemplates
+              .flatMap((template) => template.fields)
+              .find((field) => field.fieldName === trial.responseMetric)?.unit ?? ""
+          }
+        />
+      ) : null}
 
       <StaffRecords
         events={trialEvents.filter((event) => {
@@ -375,6 +410,186 @@ function StaffRecords({
           );
         })}
       </ul>
+    </Card>
+  );
+}
+
+function TrialDesignCard({
+  trial,
+  templates,
+}: {
+  trial: Trial;
+  templates: FormTemplate[];
+}) {
+  const numericFields = templates
+    .flatMap((template) => template.fields)
+    .filter((field) => field.type === "number");
+  const [saving, setSaving] = useState(false);
+
+  async function update(changes: Partial<Trial>): Promise<void> {
+    setSaving(true);
+    await saveTrial({ ...trial, ...changes });
+    setSaving(false);
+  }
+
+  return (
+    <Card>
+      <h2 className="font-display text-lg font-bold">Trial design</h2>
+      <p className="mt-1 text-sm text-ink/60 dark:text-ink-dark/60">
+        Observational trials record what happened. A replicated trial adds replicate
+        plots and a response variable so the data can be analysed statistically.
+      </p>
+      <div className="mt-3 grid gap-3 sm:grid-cols-3">
+        <label className="block text-sm font-medium">
+          Design
+          <select
+            value={trial.design}
+            disabled={saving}
+            onChange={(changeEvent) =>
+              void update({ design: changeEvent.target.value as Trial["design"] })
+            }
+            className="mt-1 min-h-11 w-full rounded-lg border border-ink/20 bg-surface px-3 dark:border-ink-dark/20 dark:bg-surface-dark"
+          >
+            <option value="observational">Observational</option>
+            <option value="replicated">Replicated experiment</option>
+          </select>
+        </label>
+        {trial.design === "replicated" ? (
+          <>
+            <label className="block text-sm font-medium">
+              Replicates per treatment
+              <input
+                type="number"
+                min={1}
+                value={trial.replicates}
+                disabled={saving}
+                onChange={(changeEvent) =>
+                  void update({ replicates: Math.max(0, Number(changeEvent.target.value) || 0) })
+                }
+                className="mt-1 min-h-11 w-full rounded-lg border border-ink/20 bg-surface px-3 dark:border-ink-dark/20 dark:bg-surface-dark"
+              />
+            </label>
+            <label className="block text-sm font-medium">
+              Response variable
+              <select
+                value={trial.responseMetric ?? ""}
+                disabled={saving}
+                onChange={(changeEvent) =>
+                  void update({ responseMetric: changeEvent.target.value || null })
+                }
+                className="mt-1 min-h-11 w-full rounded-lg border border-ink/20 bg-surface px-3 dark:border-ink-dark/20 dark:bg-surface-dark"
+              >
+                <option value="">Choose…</option>
+                {numericFields.map((field) => (
+                  <option key={field.fieldName} value={field.fieldName}>
+                    {field.label}
+                  </option>
+                ))}
+              </select>
+            </label>
+          </>
+        ) : null}
+      </div>
+    </Card>
+  );
+}
+
+function ReplicationStatusCard({
+  status,
+  arms,
+}: {
+  status: Completeness;
+  arms: PracticeArm[];
+}) {
+  const complete = status.recorded === status.expected && status.expected > 0;
+  return (
+    <Card>
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <h2 className="font-display text-lg font-bold">Replication status</h2>
+        <span
+          className={`rounded-full px-2.5 py-0.5 text-sm font-medium ${
+            complete ? "bg-success/15 text-success" : "bg-warning/15 text-warning"
+          }`}
+        >
+          {status.recorded} of {status.expected} plots recorded
+        </span>
+      </div>
+      <p className="mt-1 text-sm text-ink/60 dark:text-ink-dark/60">
+        Each cell is a plot (treatment × replicate). Amber cells are outstanding.
+      </p>
+      {status.sites.map((site) => (
+        <div key={site.siteId} className="mt-3 overflow-x-auto">
+          <h3 className="text-sm font-semibold">📍 {site.siteName}</h3>
+          <table className="mt-1 border-separate border-spacing-1 text-center text-sm">
+            <tbody>
+              {arms.map((arm) => (
+                <tr key={arm.armId}>
+                  <th scope="row" className="pr-2 text-right font-medium">
+                    {arm.name}
+                  </th>
+                  {site.cells
+                    .filter((cell) => cell.armId === arm.armId)
+                    .map((cell) => (
+                      <td
+                        key={cell.replicate}
+                        className={`h-9 w-12 rounded ${
+                          cell.recorded
+                            ? "bg-success/20 text-success"
+                            : "bg-warning/15 text-warning"
+                        }`}
+                        title={`Replicate ${cell.replicate}`}
+                      >
+                        {cell.recorded ? "✓" : `R${cell.replicate}`}
+                      </td>
+                    ))}
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      ))}
+    </Card>
+  );
+}
+
+function ResponseSummaryCard({
+  stats,
+  responseLabel,
+  responseUnit,
+}: {
+  stats: TreatmentStat[];
+  responseLabel: string;
+  responseUnit: string;
+}) {
+  return (
+    <Card>
+      <h2 className="font-display text-lg font-bold">Response summary — {responseLabel}</h2>
+      <p className="mt-1 text-sm text-ink/60 dark:text-ink-dark/60">
+        Descriptive means ± standard error per treatment. This is not a significance test —
+        export the tidy data for statistical analysis.
+      </p>
+      <div className="mt-3 overflow-x-auto">
+        <table className="w-full text-sm">
+          <thead>
+            <tr className="text-left text-ink/60 dark:text-ink-dark/60">
+              <th className="py-1">Treatment</th>
+              <th className="py-1">n</th>
+              <th className="py-1">Mean{responseUnit ? ` (${responseUnit})` : ""}</th>
+              <th className="py-1">± SE</th>
+            </tr>
+          </thead>
+          <tbody>
+            {stats.map((stat) => (
+              <tr key={stat.armId} className="border-t border-ink/10 dark:border-ink-dark/10">
+                <td className="py-1 font-medium">{stat.armName}</td>
+                <td className="py-1">{stat.n}</td>
+                <td className="py-1">{stat.mean === null ? "–" : stat.mean.toFixed(2)}</td>
+                <td className="py-1">{stat.se === null ? "–" : stat.se.toFixed(2)}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
     </Card>
   );
 }

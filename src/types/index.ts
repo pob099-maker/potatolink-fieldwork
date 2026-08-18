@@ -55,12 +55,24 @@ export interface Project {
   updatedAt: string;
 }
 
+export type TrialDesign = "observational" | "replicated";
+
 export interface Trial {
   trialId: string;
   projectId: string;
   name: string;
   objective: string;
   status: TrialStatus;
+  /**
+   * "observational" (default): practice-change / viability assessment — no
+   * reps, no completeness checks. "replicated": a designed experiment with
+   * reps and a response variable, for statistical analysis. Opt-in per trial.
+   */
+  design: TrialDesign;
+  /** Target replicates per treatment per site, when design is "replicated". */
+  replicates: number;
+  /** fieldName of the response variable the analysis is about, or null. */
+  responseMetric: string | null;
   createdAt: string;
   updatedAt: string;
 }
@@ -110,6 +122,8 @@ export interface MeasurementEvent {
   siteId: string | null;
   /** null for records that aren't about one practice, such as weather. */
   armId: string | null;
+  /** Replicate/block number for a replicated trial; null otherwise. */
+  replicate: number | null;
   eventDate: string;
   eventType: string;
   enteredBy: string;
