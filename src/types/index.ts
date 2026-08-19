@@ -140,6 +140,8 @@ export interface MeasurementEvent {
   enteredBy: string;
   syncStatus: SyncStatus;
   createdAt: string;
+  /** Set when the entry is corrected; drives last-writer-wins on sync. */
+  updatedAt?: string;
 }
 
 /**
@@ -157,6 +159,8 @@ export interface Metric {
   unit: string;
   photoUrl: string | null;
   createdAt: string;
+  /** Set when the answer is corrected; drives last-writer-wins on sync. */
+  updatedAt?: string;
 }
 
 export interface EconomicScenario {

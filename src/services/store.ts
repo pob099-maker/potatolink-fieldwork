@@ -96,12 +96,19 @@ export const listResults = (): Promise<ResultSet[]> => dbGetAll<ResultSet>("resu
 // Editable config records — stable IDs that already exist in the cloud, so
 // they need last-writer-wins on pull and a retry path when a save can't reach
 // the cloud. (Append-only records like measurement events don't.)
+// Records that can be changed after they are written, and the key each one is
+// identified by. Being in here buys three things: an updatedAt stamp on save,
+// a last-writer-wins guard so a cloud pull can't undo a newer local edit, and
+// the key a queued deletion is replayed against.
 const EDITABLE: Partial<Record<CollectionName, string>> = {
   trials: "trialId",
   formTemplates: "templateId",
   practiceArms: "armId",
   armAssumptions: "assumptionId",
   economicScenarios: "scenarioId",
+  measurementEvents: "eventId",
+  metrics: "metricId",
+  dataEntryLogs: "entryId",
 };
 
 function recordId(collection: CollectionName, record: Record<string, unknown>): string {
@@ -170,7 +177,10 @@ async function drainDeletions(): Promise<void> {
   for (const item of items) {
     const table = TABLE_NAMES[item.collection];
     const key = EDITABLE[item.collection];
-    if (!table || !key) continue;
+    if (!table || !key) {
+      console.warn(`No cloud table or key for a queued ${item.collection} deletion.`);
+      continue;
+    }
     const { error } = await supabase
       .from(table)
       .delete()
@@ -329,6 +339,91 @@ export interface NewEntryInput {
     unit: string;
     photoUrl: string | null;
   }>;
+}
+
+/**
+ * Rewrite the answers on an entry that is already saved. A wrong number gets
+ * noticed a minute after saving, and the alternative to fixing it is a second
+ * entry contradicting the first — which is worse for whoever analyses it.
+ *
+ * Answers are matched by name: an answer that is gone from the form is deleted
+ * rather than left behind, and the entry goes back to pending so the correction
+ * reaches the cloud.
+ */
+export async function updateEntry(
+  eventId: string,
+  values: NewEntryInput["values"],
+): Promise<Result<MeasurementEvent>> {
+  const events = await listEvents();
+  const event = events.find((candidate) => candidate.eventId === eventId);
+  if (!event) return { success: false, error: "That entry no longer exists." };
+
+  const updatedAt = nowIso();
+  const existing = (await listMetrics()).filter((metric) => metric.eventId === eventId);
+  const byName = new Map(existing.map((metric) => [metric.metricName, metric]));
+
+  const next: Metric[] = values.map((value) => {
+    const previous = byName.get(value.metricName);
+    byName.delete(value.metricName);
+    return {
+      metricId: previous?.metricId ?? newId(),
+      eventId,
+      metricName: value.metricName,
+      value: value.value,
+      unit: value.unit,
+      photoUrl: value.photoUrl,
+      createdAt: previous?.createdAt ?? updatedAt,
+      updatedAt,
+    };
+  });
+  if (next.some((metric) => !metricSchema.safeParse(metric).success)) {
+    return { success: false, error: "That correction failed validation and was not saved." };
+  }
+
+  const corrected: MeasurementEvent = { ...event, syncStatus: "pending", updatedAt };
+  try {
+    await dbPutMany([
+      { collection: "measurementEvents", value: corrected },
+      ...next.map((metric) => ({ collection: "metrics" as const, value: metric })),
+    ]);
+    // Whatever the form no longer asks for is removed rather than stranded.
+    for (const orphan of byName.values()) {
+      await dbDelete("metrics", orphan.metricId);
+      await enqueueDeletion("metrics", orphan.metricId);
+    }
+  } catch {
+    return { success: false, error: "Could not save the correction on this device." };
+  }
+
+  notify();
+  void syncPending();
+  return { success: true, data: corrected };
+}
+
+/**
+ * Remove an entry and everything filed under it. Children go first so the
+ * foreign keys hold, both locally and when the queue is replayed.
+ */
+export async function removeEntry(eventId: string): Promise<Result<string>> {
+  const [metrics, logs] = await Promise.all([listMetrics(), listEntryLogs()]);
+  const ownMetrics = metrics.filter((metric) => metric.eventId === eventId);
+  const ownLogs = logs.filter((log) => log.eventId === eventId);
+
+  try {
+    for (const log of ownLogs) await dbDelete("dataEntryLogs", log.entryId);
+    for (const metric of ownMetrics) await dbDelete("metrics", metric.metricId);
+    await dbDelete("measurementEvents", eventId);
+  } catch {
+    return { success: false, error: "Could not remove the entry on this device." };
+  }
+
+  for (const log of ownLogs) await enqueueDeletion("dataEntryLogs", log.entryId);
+  for (const metric of ownMetrics) await enqueueDeletion("metrics", metric.metricId);
+  await enqueueDeletion("measurementEvents", eventId);
+
+  notify();
+  void syncPending();
+  return { success: true, data: "Entry removed." };
 }
 
 /** Save a grower entry locally (event + metrics + entry log), then try to sync. */
@@ -824,6 +919,7 @@ async function pullTables(): Promise<Result<string>> {
   if (!supabase) return { success: false, error: "No Supabase project configured." };
   {
     const outbox = await readOutbox();
+    const deletions = await readDeletions();
     let pulled = 0;
     let unreadable = 0;
     for (const spec of PULL_SPECS) {
@@ -848,7 +944,14 @@ async function pullTables(): Promise<Result<string>> {
         }
       }
 
-      let toWrite = valid;
+      // A record deleted here but not yet deleted in the cloud must not come
+      // back on the next refresh, whatever kind of record it is.
+      const pendingDeletes = new Set(
+        deletions.filter((item) => item.collection === spec.collection).map((item) => item.id),
+      );
+      let toWrite = valid.filter(
+        (row) => !pendingDeletes.has(recordId(spec.collection, row)),
+      );
       // For editable records, never overwrite a newer or still-queued local
       // edit — that is the silent-loss the timestamp guard prevents (S-1).
       if (EDITABLE[spec.collection]) {
@@ -857,7 +960,7 @@ async function pullTables(): Promise<Result<string>> {
         const queued = new Set(
           outbox.filter((item) => item.collection === spec.collection).map((item) => item.id),
         );
-        toWrite = valid.filter((row) => {
+        toWrite = toWrite.filter((row) => {
           const id = recordId(spec.collection, row);
           if (queued.has(id)) return false;
           const existing = localById.get(id);
