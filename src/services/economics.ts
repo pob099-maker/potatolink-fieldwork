@@ -60,6 +60,31 @@ function annualAmount(assumption: ArmAssumption, scenario: ScenarioAssumptions):
   }
 }
 
+export interface AssumptionConfidence {
+  total: number;
+  confirmed: number;
+  placeholder: number;
+  /** The figures still standing in, so the page can name what to chase down. */
+  placeholderNames: string[];
+}
+
+/**
+ * How much of a calculation rests on real numbers. A payback period built from
+ * invented costs looks exactly like one built from invoices, so anywhere a
+ * result is shown has to be able to say which it is.
+ */
+export function assumptionConfidence(assumptions: ArmAssumption[]): AssumptionConfidence {
+  const placeholders = assumptions.filter(
+    (assumption) => (assumption.status ?? "placeholder") === "placeholder",
+  );
+  return {
+    total: assumptions.length,
+    confirmed: assumptions.length - placeholders.length,
+    placeholder: placeholders.length,
+    placeholderNames: placeholders.map((assumption) => assumption.fieldName),
+  };
+}
+
 export interface ArmEconomics {
   armId: string;
   capex: number;

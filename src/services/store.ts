@@ -26,6 +26,7 @@ import type {
   FormTemplate,
   MeasurementEvent,
   Metric,
+  MetricValue,
   PracticeArm,
   Project,
   Result,
@@ -36,7 +37,7 @@ import type {
 } from "../types";
 import { newId, nowIso } from "../lib/id";
 import { dbDelete, dbGet, dbGetAll, dbPut, dbPutMany, type CollectionName } from "../lib/localdb";
-import { fromRow, isBackendConfigured, supabase, toRow } from "../lib/supabase";
+import { fromRow, isBackendConfigured, supabase, toColumn, toRow } from "../lib/supabase";
 import { fileExtension, getMedia, isMediaPointer, markUploaded, mediaIdFromPointer } from "./media";
 
 const TABLE_NAMES: Partial<Record<CollectionName, string>> = {
@@ -139,6 +140,48 @@ async function dequeueOutbox(collection: CollectionName, id: string): Promise<vo
   );
 }
 
+// Deletions need their own queue: a deleted record is gone from the local
+// store, so the save outbox — which re-reads the record before pushing — has
+// nothing left to work from. Without this a delete made offline never left
+// the device, and the next pull brought the record back.
+interface DeletionItem {
+  collection: CollectionName;
+  id: string;
+}
+
+async function readDeletions(): Promise<DeletionItem[]> {
+  const stored = await dbGet<{ key: string; items: DeletionItem[] }>("meta", "deletions");
+  return stored?.items ?? [];
+}
+
+async function enqueueDeletion(collection: CollectionName, id: string): Promise<void> {
+  const items = await readDeletions();
+  if (!items.some((item) => item.collection === collection && item.id === id)) {
+    await dbPut("meta", { key: "deletions", items: [...items, { collection, id }] });
+  }
+}
+
+/** Replay queued deletions against the cloud; drop each one that lands. */
+async function drainDeletions(): Promise<void> {
+  if (!supabase || !navigator.onLine) return;
+  const items = await readDeletions();
+  if (items.length === 0) return;
+  const remaining: DeletionItem[] = [];
+  for (const item of items) {
+    const table = TABLE_NAMES[item.collection];
+    const key = EDITABLE[item.collection];
+    if (!table || !key) continue;
+    const { error } = await supabase
+      .from(table)
+      .delete()
+      .eq(toColumn(key), item.id);
+    if (error) remaining.push(item);
+  }
+  if (remaining.length !== items.length) {
+    await dbPut("meta", { key: "deletions", items: remaining });
+  }
+}
+
 /**
  * Save a config record locally, stamp updatedAt for last-writer-wins, then push
  * to Supabase. If the push can't happen (offline) or fails, the record is
@@ -222,18 +265,29 @@ export async function saveAssumption(assumption: ArmAssumption): Promise<Result<
   return saveRecord("armAssumptions", assumption, "Could not save the assumption.");
 }
 
-/** Remove an assumption locally. Cloud rows are kept (no delete policy yet). */
-export async function removeAssumption(assumptionId: string): Promise<void> {
+/**
+ * Remove an assumption everywhere. It used to be zeroed in the cloud rather
+ * than deleted, because anon had no delete permission — so the next pull
+ * brought it back as a live $0 line that quietly sat in the calculation.
+ * Migration 0011 grants the delete; if it still fails the row is queued so a
+ * later sync finishes the job rather than leaving the two copies disagreeing.
+ */
+export async function removeAssumption(assumptionId: string): Promise<Result<string>> {
   await dbDelete("armAssumptions", assumptionId);
-  if (supabase) {
-    // Best effort: mark the value zero in the cloud so calculations elsewhere match.
-    void supabase
-      .from("arm_assumptions")
-      .update({ value: 0 })
-      .eq("assumption_id", assumptionId)
-      .then();
-  }
   notify();
+  if (!supabase || !navigator.onLine) {
+    await enqueueDeletion("armAssumptions", assumptionId);
+    return { success: true, data: "Removed on this device; will remove from the cloud." };
+  }
+  const { error } = await supabase
+    .from("arm_assumptions")
+    .delete()
+    .eq("assumption_id", assumptionId);
+  if (error) {
+    await enqueueDeletion("armAssumptions", assumptionId);
+    return { success: true, data: "Removed on this device; will remove from the cloud." };
+  }
+  return { success: true, data: "Removed." };
 }
 
 export async function saveScenario(scenario: EconomicScenario): Promise<Result<EconomicScenario>> {
@@ -271,7 +325,7 @@ export interface NewEntryInput {
   deviceType: DataEntryLog["deviceType"];
   values: Array<{
     metricName: string;
-    value: number | string;
+    value: MetricValue;
     unit: string;
     photoUrl: string | null;
   }>;
@@ -589,13 +643,39 @@ export async function saveTemplate(template: FormTemplate): Promise<Result<FormT
   return saveRecord("formTemplates", template, "Could not save the form on this device.");
 }
 
-let syncing = false;
+// One sync at a time. Push and pull held separate locks, so a pull could land
+// a cloud row on top of a record the push was midway through writing and mark
+// it synced when it never went (S-5). They now queue behind each other. A
+// second call to work already in flight is dropped rather than stacked up —
+// the interval comes round again soon enough.
+let syncLock: Promise<void> = Promise.resolve();
+const inFlight = new Set<string>();
+
+async function serialize<T>(key: string, work: () => Promise<T>, skipped: T): Promise<T> {
+  if (inFlight.has(key)) return skipped;
+  inFlight.add(key);
+  const previous = syncLock;
+  let release = (): void => {};
+  syncLock = new Promise<void>((resolve) => {
+    release = resolve;
+  });
+  try {
+    await previous;
+    return await work();
+  } finally {
+    inFlight.delete(key);
+    release();
+  }
+}
 
 /** Push all pending measurement events (with metrics and logs) to Supabase. */
 export async function syncPending(): Promise<void> {
-  if (syncing || !isBackendConfigured() || !navigator.onLine) return;
-  syncing = true;
-  try {
+  if (!isBackendConfigured() || !navigator.onLine) return;
+  return serialize("push", pushPending, undefined);
+}
+
+async function pushPending(): Promise<void> {
+  {
     const [events, metrics, logs] = await Promise.all([
       listEvents(),
       listMetrics(),
@@ -618,8 +698,7 @@ export async function syncPending(): Promise<void> {
     }
     if (pending.length > 0) notify();
     await drainOutbox();
-  } finally {
-    syncing = false;
+    await drainDeletions();
   }
 }
 
@@ -727,8 +806,6 @@ const PULL_SPECS: Array<{ collection: CollectionName; table: string; schema: Zod
   { collection: "dataEntryLogs", table: "data_entry_logs", schema: dataEntryLogSchema },
 ];
 
-let pulling = false;
-
 /** Fetch every synced table from Supabase into the local store. */
 export async function pullFromCloud(): Promise<Result<string>> {
   if (!isBackendConfigured() || !supabase) {
@@ -737,11 +814,18 @@ export async function pullFromCloud(): Promise<Result<string>> {
   if (!navigator.onLine) {
     return { success: false, error: "Offline — will refresh when a connection returns." };
   }
-  if (pulling) return { success: true, data: "Refresh already in progress." };
-  pulling = true;
-  try {
+  return serialize<Result<string>>("pull", pullTables, {
+    success: true,
+    data: "Refresh already in progress.",
+  });
+}
+
+async function pullTables(): Promise<Result<string>> {
+  if (!supabase) return { success: false, error: "No Supabase project configured." };
+  {
     const outbox = await readOutbox();
     let pulled = 0;
+    let unreadable = 0;
     for (const spec of PULL_SPECS) {
       const { data, error } = await supabase.from(spec.table).select("*");
       if (error) {
@@ -750,7 +834,18 @@ export async function pullFromCloud(): Promise<Result<string>> {
       const valid: Record<string, unknown>[] = [];
       for (const row of data ?? []) {
         const check = spec.schema.safeParse(fromRow(row as Record<string, unknown>));
-        if (check.success) valid.push(check.data as Record<string, unknown>);
+        if (check.success) {
+          valid.push(check.data as Record<string, unknown>);
+        } else {
+          // A row the app can't read is a real problem — a schema drift or a
+          // bad write. It used to vanish silently, so the device just showed
+          // fewer records than the cloud held (S-5).
+          unreadable += 1;
+          console.warn(
+            `Skipped an unreadable ${spec.table} row:`,
+            check.error.issues.map((issue) => `${issue.path.join(".")} ${issue.message}`),
+          );
+        }
       }
 
       let toWrite = valid;
@@ -775,9 +870,13 @@ export async function pullFromCloud(): Promise<Result<string>> {
       pulled += toWrite.length;
     }
     if (pulled > 0) notify();
-    return { success: true, data: `Refreshed ${pulled} records from the cloud.` };
-  } finally {
-    pulling = false;
+    const warning =
+      unreadable > 0
+        ? ` ${unreadable} row${unreadable === 1 ? "" : "s"} could not be read and ${
+            unreadable === 1 ? "was" : "were"
+          } skipped — check the browser console.`
+        : "";
+    return { success: true, data: `Refreshed ${pulled} records from the cloud.${warning}` };
   }
 }
 

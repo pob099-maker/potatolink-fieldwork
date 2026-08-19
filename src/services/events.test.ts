@@ -105,6 +105,29 @@ describe("describing records", () => {
     expect(describeEvent(event({ eventType: "cost_log" }), templates)).toBe("Cost log");
   });
 
+  it("names a record after its own trial's form, not another trial's", () => {
+    // Nearly every trial has a "field_record", so matching on event type alone
+    // labelled a record with whichever trial came first in the list.
+    const shared: FormTemplate[] = [
+      { ...templates[0], templateId: "t2", trialId: OTHER_TRIAL, name: "Their run record", eventType: "field_record" },
+      { ...templates[0], templateId: "t3", trialId: TRIAL, name: "Our run record", eventType: "field_record" },
+    ];
+    expect(
+      describeEvent(event({ trialId: TRIAL, eventType: "field_record" }), shared),
+    ).toBe("Our run record");
+  });
+
+  it("falls back to any matching form when the record predates trial references", () => {
+    // Older records carry no trialId, so the best available guess is the
+    // event type alone — the old behaviour, kept for them only.
+    const shared: FormTemplate[] = [
+      { ...templates[0], templateId: "t2", trialId: OTHER_TRIAL, name: "Their run record", eventType: "field_record" },
+    ];
+    expect(describeEvent(event({ eventType: "field_record" }), shared)).toBe(
+      "Their run record",
+    );
+  });
+
   it("falls back to a readable event type when no form matches", () => {
     expect(describeEvent(event({ eventType: "portal_output" }), templates)).toBe(
       "portal output",

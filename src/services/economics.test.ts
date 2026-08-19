@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+  assumptionConfidence,
   calculateArm,
   compareArms,
   parseScenarioAssumptions,
@@ -39,6 +40,7 @@ function assumption(
     fieldName: "test",
     value,
     unit,
+    status: "placeholder",
     createdAt: "2026-08-18T00:00:00.000Z",
   };
 }
@@ -123,5 +125,30 @@ describe("parseScenarioAssumptions", () => {
       JSON.stringify({ seasonTonnes: 1000, pricePerTonne: 500, labourRatePerHour: 45 }),
     );
     expect(parsed).toEqual({ seasonTonnes: 1000, pricePerTonne: 500, labourRatePerHour: 45 });
+  });
+});
+
+describe("assumptionConfidence", () => {
+  it("counts what is still a stand-in and names it", () => {
+    const confidence = assumptionConfidence([
+      { ...assumption("a", "capex", 450000, "$"), fieldName: "Sorter purchase" },
+      {
+        ...assumption("a", "opex", 18000, "$/yr"),
+        fieldName: "Service contract",
+        status: "confirmed",
+      },
+    ]);
+    expect(confidence.total).toBe(2);
+    expect(confidence.confirmed).toBe(1);
+    expect(confidence.placeholder).toBe(1);
+    expect(confidence.placeholderNames).toEqual(["Sorter purchase"]);
+  });
+
+  it("treats a figure with no status as a placeholder", () => {
+    // Rows written before the flag existed were never verified by anyone, so
+    // the safe reading is the cautious one.
+    const legacy = { ...assumption("a", "opex", 100, "$/yr") };
+    delete (legacy as { status?: string }).status;
+    expect(assumptionConfidence([legacy]).placeholder).toBe(1);
   });
 });

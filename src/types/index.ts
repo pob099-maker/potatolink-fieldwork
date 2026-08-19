@@ -102,6 +102,13 @@ export interface PracticeArm {
   updatedAt?: string;
 }
 
+/**
+ * Whether a cost or benefit is a stand-in or a real figure. Everything starts
+ * as a placeholder so a modelled result is never mistaken for a measured one;
+ * someone with the invoice in hand marks it confirmed.
+ */
+export type AssumptionStatus = "placeholder" | "confirmed";
+
 export interface ArmAssumption {
   assumptionId: string;
   armId: string;
@@ -109,6 +116,7 @@ export interface ArmAssumption {
   fieldName: string;
   value: number | string;
   unit: string;
+  status: AssumptionStatus;
   createdAt: string;
   updatedAt?: string;
 }
@@ -134,11 +142,18 @@ export interface MeasurementEvent {
   createdAt: string;
 }
 
+/**
+ * A recorded answer in its own shape: a measurement, a written note, a yes/no,
+ * or the set of choices ticked on a multi-choice question. Kept native so the
+ * export can stay tidy — see services/metricValue.ts.
+ */
+export type MetricValue = number | string | boolean | string[];
+
 export interface Metric {
   metricId: string;
   eventId: string;
   metricName: string;
-  value: number | string;
+  value: MetricValue;
   unit: string;
   photoUrl: string | null;
   createdAt: string;

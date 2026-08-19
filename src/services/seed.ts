@@ -692,6 +692,8 @@ const seedAssumptions: ArmAssumption[] = assumptionRows.map(
     fieldName,
     value,
     unit,
+    // Indicative figures for the demonstration, not the grower's own costs.
+    status: "placeholder",
     createdAt: T0,
   }),
 );

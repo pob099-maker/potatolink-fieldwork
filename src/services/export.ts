@@ -11,6 +11,7 @@ import type {
   Trial,
 } from "../types";
 import { eventsForTrial, templateForEvent } from "./events";
+import { metricExportValues } from "./metricValue";
 
 const COLUMNS = [
   "trial",
@@ -86,13 +87,17 @@ export function buildTrialCsv(
     }
     for (const metric of eventMetrics) {
       const isUrl = typeof metric.photoUrl === "string" && metric.photoUrl.startsWith("http");
-      rows.push([
-        ...base,
-        metric.metricName,
-        String(metric.value),
-        metric.unit,
-        isUrl ? (metric.photoUrl as string) : "",
-      ]);
+      // A multi-choice answer yields one row per selection, so the export
+      // stays long-format rather than hiding several observations in one cell.
+      for (const value of metricExportValues(metric.value)) {
+        rows.push([
+          ...base,
+          metric.metricName,
+          value,
+          metric.unit,
+          isUrl ? (metric.photoUrl as string) : "",
+        ]);
+      }
     }
   }
 

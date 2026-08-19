@@ -15,12 +15,16 @@ export function isBackendConfigured(): boolean {
   return supabase !== null;
 }
 
+/** Map one camelCase key to its snake_case Postgres column. */
+export function toColumn(key: string): string {
+  return key.replace(/[A-Z]/g, (letter) => `_${letter.toLowerCase()}`);
+}
+
 /** Map a camelCase record to the snake_case columns used in Postgres. */
 export function toRow(record: object): Record<string, unknown> {
   const row: Record<string, unknown> = {};
   for (const [key, value] of Object.entries(record)) {
-    const column = key.replace(/[A-Z]/g, (letter) => `_${letter.toLowerCase()}`);
-    row[column] = value;
+    row[toColumn(key)] = value;
   }
   return row;
 }

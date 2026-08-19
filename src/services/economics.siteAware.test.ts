@@ -49,6 +49,7 @@ function assumption(
     fieldName: "test",
     value,
     unit,
+    status: "placeholder",
     createdAt: T0,
   };
 }
