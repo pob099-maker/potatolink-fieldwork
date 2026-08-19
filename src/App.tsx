@@ -2,6 +2,8 @@ import { HashRouter, Route, Routes } from "react-router-dom";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { Layout } from "./components/Layout";
 import { AccessProvider } from "./contexts/AccessContext";
+import { AuthProvider } from "./contexts/AuthContext";
+import { RequireStaff } from "./components/RequireStaff";
 import { ThemeProvider } from "./contexts/ThemeContext";
 import { useStoreInvalidation } from "./hooks/useCollections";
 import { DashboardPage } from "./pages/DashboardPage";
@@ -21,15 +23,30 @@ function AppRoutes() {
   return (
     <Layout>
       <Routes>
-        <Route path="/" element={<DashboardPage />} />
-        <Route path="/trials" element={<TrialsPage />} />
-        <Route path="/trials/new" element={<NewTrialPage />} />
-        <Route path="/trials/import" element={<ImportTrialPage />} />
-        <Route path="/trials/:trialId" element={<TrialDetailPage />} />
+        {/*
+          Recording data is the one thing that must never need an account: a
+          grower opens their link and fills the form. Everything that changes
+          what a trial *is* — its sites, practices, forms and economics — sits
+          behind staff sign-in.
+        */}
         <Route path="/trials/:trialId/entry" element={<EntryPage />} />
-        <Route path="/trials/:trialId/template" element={<TemplateEditorPage />} />
-        <Route path="/trials/:trialId/results" element={<ResultsPage />} />
-        <Route path="/settings" element={<SettingsPage />} />
+        <Route
+          path="*"
+          element={
+            <RequireStaff>
+              <Routes>
+                <Route path="/" element={<DashboardPage />} />
+                <Route path="/trials" element={<TrialsPage />} />
+                <Route path="/trials/new" element={<NewTrialPage />} />
+                <Route path="/trials/import" element={<ImportTrialPage />} />
+                <Route path="/trials/:trialId" element={<TrialDetailPage />} />
+                <Route path="/trials/:trialId/template" element={<TemplateEditorPage />} />
+                <Route path="/trials/:trialId/results" element={<ResultsPage />} />
+                <Route path="/settings" element={<SettingsPage />} />
+              </Routes>
+            </RequireStaff>
+          }
+        />
       </Routes>
     </Layout>
   );
@@ -39,6 +56,7 @@ export function App() {
   return (
     <QueryClientProvider client={queryClient}>
       <ThemeProvider>
+        <AuthProvider>
         <AccessProvider>
           {/*
             Hash routing: static hosts (GitHub Pages included) answer an
@@ -53,6 +71,7 @@ export function App() {
             <AppRoutes />
           </HashRouter>
         </AccessProvider>
+        </AuthProvider>
       </ThemeProvider>
     </QueryClientProvider>
   );
