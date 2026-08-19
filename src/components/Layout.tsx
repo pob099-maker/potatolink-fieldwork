@@ -1,6 +1,7 @@
 import type { ReactNode } from "react";
 import { NavLink, useLocation } from "react-router-dom";
 import { useTheme } from "../contexts/ThemeContext";
+import { useAuth } from "../contexts/AuthContext";
 import { isBackendConfigured } from "../lib/supabase";
 
 const NAV_ITEMS = [
@@ -35,6 +36,7 @@ function PotatoMark() {
 
 export function Layout({ children }: { children: ReactNode }) {
   const { theme, toggleTheme } = useTheme();
+  const { email } = useAuth();
   // A grower opens a link straight to a form. Showing them the staff
   // navigation invites taps into trial setup and makes a one-job screen look
   // like an admin console, so the entry route runs without it.
@@ -66,7 +68,7 @@ export function Layout({ children }: { children: ReactNode }) {
           </button>
         </div>
         {focused ? null : (
-        <nav className="mx-auto flex max-w-4xl gap-1 px-4 pb-2">
+        <nav className="mx-auto flex max-w-4xl flex-wrap items-center gap-1 px-4 pb-2">
           {NAV_ITEMS.map((item) => (
             <NavLink
               key={item.to}
@@ -83,6 +85,17 @@ export function Layout({ children }: { children: ReactNode }) {
               {item.label}
             </NavLink>
           ))}
+          {/* Who the app thinks you are, which matters when several people
+              share a laptop at a field day. */}
+          {email ? (
+            <NavLink
+              to="/settings"
+              className="ml-auto max-w-[40%] truncate text-sm text-ink/50 hover:underline dark:text-ink-dark/50"
+              title={email}
+            >
+              {email}
+            </NavLink>
+          ) : null}
         </nav>
         )}
       </header>
