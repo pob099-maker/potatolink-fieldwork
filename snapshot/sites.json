@@ -1,0 +1,62 @@
+[
+  {
+    "site_id": "5f0a6c1e-0003-4000-8000-000000000001",
+    "trial_id": "5f0a6c1e-0002-4000-8000-000000000001",
+    "contact_id": "5f0a6c1e-0005-4000-8000-000000000001",
+    "location": "Walkers Flat",
+    "region": "South Australia",
+    "soil_type": "Sandy loam",
+    "coordinates": null,
+    "created_at": "2026-08-01T00:00:00+00:00"
+  },
+  {
+    "site_id": "5f0a6c1e-0003-4000-8000-000000000002",
+    "trial_id": "5f0a6c1e-0002-4000-8000-000000000001",
+    "contact_id": "5f0a6c1e-0005-4000-8000-000000000001",
+    "location": "Tasmania",
+    "region": "Tasmania",
+    "soil_type": "Ferrosol",
+    "coordinates": null,
+    "created_at": "2026-08-01T00:00:00+00:00"
+  },
+  {
+    "site_id": "5f0a6c1e-0003-4000-8000-000000000003",
+    "trial_id": "5f0a6c1e-0002-4000-8000-000000000002",
+    "contact_id": "5f0a6c1e-0005-4000-8000-000000000003",
+    "location": "Atherton Tablelands",
+    "region": "North Queensland",
+    "soil_type": "Red ferrosol",
+    "coordinates": null,
+    "created_at": "2026-08-01T00:00:00+00:00"
+  },
+  {
+    "site_id": "5f0a6c1e-0003-4000-8000-000000000004",
+    "trial_id": "5f0a6c1e-0002-4000-8000-000000000003",
+    "contact_id": "5f0a6c1e-0005-4000-8000-000000000004",
+    "location": "Mallee block",
+    "region": "South Australia",
+    "soil_type": "Sandy loam",
+    "coordinates": null,
+    "created_at": "2026-08-01T00:00:00+00:00"
+  },
+  {
+    "site_id": "217262bf-c91b-472e-aaa5-eb449827cc74",
+    "trial_id": "45aa91f3-447e-466c-824d-718aa5129ed5",
+    "contact_id": "5f0a6c1e-0005-4000-8000-000000000003",
+    "location": "Gatton Research Farm",
+    "region": "QLD",
+    "soil_type": "",
+    "coordinates": null,
+    "created_at": "2026-08-18T19:26:53.032+00:00"
+  },
+  {
+    "site_id": "df4c540a-9cdf-4b20-80e6-bc9284950ac9",
+    "trial_id": "ad89484c-7071-4046-ba29-a21c59bc05e5",
+    "contact_id": "5f0a6c1e-0005-4000-8000-000000000003",
+    "location": "Tolga",
+    "region": "North Queensland",
+    "soil_type": "Red ferrosol",
+    "coordinates": null,
+    "created_at": "2026-08-18T19:57:06.013+00:00"
+  }
+]

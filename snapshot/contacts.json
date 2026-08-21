@@ -1,0 +1,52 @@
+[
+  {
+    "contact_id": "5f0a6c1e-0005-4000-8000-000000000001",
+    "name": "Sample Grower",
+    "business": "Walkers Flat Produce",
+    "role": "grower",
+    "region": "Murraylands SA",
+    "email": "",
+    "phone": "",
+    "tags": [
+      "cropvision-trial"
+    ],
+    "created_at": "2026-08-01T00:00:00+00:00"
+  },
+  {
+    "contact_id": "5f0a6c1e-0005-4000-8000-000000000002",
+    "name": "PotatoLink Staff",
+    "business": "PotatoLink",
+    "role": "staff",
+    "region": "National",
+    "email": "",
+    "phone": "",
+    "tags": [],
+    "created_at": "2026-08-01T00:00:00+00:00"
+  },
+  {
+    "contact_id": "5f0a6c1e-0005-4000-8000-000000000003",
+    "name": "North QLD Cooperator (TBC)",
+    "business": "",
+    "role": "cooperator",
+    "region": "North Queensland",
+    "email": "",
+    "phone": "",
+    "tags": [
+      "harvesteye-trial"
+    ],
+    "created_at": "2026-08-01T00:00:00+00:00"
+  },
+  {
+    "contact_id": "5f0a6c1e-0005-4000-8000-000000000004",
+    "name": "Trial Cooperator",
+    "business": "",
+    "role": "cooperator",
+    "region": "South Australia",
+    "email": "",
+    "phone": "",
+    "tags": [
+      "nitrogen-trial"
+    ],
+    "created_at": "2026-08-01T00:00:00+00:00"
+  }
+]

@@ -1,0 +1,134 @@
+[
+  {
+    "arm_id": "1c651e88-6561-4f3e-980f-4469c5034902",
+    "trial_id": "ad89484c-7071-4046-ba29-a21c59bc05e5",
+    "name": "Current practice",
+    "type": "control",
+    "description": "What the grower does now.",
+    "sort_order": 0,
+    "created_at": "2026-08-18T19:57:05.646+00:00",
+    "archived": false,
+    "updated_at": "2026-08-18T19:57:06.195+00:00"
+  },
+  {
+    "arm_id": "d3b33bc6-0b26-48df-88cd-5fd295973115",
+    "trial_id": "ad89484c-7071-4046-ba29-a21c59bc05e5",
+    "name": "New handling",
+    "type": "alternative",
+    "description": "The change being tested.",
+    "sort_order": 1,
+    "created_at": "2026-08-18T19:57:06.404+00:00",
+    "archived": false,
+    "updated_at": "2026-08-18T19:57:06.404+00:00"
+  },
+  {
+    "arm_id": "f55c0ce5-0526-4dc1-9be2-c68fcc00227d",
+    "trial_id": "45aa91f3-447e-466c-824d-718aa5129ed5",
+    "name": "Alternative practice",
+    "type": "alternative",
+    "description": "",
+    "sort_order": 1,
+    "created_at": "2026-08-18T18:45:54.218+00:00",
+    "archived": false,
+    "updated_at": "2026-08-18T18:45:54.218+00:00"
+  },
+  {
+    "arm_id": "5f0a6c1e-0004-4000-8000-000000000001",
+    "trial_id": "5f0a6c1e-0002-4000-8000-000000000001",
+    "name": "Existing post-harvest handling",
+    "type": "control",
+    "description": "Current practice without an optical sorter.",
+    "sort_order": 0,
+    "created_at": "2026-08-01T00:00:00+00:00",
+    "archived": false,
+    "updated_at": null
+  },
+  {
+    "arm_id": "5f0a6c1e-0004-4000-8000-000000000002",
+    "trial_id": "5f0a6c1e-0002-4000-8000-000000000001",
+    "name": "CropVision — on-farm owned unit",
+    "type": "alternative",
+    "description": "Optical sorter owned and operated on farm.",
+    "sort_order": 1,
+    "created_at": "2026-08-01T00:00:00+00:00",
+    "archived": false,
+    "updated_at": null
+  },
+  {
+    "arm_id": "5f0a6c1e-0004-4000-8000-000000000003",
+    "trial_id": "5f0a6c1e-0002-4000-8000-000000000001",
+    "name": "CropVision — shared/service model",
+    "type": "alternative",
+    "description": "Optical sorter accessed through a shared or contracted service.",
+    "sort_order": 2,
+    "created_at": "2026-08-01T00:00:00+00:00",
+    "archived": false,
+    "updated_at": null
+  },
+  {
+    "arm_id": "5f0a6c1e-0004-4000-8000-000000000004",
+    "trial_id": "5f0a6c1e-0002-4000-8000-000000000001",
+    "name": "Improved handling without optical sorter",
+    "type": "alternative",
+    "description": "Upgraded conventional handling practices, no optical sorter.",
+    "sort_order": 3,
+    "created_at": "2026-08-01T00:00:00+00:00",
+    "archived": false,
+    "updated_at": null
+  },
+  {
+    "arm_id": "5f0a6c1e-0004-4000-8000-000000000005",
+    "trial_id": "5f0a6c1e-0002-4000-8000-000000000002",
+    "name": "Manual grading (current practice)",
+    "type": "control",
+    "description": "Hand-graded samples only; no in-field sensing.",
+    "sort_order": 0,
+    "created_at": "2026-08-01T00:00:00+00:00",
+    "archived": false,
+    "updated_at": null
+  },
+  {
+    "arm_id": "5f0a6c1e-0004-4000-8000-000000000006",
+    "trial_id": "5f0a6c1e-0002-4000-8000-000000000002",
+    "name": "HarvestEye-fitted harvester",
+    "type": "alternative",
+    "description": "HarvestEye unit mounted on the harvester, validated against hand grading.",
+    "sort_order": 1,
+    "created_at": "2026-08-01T00:00:00+00:00",
+    "archived": false,
+    "updated_at": null
+  },
+  {
+    "arm_id": "5f0a6c1e-0004-4000-8000-000000000007",
+    "trial_id": "5f0a6c1e-0002-4000-8000-000000000003",
+    "name": "Standard N",
+    "type": "control",
+    "description": "District-standard nitrogen rate.",
+    "sort_order": 0,
+    "created_at": "2026-08-01T00:00:00+00:00",
+    "archived": false,
+    "updated_at": null
+  },
+  {
+    "arm_id": "5f0a6c1e-0004-4000-8000-000000000008",
+    "trial_id": "5f0a6c1e-0002-4000-8000-000000000003",
+    "name": "High N",
+    "type": "alternative",
+    "description": "Elevated nitrogen rate.",
+    "sort_order": 1,
+    "created_at": "2026-08-01T00:00:00+00:00",
+    "archived": false,
+    "updated_at": null
+  },
+  {
+    "arm_id": "5f0a6c1e-0004-4000-8000-000000000009",
+    "trial_id": "5f0a6c1e-0002-4000-8000-000000000003",
+    "name": "Split N",
+    "type": "alternative",
+    "description": "Standard total nitrogen, split across the season.",
+    "sort_order": 2,
+    "created_at": "2026-08-01T00:00:00+00:00",
+    "archived": false,
+    "updated_at": null
+  }
+]

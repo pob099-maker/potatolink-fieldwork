@@ -1,0 +1,905 @@
+[
+  {
+    "template_id": "5f0a6c1e-0006-4000-8000-000000000001",
+    "trial_id": "5f0a6c1e-0002-4000-8000-000000000001",
+    "arm_id": null,
+    "name": "CropVision run record",
+    "fields": [
+      {
+        "max": null,
+        "min": 0,
+        "type": "number",
+        "unit": "t",
+        "label": "Tonnes handled",
+        "options": null,
+        "required": true,
+        "fieldName": "tonnesHandled",
+        "displayOrder": 0
+      },
+      {
+        "max": null,
+        "min": 0,
+        "type": "number",
+        "unit": "hours",
+        "label": "How long did the run take?",
+        "options": null,
+        "required": true,
+        "fieldName": "runDuration",
+        "displayOrder": 1
+      },
+      {
+        "max": null,
+        "min": 1,
+        "type": "number",
+        "unit": null,
+        "label": "People involved",
+        "options": null,
+        "required": true,
+        "fieldName": "peopleInvolved",
+        "displayOrder": 2
+      },
+      {
+        "max": null,
+        "min": null,
+        "type": "boolean",
+        "unit": null,
+        "label": "Did the run go as planned?",
+        "options": null,
+        "required": true,
+        "fieldName": "runWentAsPlanned",
+        "displayOrder": 3
+      },
+      {
+        "max": null,
+        "min": null,
+        "type": "photo",
+        "unit": null,
+        "label": "Photo of the run (optional)",
+        "options": null,
+        "required": false,
+        "fieldName": "photo",
+        "displayOrder": 4
+      },
+      {
+        "max": null,
+        "min": null,
+        "type": "video",
+        "unit": null,
+        "label": "Short video of the run (optional)",
+        "options": null,
+        "required": false,
+        "fieldName": "video",
+        "displayOrder": 8
+      },
+      {
+        "max": 5,
+        "min": 1,
+        "type": "slider",
+        "unit": null,
+        "label": "How well did the sorting work?",
+        "options": null,
+        "required": false,
+        "fieldName": "sortingResult",
+        "displayOrder": 5
+      },
+      {
+        "max": null,
+        "min": null,
+        "type": "select",
+        "unit": null,
+        "label": "Main thing removed",
+        "options": [
+          "clods/stones",
+          "damaged tubers",
+          "rot",
+          "green potatoes",
+          "misshapes",
+          "foreign material",
+          "no meaningful separation"
+        ],
+        "required": false,
+        "fieldName": "mainRemovalCategory",
+        "displayOrder": 6
+      },
+      {
+        "max": null,
+        "min": null,
+        "type": "text",
+        "unit": null,
+        "label": "Anything else worth noting?",
+        "options": null,
+        "required": false,
+        "fieldName": "notes",
+        "displayOrder": 7
+      }
+    ],
+    "created_at": "2026-08-01T00:00:00+00:00",
+    "event_type": "field_record",
+    "audience": "grower",
+    "frequency": "",
+    "requires_site": true,
+    "requires_arm": true,
+    "updated_at": null
+  },
+  {
+    "template_id": "9cefa5ab-9373-4c1e-b37a-ebf138c2bfd0",
+    "trial_id": "45aa91f3-447e-466c-824d-718aa5129ed5",
+    "arm_id": null,
+    "name": "Cost log",
+    "fields": [
+      {
+        "max": null,
+        "min": 0,
+        "type": "number",
+        "unit": "$",
+        "label": "Lease cost",
+        "options": null,
+        "required": true,
+        "fieldName": "leaseCost",
+        "displayOrder": 0
+      }
+    ],
+    "created_at": "2026-08-18T18:45:53.676+00:00",
+    "event_type": "cost_log",
+    "audience": "staff",
+    "frequency": "Once per trial",
+    "requires_site": false,
+    "requires_arm": false,
+    "updated_at": "2026-08-18T18:45:54.022+00:00"
+  },
+  {
+    "template_id": "eece93f9-587c-4706-a3f6-79984679b34b",
+    "trial_id": "ad89484c-7071-4046-ba29-a21c59bc05e5",
+    "arm_id": null,
+    "name": "Run record",
+    "fields": [
+      {
+        "max": null,
+        "min": 0,
+        "type": "number",
+        "unit": "t",
+        "label": "Tonnes handled",
+        "options": null,
+        "required": true,
+        "fieldName": "tonnesHandled",
+        "displayOrder": 0
+      }
+    ],
+    "created_at": "2026-08-18T19:57:05.651+00:00",
+    "event_type": "run_record",
+    "audience": "grower",
+    "frequency": "Each run",
+    "requires_site": true,
+    "requires_arm": true,
+    "updated_at": "2026-08-18T19:57:05.651+00:00"
+  },
+  {
+    "template_id": "5f0a6c1e-0006-4000-8000-000000000002",
+    "trial_id": "5f0a6c1e-0002-4000-8000-000000000002",
+    "arm_id": null,
+    "name": "HarvestEye harvest run record",
+    "fields": [
+      {
+        "max": null,
+        "min": null,
+        "type": "text",
+        "unit": null,
+        "label": "Variety",
+        "options": null,
+        "required": true,
+        "fieldName": "varietyName",
+        "displayOrder": 0
+      },
+      {
+        "max": null,
+        "min": null,
+        "type": "text",
+        "unit": null,
+        "label": "Plot / row number",
+        "options": null,
+        "required": true,
+        "fieldName": "plotId",
+        "displayOrder": 1
+      },
+      {
+        "max": null,
+        "min": 1,
+        "type": "number",
+        "unit": null,
+        "label": "Replicate number",
+        "options": null,
+        "required": true,
+        "fieldName": "replicate",
+        "displayOrder": 2
+      },
+      {
+        "max": null,
+        "min": 0,
+        "type": "number",
+        "unit": "km/h",
+        "label": "Harvester speed",
+        "options": null,
+        "required": true,
+        "fieldName": "harvesterSpeed",
+        "displayOrder": 3
+      },
+      {
+        "max": null,
+        "min": null,
+        "type": "boolean",
+        "unit": null,
+        "label": "Did the unit cause any slow-downs?",
+        "options": null,
+        "required": true,
+        "fieldName": "slowDownsFromUnit",
+        "displayOrder": 4
+      },
+      {
+        "max": 100,
+        "min": 0,
+        "type": "number",
+        "unit": "%",
+        "label": "HarvestEye marketable yield",
+        "options": null,
+        "required": false,
+        "fieldName": "marketableYield",
+        "displayOrder": 5
+      },
+      {
+        "max": null,
+        "min": 0,
+        "type": "number",
+        "unit": null,
+        "label": "HarvestEye tuber count",
+        "options": null,
+        "required": false,
+        "fieldName": "tuberCount",
+        "displayOrder": 6
+      },
+      {
+        "max": null,
+        "min": 0,
+        "type": "number",
+        "unit": "kg",
+        "label": "Hand-graded sample weight",
+        "options": null,
+        "required": false,
+        "fieldName": "manualSampleWeight",
+        "displayOrder": 7
+      },
+      {
+        "max": null,
+        "min": null,
+        "type": "multiselect",
+        "unit": null,
+        "label": "Defects graded out (choose all that apply)",
+        "options": [
+          "none",
+          "rot",
+          "greening",
+          "misshapen",
+          "cracking",
+          "mechanical damage"
+        ],
+        "required": false,
+        "fieldName": "mainDefect",
+        "displayOrder": 8
+      },
+      {
+        "max": null,
+        "min": null,
+        "type": "photo",
+        "unit": null,
+        "label": "Photo of graded-out tubers (optional)",
+        "options": null,
+        "required": false,
+        "fieldName": "defectPhoto",
+        "displayOrder": 9
+      },
+      {
+        "max": null,
+        "min": null,
+        "type": "video",
+        "unit": null,
+        "label": "30–60 s video of tubers passing the sensor (optional)",
+        "options": null,
+        "required": false,
+        "fieldName": "sensorVideo",
+        "displayOrder": 10
+      },
+      {
+        "max": null,
+        "min": null,
+        "type": "file",
+        "unit": null,
+        "label": "HarvestEye CSV export (optional)",
+        "options": null,
+        "required": false,
+        "fieldName": "csvExport",
+        "displayOrder": 11
+      },
+      {
+        "max": null,
+        "min": null,
+        "type": "gps",
+        "unit": null,
+        "label": "Where was this pass? (optional)",
+        "options": null,
+        "required": false,
+        "fieldName": "passLocation",
+        "displayOrder": 12
+      },
+      {
+        "max": null,
+        "min": null,
+        "type": "text",
+        "unit": null,
+        "label": "Anything else worth noting?",
+        "options": null,
+        "required": false,
+        "fieldName": "notes",
+        "displayOrder": 13
+      }
+    ],
+    "created_at": "2026-08-01T00:00:00+00:00",
+    "event_type": "field_record",
+    "audience": "grower",
+    "frequency": "",
+    "requires_site": true,
+    "requires_arm": true,
+    "updated_at": null
+  },
+  {
+    "template_id": "5f0a6c1e-0006-4000-8000-000000000010",
+    "trial_id": "5f0a6c1e-0002-4000-8000-000000000002",
+    "arm_id": null,
+    "name": "Site setup",
+    "fields": [
+      {
+        "max": null,
+        "min": null,
+        "type": "gps",
+        "unit": null,
+        "label": "Field boundary location",
+        "options": null,
+        "required": false,
+        "fieldName": "siteBoundary",
+        "displayOrder": 0
+      },
+      {
+        "max": null,
+        "min": null,
+        "type": "file",
+        "unit": null,
+        "label": "Variety layout map (photo or file)",
+        "options": null,
+        "required": false,
+        "fieldName": "varietyLayout",
+        "displayOrder": 1
+      },
+      {
+        "max": null,
+        "min": 0,
+        "type": "number",
+        "unit": "cm",
+        "label": "Row spacing",
+        "options": null,
+        "required": false,
+        "fieldName": "rowSpacing",
+        "displayOrder": 2
+      },
+      {
+        "max": null,
+        "min": null,
+        "type": "date",
+        "unit": null,
+        "label": "Planting date",
+        "options": null,
+        "required": false,
+        "fieldName": "plantingDate",
+        "displayOrder": 3
+      },
+      {
+        "max": null,
+        "min": 0,
+        "type": "number",
+        "unit": null,
+        "label": "Days to harvest",
+        "options": null,
+        "required": false,
+        "fieldName": "daysToHarvest",
+        "displayOrder": 4
+      },
+      {
+        "max": null,
+        "min": null,
+        "type": "text",
+        "unit": null,
+        "label": "Irrigation regime",
+        "options": null,
+        "required": false,
+        "fieldName": "irrigationRegime",
+        "displayOrder": 5
+      }
+    ],
+    "created_at": "2026-08-01T00:00:00+00:00",
+    "event_type": "site_setup",
+    "audience": "staff",
+    "frequency": "Once per site, before harvest",
+    "requires_site": true,
+    "requires_arm": false,
+    "updated_at": null
+  },
+  {
+    "template_id": "f5154ba9-c53a-44fa-bdee-733634b082c9",
+    "trial_id": "45aa91f3-447e-466c-824d-718aa5129ed5",
+    "arm_id": null,
+    "name": "Run record",
+    "fields": [
+      {
+        "max": null,
+        "min": 0,
+        "type": "number",
+        "unit": "t",
+        "label": "Tonnes handled",
+        "options": null,
+        "required": true,
+        "fieldName": "tonnesHandled",
+        "displayOrder": 0
+      },
+      {
+        "max": null,
+        "min": null,
+        "type": "select",
+        "unit": null,
+        "label": "Main issue",
+        "options": [
+          "rot",
+          "none"
+        ],
+        "required": false,
+        "fieldName": "mainIssue",
+        "displayOrder": 1
+      }
+    ],
+    "created_at": "2026-08-18T18:45:53.676+00:00",
+    "event_type": "run_record",
+    "audience": "grower",
+    "frequency": "Each run",
+    "requires_site": true,
+    "requires_arm": true,
+    "updated_at": "2026-08-18T18:45:53.676+00:00"
+  },
+  {
+    "template_id": "5f0a6c1e-0006-4000-8000-000000000011",
+    "trial_id": "5f0a6c1e-0002-4000-8000-000000000002",
+    "arm_id": null,
+    "name": "Calibration record",
+    "fields": [
+      {
+        "max": null,
+        "min": null,
+        "type": "text",
+        "unit": null,
+        "label": "Calibration method used",
+        "options": null,
+        "required": true,
+        "fieldName": "calibrationMethod",
+        "displayOrder": 0
+      },
+      {
+        "max": null,
+        "min": null,
+        "type": "text",
+        "unit": null,
+        "label": "Technician",
+        "options": null,
+        "required": true,
+        "fieldName": "technician",
+        "displayOrder": 1
+      },
+      {
+        "max": null,
+        "min": null,
+        "type": "photo",
+        "unit": null,
+        "label": "Photo of the calibration",
+        "options": null,
+        "required": false,
+        "fieldName": "calibrationPhoto",
+        "displayOrder": 2
+      },
+      {
+        "max": null,
+        "min": null,
+        "type": "text",
+        "unit": null,
+        "label": "Anything unusual?",
+        "options": null,
+        "required": false,
+        "fieldName": "calibrationNotes",
+        "displayOrder": 3
+      }
+    ],
+    "created_at": "2026-08-01T00:00:00+00:00",
+    "event_type": "calibration",
+    "audience": "staff",
+    "frequency": "Start of each session",
+    "requires_site": true,
+    "requires_arm": false,
+    "updated_at": null
+  },
+  {
+    "template_id": "5f0a6c1e-0006-4000-8000-000000000012",
+    "trial_id": "5f0a6c1e-0002-4000-8000-000000000002",
+    "arm_id": null,
+    "name": "Install / removal log",
+    "fields": [
+      {
+        "max": null,
+        "min": null,
+        "type": "select",
+        "unit": null,
+        "label": "Install or removal?",
+        "options": [
+          "install",
+          "removal"
+        ],
+        "required": true,
+        "fieldName": "action",
+        "displayOrder": 0
+      },
+      {
+        "max": null,
+        "min": 0,
+        "type": "number",
+        "unit": "minutes",
+        "label": "Time taken",
+        "options": null,
+        "required": true,
+        "fieldName": "minutesTaken",
+        "displayOrder": 1
+      },
+      {
+        "max": null,
+        "min": null,
+        "type": "photo",
+        "unit": null,
+        "label": "Photo of the unit fitted",
+        "options": null,
+        "required": false,
+        "fieldName": "fitPhoto",
+        "displayOrder": 2
+      },
+      {
+        "max": null,
+        "min": null,
+        "type": "boolean",
+        "unit": null,
+        "label": "Did fitting disrupt normal work?",
+        "options": null,
+        "required": true,
+        "fieldName": "disruption",
+        "displayOrder": 3
+      },
+      {
+        "max": null,
+        "min": null,
+        "type": "text",
+        "unit": null,
+        "label": "Notes",
+        "options": null,
+        "required": false,
+        "fieldName": "installNotes",
+        "displayOrder": 4
+      }
+    ],
+    "created_at": "2026-08-01T00:00:00+00:00",
+    "event_type": "install_log",
+    "audience": "staff",
+    "frequency": "Each install and removal",
+    "requires_site": true,
+    "requires_arm": false,
+    "updated_at": null
+  },
+  {
+    "template_id": "5f0a6c1e-0006-4000-8000-000000000013",
+    "trial_id": "5f0a6c1e-0002-4000-8000-000000000002",
+    "arm_id": null,
+    "name": "Daily weather",
+    "fields": [
+      {
+        "max": null,
+        "min": null,
+        "type": "number",
+        "unit": "°C",
+        "label": "Temperature",
+        "options": null,
+        "required": true,
+        "fieldName": "temperature",
+        "displayOrder": 0
+      },
+      {
+        "max": null,
+        "min": 0,
+        "type": "number",
+        "unit": "mm",
+        "label": "Rainfall, last 7 days",
+        "options": null,
+        "required": false,
+        "fieldName": "rainfall7Day",
+        "displayOrder": 1
+      },
+      {
+        "max": 100,
+        "min": 0,
+        "type": "number",
+        "unit": "%",
+        "label": "Soil moisture",
+        "options": null,
+        "required": false,
+        "fieldName": "soilMoisture",
+        "displayOrder": 2
+      },
+      {
+        "max": null,
+        "min": null,
+        "type": "text",
+        "unit": null,
+        "label": "Conditions worth noting",
+        "options": null,
+        "required": false,
+        "fieldName": "weatherNotes",
+        "displayOrder": 3
+      }
+    ],
+    "created_at": "2026-08-01T00:00:00+00:00",
+    "event_type": "weather",
+    "audience": "staff",
+    "frequency": "Daily during the trial",
+    "requires_site": true,
+    "requires_arm": false,
+    "updated_at": null
+  },
+  {
+    "template_id": "5f0a6c1e-0006-4000-8000-000000000014",
+    "trial_id": "5f0a6c1e-0002-4000-8000-000000000002",
+    "arm_id": null,
+    "name": "Portal output check",
+    "fields": [
+      {
+        "max": null,
+        "min": null,
+        "type": "file",
+        "unit": null,
+        "label": "Portal export (screenshot or PDF)",
+        "options": null,
+        "required": true,
+        "fieldName": "portalScreenshot",
+        "displayOrder": 0
+      },
+      {
+        "max": null,
+        "min": 0,
+        "type": "number",
+        "unit": "minutes",
+        "label": "Time from harvest to portal-ready data",
+        "options": null,
+        "required": true,
+        "fieldName": "dataLagMinutes",
+        "displayOrder": 1
+      },
+      {
+        "max": null,
+        "min": null,
+        "type": "boolean",
+        "unit": null,
+        "label": "Was the output usable as-is?",
+        "options": null,
+        "required": true,
+        "fieldName": "outputUsable",
+        "displayOrder": 2
+      },
+      {
+        "max": null,
+        "min": null,
+        "type": "text",
+        "unit": null,
+        "label": "Notes",
+        "options": null,
+        "required": false,
+        "fieldName": "portalNotes",
+        "displayOrder": 3
+      }
+    ],
+    "created_at": "2026-08-01T00:00:00+00:00",
+    "event_type": "portal_output",
+    "audience": "staff",
+    "frequency": "End of each harvest day",
+    "requires_site": true,
+    "requires_arm": false,
+    "updated_at": null
+  },
+  {
+    "template_id": "5f0a6c1e-0006-4000-8000-000000000015",
+    "trial_id": "5f0a6c1e-0002-4000-8000-000000000002",
+    "arm_id": null,
+    "name": "Observer feedback",
+    "fields": [
+      {
+        "max": null,
+        "min": null,
+        "type": "text",
+        "unit": null,
+        "label": "Observer name",
+        "options": null,
+        "required": true,
+        "fieldName": "observerName",
+        "displayOrder": 0
+      },
+      {
+        "max": null,
+        "min": null,
+        "type": "select",
+        "unit": null,
+        "label": "Role",
+        "options": [
+          "grower",
+          "processor",
+          "agronomist",
+          "other"
+        ],
+        "required": true,
+        "fieldName": "observerRole",
+        "displayOrder": 1
+      },
+      {
+        "max": 5,
+        "min": 1,
+        "type": "slider",
+        "unit": null,
+        "label": "How relevant is this to your operation?",
+        "options": null,
+        "required": true,
+        "fieldName": "relevanceRating",
+        "displayOrder": 2
+      },
+      {
+        "max": null,
+        "min": null,
+        "type": "boolean",
+        "unit": null,
+        "label": "Would you consider using it?",
+        "options": null,
+        "required": true,
+        "fieldName": "wouldUse",
+        "displayOrder": 3
+      },
+      {
+        "max": null,
+        "min": null,
+        "type": "text",
+        "unit": null,
+        "label": "Comments",
+        "options": null,
+        "required": false,
+        "fieldName": "observerComments",
+        "displayOrder": 4
+      }
+    ],
+    "created_at": "2026-08-01T00:00:00+00:00",
+    "event_type": "observer_feedback",
+    "audience": "staff",
+    "frequency": "End of each site visit",
+    "requires_site": true,
+    "requires_arm": false,
+    "updated_at": null
+  },
+  {
+    "template_id": "5f0a6c1e-0006-4000-8000-000000000016",
+    "trial_id": "5f0a6c1e-0002-4000-8000-000000000002",
+    "arm_id": null,
+    "name": "Cost log",
+    "fields": [
+      {
+        "max": null,
+        "min": 0,
+        "type": "number",
+        "unit": "$",
+        "label": "Lease or subscription cost",
+        "options": null,
+        "required": true,
+        "fieldName": "leaseCost",
+        "displayOrder": 0
+      },
+      {
+        "max": null,
+        "min": 0,
+        "type": "number",
+        "unit": "$",
+        "label": "Technician time",
+        "options": null,
+        "required": false,
+        "fieldName": "technicianCost",
+        "displayOrder": 1
+      },
+      {
+        "max": null,
+        "min": 0,
+        "type": "number",
+        "unit": "$",
+        "label": "Freight",
+        "options": null,
+        "required": false,
+        "fieldName": "freightCost",
+        "displayOrder": 2
+      },
+      {
+        "max": null,
+        "min": null,
+        "type": "text",
+        "unit": null,
+        "label": "What's included in these figures?",
+        "options": null,
+        "required": false,
+        "fieldName": "costNotes",
+        "displayOrder": 3
+      }
+    ],
+    "created_at": "2026-08-01T00:00:00+00:00",
+    "event_type": "cost_log",
+    "audience": "staff",
+    "frequency": "Once per trial",
+    "requires_site": false,
+    "requires_arm": false,
+    "updated_at": null
+  },
+  {
+    "template_id": "5f0a6c1e-0006-4000-8000-000000000020",
+    "trial_id": "5f0a6c1e-0002-4000-8000-000000000003",
+    "arm_id": null,
+    "name": "Plot yield record",
+    "fields": [
+      {
+        "max": null,
+        "min": null,
+        "type": "text",
+        "unit": null,
+        "label": "Plot number",
+        "options": null,
+        "required": true,
+        "fieldName": "plotId",
+        "displayOrder": 0
+      },
+      {
+        "max": null,
+        "min": 0,
+        "type": "number",
+        "unit": "t/ha",
+        "label": "Plot yield",
+        "options": null,
+        "required": true,
+        "fieldName": "yield",
+        "displayOrder": 1
+      },
+      {
+        "max": null,
+        "min": null,
+        "type": "text",
+        "unit": null,
+        "label": "Anything worth noting?",
+        "options": null,
+        "required": false,
+        "fieldName": "notes",
+        "displayOrder": 2
+      }
+    ],
+    "created_at": "2026-08-01T00:00:00+00:00",
+    "event_type": "field_record",
+    "audience": "grower",
+    "frequency": "Once per plot at harvest",
+    "requires_site": true,
+    "requires_arm": true,
+    "updated_at": null
+  }
+]

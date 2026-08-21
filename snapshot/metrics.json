@@ -1,0 +1,332 @@
+[
+  {
+    "metric_id": "89071aa7-1274-4ef2-a6d1-b7966e04cbb4",
+    "event_id": "195dffe2-752c-4c39-b8e2-86f217a9708b",
+    "metric_name": "peopleInvolved",
+    "value": 2,
+    "unit": "",
+    "photo_url": null,
+    "created_at": "2026-08-18T01:51:36.125+00:00",
+    "updated_at": null
+  },
+  {
+    "metric_id": "a4a07843-ca95-49e2-a18b-793a218011a4",
+    "event_id": "195dffe2-752c-4c39-b8e2-86f217a9708b",
+    "metric_name": "tonnesHandled",
+    "value": 42.5,
+    "unit": "t",
+    "photo_url": null,
+    "created_at": "2026-08-18T01:51:36.125+00:00",
+    "updated_at": null
+  },
+  {
+    "metric_id": "eb2be127-7b67-4a07-ad6f-1594c821251f",
+    "event_id": "195dffe2-752c-4c39-b8e2-86f217a9708b",
+    "metric_name": "runWentAsPlanned",
+    "value": "true",
+    "unit": "",
+    "photo_url": null,
+    "created_at": "2026-08-18T01:51:36.125+00:00",
+    "updated_at": null
+  },
+  {
+    "metric_id": "f7b51dad-311d-45de-bf0a-39b46bc33714",
+    "event_id": "195dffe2-752c-4c39-b8e2-86f217a9708b",
+    "metric_name": "runDuration",
+    "value": 3.5,
+    "unit": "hours",
+    "photo_url": null,
+    "created_at": "2026-08-18T01:51:36.125+00:00",
+    "updated_at": null
+  },
+  {
+    "metric_id": "35ecc1fe-907c-468a-8c29-c74fc03b350b",
+    "event_id": "e40174ab-0cb6-4f96-adbd-33984bfcfff7",
+    "metric_name": "runDuration",
+    "value": 1,
+    "unit": "hours",
+    "photo_url": null,
+    "created_at": "2026-08-18T04:49:03.57+00:00",
+    "updated_at": null
+  },
+  {
+    "metric_id": "8cbc783c-8113-4ad0-8ba1-5ec1edea6b69",
+    "event_id": "e40174ab-0cb6-4f96-adbd-33984bfcfff7",
+    "metric_name": "peopleInvolved",
+    "value": 2,
+    "unit": "",
+    "photo_url": null,
+    "created_at": "2026-08-18T04:49:03.57+00:00",
+    "updated_at": null
+  },
+  {
+    "metric_id": "96778890-0c4d-498d-bfbb-9b7e286f379c",
+    "event_id": "e40174ab-0cb6-4f96-adbd-33984bfcfff7",
+    "metric_name": "runWentAsPlanned",
+    "value": "true",
+    "unit": "",
+    "photo_url": null,
+    "created_at": "2026-08-18T04:49:03.57+00:00",
+    "updated_at": null
+  },
+  {
+    "metric_id": "a1f6481d-f76f-42a3-a1aa-6950ef2ff7a1",
+    "event_id": "e40174ab-0cb6-4f96-adbd-33984bfcfff7",
+    "metric_name": "tonnesHandled",
+    "value": 10,
+    "unit": "t",
+    "photo_url": null,
+    "created_at": "2026-08-18T04:49:03.57+00:00",
+    "updated_at": null
+  },
+  {
+    "metric_id": "61c93f29-b837-4ef5-9ac6-07bbc6d326ba",
+    "event_id": "7bfb2393-e9f5-4932-9a5b-0d2479856757",
+    "metric_name": "tonnesHandled",
+    "value": 5,
+    "unit": "t",
+    "photo_url": null,
+    "created_at": "2026-08-18T04:50:54.759+00:00",
+    "updated_at": null
+  },
+  {
+    "metric_id": "7caf09b7-51ba-4d88-93c9-1895df5a09df",
+    "event_id": "7bfb2393-e9f5-4932-9a5b-0d2479856757",
+    "metric_name": "runDuration",
+    "value": 1,
+    "unit": "hours",
+    "photo_url": null,
+    "created_at": "2026-08-18T04:50:54.759+00:00",
+    "updated_at": null
+  },
+  {
+    "metric_id": "f41debb0-798a-49f5-92d1-836ca99e6f19",
+    "event_id": "7bfb2393-e9f5-4932-9a5b-0d2479856757",
+    "metric_name": "runWentAsPlanned",
+    "value": "true",
+    "unit": "",
+    "photo_url": null,
+    "created_at": "2026-08-18T04:50:54.759+00:00",
+    "updated_at": null
+  },
+  {
+    "metric_id": "fc1b0db1-e47a-4039-a025-2ef5b26199a0",
+    "event_id": "7bfb2393-e9f5-4932-9a5b-0d2479856757",
+    "metric_name": "peopleInvolved",
+    "value": 1,
+    "unit": "",
+    "photo_url": null,
+    "created_at": "2026-08-18T04:50:54.759+00:00",
+    "updated_at": null
+  },
+  {
+    "metric_id": "2995900a-1d86-4204-bdfe-1065689dba08",
+    "event_id": "72c09ea3-52c1-4074-88ef-fc1bd1556f0f",
+    "metric_name": "runDuration",
+    "value": 0.25,
+    "unit": "hours",
+    "photo_url": null,
+    "created_at": "2026-08-18T04:17:41.305+00:00",
+    "updated_at": null
+  },
+  {
+    "metric_id": "64d33d37-182b-4726-b2da-d40be3c26dff",
+    "event_id": "72c09ea3-52c1-4074-88ef-fc1bd1556f0f",
+    "metric_name": "tonnesHandled",
+    "value": 25,
+    "unit": "t",
+    "photo_url": null,
+    "created_at": "2026-08-18T04:17:41.305+00:00",
+    "updated_at": null
+  },
+  {
+    "metric_id": "913d7990-e7b3-4d77-b5d4-ce3333748072",
+    "event_id": "72c09ea3-52c1-4074-88ef-fc1bd1556f0f",
+    "metric_name": "runWentAsPlanned",
+    "value": "true",
+    "unit": "",
+    "photo_url": null,
+    "created_at": "2026-08-18T04:17:41.305+00:00",
+    "updated_at": null
+  },
+  {
+    "metric_id": "d871f5a8-dfcb-452f-ba73-3c8c783dacd2",
+    "event_id": "72c09ea3-52c1-4074-88ef-fc1bd1556f0f",
+    "metric_name": "peopleInvolved",
+    "value": 8,
+    "unit": "",
+    "photo_url": null,
+    "created_at": "2026-08-18T04:17:41.305+00:00",
+    "updated_at": null
+  },
+  {
+    "metric_id": "35a311cb-584b-4091-915a-34456503ac0c",
+    "event_id": "a4553c8d-c3aa-4e8f-8a98-4e03fef9efcb",
+    "metric_name": "replicate",
+    "value": 4,
+    "unit": "",
+    "photo_url": null,
+    "created_at": "2026-08-18T05:48:57.911+00:00",
+    "updated_at": null
+  },
+  {
+    "metric_id": "3a21c783-d958-4080-9628-bcc045471071",
+    "event_id": "a4553c8d-c3aa-4e8f-8a98-4e03fef9efcb",
+    "metric_name": "mainDefect",
+    "value": "greening",
+    "unit": "",
+    "photo_url": null,
+    "created_at": "2026-08-18T05:48:57.911+00:00",
+    "updated_at": null
+  },
+  {
+    "metric_id": "58dc96e3-421d-4e25-80c2-99fd3fcafae4",
+    "event_id": "a4553c8d-c3aa-4e8f-8a98-4e03fef9efcb",
+    "metric_name": "varietyName",
+    "value": "Sebago",
+    "unit": "",
+    "photo_url": null,
+    "created_at": "2026-08-18T05:48:57.911+00:00",
+    "updated_at": null
+  },
+  {
+    "metric_id": "6bd5e534-7192-42d9-b08a-f7787515178a",
+    "event_id": "a4553c8d-c3aa-4e8f-8a98-4e03fef9efcb",
+    "metric_name": "marketableYield",
+    "value": 0,
+    "unit": "%",
+    "photo_url": null,
+    "created_at": "2026-08-18T05:48:57.911+00:00",
+    "updated_at": null
+  },
+  {
+    "metric_id": "74ce45d6-e2aa-4e02-87c8-7998ad74b382",
+    "event_id": "a4553c8d-c3aa-4e8f-8a98-4e03fef9efcb",
+    "metric_name": "harvesterSpeed",
+    "value": 4,
+    "unit": "km/h",
+    "photo_url": null,
+    "created_at": "2026-08-18T05:48:57.911+00:00",
+    "updated_at": null
+  },
+  {
+    "metric_id": "7557df04-c17a-42f4-8bc9-a60f685831d7",
+    "event_id": "a4553c8d-c3aa-4e8f-8a98-4e03fef9efcb",
+    "metric_name": "slowDownsFromUnit",
+    "value": "false",
+    "unit": "",
+    "photo_url": null,
+    "created_at": "2026-08-18T05:48:57.911+00:00",
+    "updated_at": null
+  },
+  {
+    "metric_id": "bde7b6d4-9a0d-406d-9e3f-892658b363d4",
+    "event_id": "a4553c8d-c3aa-4e8f-8a98-4e03fef9efcb",
+    "metric_name": "plotId",
+    "value": "Sebago",
+    "unit": "",
+    "photo_url": null,
+    "created_at": "2026-08-18T05:48:57.911+00:00",
+    "updated_at": null
+  },
+  {
+    "metric_id": "ea0786ff-1358-476d-920d-75bd332c6446",
+    "event_id": "a4553c8d-c3aa-4e8f-8a98-4e03fef9efcb",
+    "metric_name": "tuberCount",
+    "value": 0,
+    "unit": "",
+    "photo_url": null,
+    "created_at": "2026-08-18T05:48:57.911+00:00",
+    "updated_at": null
+  },
+  {
+    "metric_id": "ea07c577-1a7a-4a1d-8be0-4adafbd9eff5",
+    "event_id": "a4553c8d-c3aa-4e8f-8a98-4e03fef9efcb",
+    "metric_name": "manualSampleWeight",
+    "value": 0,
+    "unit": "kg",
+    "photo_url": null,
+    "created_at": "2026-08-18T05:48:57.911+00:00",
+    "updated_at": null
+  },
+  {
+    "metric_id": "49b094b5-bfc2-4863-b015-57be0390d292",
+    "event_id": "613d2396-b74c-46ea-a38c-5e523fcd1179",
+    "metric_name": "runWentAsPlanned",
+    "value": "true",
+    "unit": "",
+    "photo_url": null,
+    "created_at": "2026-08-18T07:23:29.417+00:00",
+    "updated_at": null
+  },
+  {
+    "metric_id": "6b45eded-5a53-4927-ba24-294dad459e1d",
+    "event_id": "613d2396-b74c-46ea-a38c-5e523fcd1179",
+    "metric_name": "runDuration",
+    "value": 2,
+    "unit": "hours",
+    "photo_url": null,
+    "created_at": "2026-08-18T07:23:29.417+00:00",
+    "updated_at": null
+  },
+  {
+    "metric_id": "8f746e48-3570-46ee-924b-c26994b3cbb0",
+    "event_id": "613d2396-b74c-46ea-a38c-5e523fcd1179",
+    "metric_name": "tonnesHandled",
+    "value": 25,
+    "unit": "t",
+    "photo_url": null,
+    "created_at": "2026-08-18T07:23:29.417+00:00",
+    "updated_at": null
+  },
+  {
+    "metric_id": "e23c672f-00d7-496f-a3c1-7d95d665c8d4",
+    "event_id": "613d2396-b74c-46ea-a38c-5e523fcd1179",
+    "metric_name": "peopleInvolved",
+    "value": 3,
+    "unit": "",
+    "photo_url": null,
+    "created_at": "2026-08-18T07:23:29.417+00:00",
+    "updated_at": null
+  },
+  {
+    "metric_id": "0362ec7a-748b-4b07-b2fa-cdbd9fa02adf",
+    "event_id": "e4fd2614-43fa-4e32-b276-a1ee8c8b31b3",
+    "metric_name": "costNotes",
+    "value": "Season lease, technician travel and freight both ways.",
+    "unit": "",
+    "photo_url": null,
+    "created_at": "2026-08-18T08:18:55.24+00:00",
+    "updated_at": null
+  },
+  {
+    "metric_id": "274e411c-07ca-4be3-a879-982b3fcac957",
+    "event_id": "e4fd2614-43fa-4e32-b276-a1ee8c8b31b3",
+    "metric_name": "technicianCost",
+    "value": 4200,
+    "unit": "$",
+    "photo_url": null,
+    "created_at": "2026-08-18T08:18:55.24+00:00",
+    "updated_at": null
+  },
+  {
+    "metric_id": "56108fa2-50dc-4795-bfe5-234ca32dec20",
+    "event_id": "e4fd2614-43fa-4e32-b276-a1ee8c8b31b3",
+    "metric_name": "freightCost",
+    "value": 1500,
+    "unit": "$",
+    "photo_url": null,
+    "created_at": "2026-08-18T08:18:55.24+00:00",
+    "updated_at": null
+  },
+  {
+    "metric_id": "6f7f6f4e-bf33-4361-ac7a-8b1da282dcc4",
+    "event_id": "e4fd2614-43fa-4e32-b276-a1ee8c8b31b3",
+    "metric_name": "leaseCost",
+    "value": 18000,
+    "unit": "$",
+    "photo_url": null,
+    "created_at": "2026-08-18T08:18:55.24+00:00",
+    "updated_at": null
+  }
+]

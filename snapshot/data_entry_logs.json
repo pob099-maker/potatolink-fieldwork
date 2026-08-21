@@ -1,0 +1,65 @@
+[
+  {
+    "entry_id": "3f50bbb5-8048-4081-a0d4-b229d5010a3e",
+    "event_id": "195dffe2-752c-4c39-b8e2-86f217a9708b",
+    "entered_by": "5f0a6c1e-0005-4000-8000-000000000001",
+    "entry_date": "2026-08-18T01:51:36.125+00:00",
+    "device_type": "tablet",
+    "sync_status": "synced",
+    "created_at": "2026-08-18T01:51:36.125+00:00"
+  },
+  {
+    "entry_id": "90c2744b-8f26-4f3e-a917-a744407ceabc",
+    "event_id": "e40174ab-0cb6-4f96-adbd-33984bfcfff7",
+    "entered_by": "5f0a6c1e-0005-4000-8000-000000000001",
+    "entry_date": "2026-08-18T04:49:03.57+00:00",
+    "device_type": "tablet",
+    "sync_status": "synced",
+    "created_at": "2026-08-18T04:49:03.57+00:00"
+  },
+  {
+    "entry_id": "c11790bb-e4bf-4e68-b4d8-d562c1dea0b5",
+    "event_id": "7bfb2393-e9f5-4932-9a5b-0d2479856757",
+    "entered_by": "5f0a6c1e-0005-4000-8000-000000000001",
+    "entry_date": "2026-08-18T04:50:54.759+00:00",
+    "device_type": "tablet",
+    "sync_status": "synced",
+    "created_at": "2026-08-18T04:50:54.759+00:00"
+  },
+  {
+    "entry_id": "589da2a6-e676-4154-8fc2-fb45055dd82d",
+    "event_id": "72c09ea3-52c1-4074-88ef-fc1bd1556f0f",
+    "entered_by": "5f0a6c1e-0005-4000-8000-000000000001",
+    "entry_date": "2026-08-18T04:17:41.305+00:00",
+    "device_type": "desktop",
+    "sync_status": "synced",
+    "created_at": "2026-08-18T04:17:41.305+00:00"
+  },
+  {
+    "entry_id": "ce89fd97-1c4a-48c1-8a0b-941b26390de1",
+    "event_id": "a4553c8d-c3aa-4e8f-8a98-4e03fef9efcb",
+    "entered_by": "5f0a6c1e-0005-4000-8000-000000000001",
+    "entry_date": "2026-08-18T05:48:57.911+00:00",
+    "device_type": "tablet",
+    "sync_status": "synced",
+    "created_at": "2026-08-18T05:48:57.911+00:00"
+  },
+  {
+    "entry_id": "d13d4f2c-f8e8-451e-b05b-6e86f3fd450a",
+    "event_id": "613d2396-b74c-46ea-a38c-5e523fcd1179",
+    "entered_by": "5f0a6c1e-0005-4000-8000-000000000001",
+    "entry_date": "2026-08-18T07:23:29.417+00:00",
+    "device_type": "tablet",
+    "sync_status": "synced",
+    "created_at": "2026-08-18T07:23:29.417+00:00"
+  },
+  {
+    "entry_id": "9beaaacd-c0d2-4beb-b9e2-c6f85490ede3",
+    "event_id": "e4fd2614-43fa-4e32-b276-a1ee8c8b31b3",
+    "entered_by": "5f0a6c1e-0005-4000-8000-000000000001",
+    "entry_date": "2026-08-18T08:18:55.24+00:00",
+    "device_type": "tablet",
+    "sync_status": "synced",
+    "created_at": "2026-08-18T08:18:55.24+00:00"
+  }
+]
