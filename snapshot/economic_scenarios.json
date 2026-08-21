@@ -1,0 +1,29 @@
+[
+  {
+    "scenario_id": "5f0a6c1e-0008-4000-8000-000000000001",
+    "trial_id": "5f0a6c1e-0002-4000-8000-000000000001",
+    "name": "Base case (placeholder numbers)",
+    "assumptions_json": "{\"seasonTonnes\":8000,\"pricePerTonne\":450,\"labourRatePerHour\":40}",
+    "created_at": "2026-08-01T00:00:00+00:00",
+    "site_id": null,
+    "updated_at": null
+  },
+  {
+    "scenario_id": "5f0a6c1e-0008-4000-8000-000000000003",
+    "trial_id": "5f0a6c1e-0002-4000-8000-000000000001",
+    "name": "Tasmania base case (placeholder numbers)",
+    "assumptions_json": "{\"seasonTonnes\":5000,\"pricePerTonne\":420,\"labourRatePerHour\":45}",
+    "created_at": "2026-08-01T00:00:00+00:00",
+    "site_id": "5f0a6c1e-0003-4000-8000-000000000002",
+    "updated_at": null
+  },
+  {
+    "scenario_id": "5f0a6c1e-0008-4000-8000-000000000002",
+    "trial_id": "5f0a6c1e-0002-4000-8000-000000000001",
+    "name": "Walkers Flat base case (placeholder numbers)",
+    "assumptions_json": "{\"seasonTonnes\":8000,\"pricePerTonne\":450,\"labourRatePerHour\":40}",
+    "created_at": "2026-08-01T00:00:00+00:00",
+    "site_id": "5f0a6c1e-0003-4000-8000-000000000001",
+    "updated_at": null
+  }
+]

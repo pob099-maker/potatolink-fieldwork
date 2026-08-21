@@ -1,0 +1,72 @@
+[
+  {
+    "result_id": "5f8ecd24-eec5-48f4-a12f-a869cbcd0af2",
+    "scenario_id": "5f0a6c1e-0008-4000-8000-000000000001",
+    "arm_id": "5f0a6c1e-0004-4000-8000-000000000002",
+    "net_benefit": 171000,
+    "payback_period": 2.63,
+    "notes": "vs control; extra capex $450,000",
+    "calculated_at": "2026-08-18T06:05:47.433+00:00",
+    "site_id": null
+  },
+  {
+    "result_id": "432c2847-10c9-44af-a817-810e0a7cc229",
+    "scenario_id": "5f0a6c1e-0008-4000-8000-000000000001",
+    "arm_id": "5f0a6c1e-0004-4000-8000-000000000003",
+    "net_benefit": 91000,
+    "payback_period": 0,
+    "notes": "vs control; extra capex $0",
+    "calculated_at": "2026-08-18T06:05:47.433+00:00",
+    "site_id": null
+  },
+  {
+    "result_id": "3a2c92f7-52c5-41a2-b1d8-2328d3ed7c31",
+    "scenario_id": "5f0a6c1e-0008-4000-8000-000000000001",
+    "arm_id": "5f0a6c1e-0004-4000-8000-000000000004",
+    "net_benefit": 71000,
+    "payback_period": 0.85,
+    "notes": "vs control; extra capex $60,000",
+    "calculated_at": "2026-08-18T06:05:47.433+00:00",
+    "site_id": null
+  },
+  {
+    "result_id": "11111111-2222-4333-8444-555555555555",
+    "scenario_id": "5f0a6c1e-0008-4000-8000-000000000003",
+    "arm_id": "5f0a6c1e-0004-4000-8000-000000000002",
+    "net_benefit": 107750,
+    "payback_period": 4.18,
+    "notes": "probe row - superseded",
+    "calculated_at": "2026-08-18T08:00:00+00:00",
+    "site_id": "5f0a6c1e-0003-4000-8000-000000000002"
+  },
+  {
+    "result_id": "00de1033-a7b9-4ee0-b4ab-9037fdbe622b",
+    "scenario_id": "5f0a6c1e-0008-4000-8000-000000000002",
+    "arm_id": "5f0a6c1e-0004-4000-8000-000000000002",
+    "net_benefit": 171000,
+    "payback_period": 2.63,
+    "notes": "vs control; extra capex $450,000",
+    "calculated_at": "2026-08-18T07:51:18.817+00:00",
+    "site_id": "5f0a6c1e-0003-4000-8000-000000000001"
+  },
+  {
+    "result_id": "061485cd-a115-442d-8e12-c7f13ef3f290",
+    "scenario_id": "5f0a6c1e-0008-4000-8000-000000000002",
+    "arm_id": "5f0a6c1e-0004-4000-8000-000000000003",
+    "net_benefit": 91000,
+    "payback_period": 0,
+    "notes": "vs control; extra capex $0",
+    "calculated_at": "2026-08-18T07:51:18.817+00:00",
+    "site_id": "5f0a6c1e-0003-4000-8000-000000000001"
+  },
+  {
+    "result_id": "28610840-2ac3-46d3-baa3-ed56ed424b5b",
+    "scenario_id": "5f0a6c1e-0008-4000-8000-000000000002",
+    "arm_id": "5f0a6c1e-0004-4000-8000-000000000004",
+    "net_benefit": 71000,
+    "payback_period": 0.85,
+    "notes": "vs control; extra capex $60,000",
+    "calculated_at": "2026-08-18T07:51:18.817+00:00",
+    "site_id": "5f0a6c1e-0003-4000-8000-000000000001"
+  }
+]
