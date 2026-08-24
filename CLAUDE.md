@@ -34,10 +34,10 @@ src/
 ├── components/       # Reusable UI components
 ├── pages/            # Route-level pages
 ├── hooks/            # Custom React hooks
-├── lib/              # Firebase config, utilities, helpers
+├── lib/              # Supabase client, IndexedDB, utilities
 ├── types/            # TypeScript interfaces and types
 ├── schemas/          # Zod validation schemas
-├── services/         # Firestore CRUD operations
+├── services/         # Local-first store, sync, and pure domain logic
 ├── contexts/         # React contexts (auth, theme)
 └── assets/           # Static assets
 ```
@@ -54,6 +54,18 @@ src/
 8. MUST test on mobile viewport (375px) before considering a feature complete.
 9. MUST use semantic HTML elements. NEVER use div where a semantic element exists.
 10. MUST include alt text on every img element.
+11. MUST keep keyboard focus visible. The Tailwind reset removes it; `:focus-visible`
+    styling in `src/index.css` puts it back. Never add `focus:outline-none` without
+    replacing the indicator.
+12. MUST convey required and invalid state to assistive technology, not only with an
+    asterisk and a colour. An `aria-hidden` asterisk tells a screen reader nothing.
+13. MUST NOT let an empty input become a number. `z.coerce.number()` turns `""` into
+    `0`, which once saved a blank required yield as a real observation of zero.
+14. MUST derive a plot layout only from the seed, the treatments, the replicate count
+    and the site — and freeze all of them once a plot-keyed record exists. Changing
+    any of them afterwards silently re-labels every record already taken.
+15. MUST average readings that share an experimental unit before comparing treatments.
+    Several samples in one plot are one observation, not several.
 
 ## Database schema
 
