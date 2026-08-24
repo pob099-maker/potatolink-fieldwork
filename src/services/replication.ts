@@ -85,10 +85,42 @@ export function replicationStatus(
 export interface TreatmentStat {
   armId: string;
   armName: string;
+  /**
+   * The number of independent observations — plots, not records. Several
+   * readings taken down one strip are one plot's worth of information however
+   * many times the clipboard was filled in.
+   */
   n: number;
+  /** How many records those plots were averaged from, for the honest footnote. */
+  records: number;
   mean: number | null;
   /** Standard error of the mean; null when fewer than two observations. */
   se: number | null;
+}
+
+/**
+ * What one independent observation is for this record.
+ *
+ * The experimental unit is whatever randomisation was applied to: a plot where
+ * the trial has a layout, otherwise the treatment's replicate at a site. Two
+ * records sharing a unit are sub-samples — six points measured along one strip,
+ * or the same plot assessed twice — and averaging them before comparing
+ * treatments is the difference between an honest standard error and one that
+ * is too small by roughly the square root of however many samples were taken.
+ *
+ * When a trial has no plot and no replicate there is no unit to collapse to,
+ * so every record stands alone. That is right for an observational comparison,
+ * where five harvest runs really are five observations.
+ */
+function experimentalUnit(event: MeasurementEvent): string | null {
+  // Keyed on the replicate rather than the plot number, even though the plot
+  // is the friendlier label. Under either design a treatment appears once per
+  // replicate at a site, so site + treatment + replicate identifies the same
+  // piece of ground — and it identifies it for records taken before the trial
+  // had a layout too. Keying on the plot would file those separately from the
+  // ones taken after, splitting one plot's readings into two "observations".
+  if (event.replicate === null) return null;
+  return `${event.siteId ?? ""}:${event.armId ?? ""}:rep:${event.replicate}`;
 }
 
 /**
@@ -105,26 +137,58 @@ export function responseSummary(
   const response = trial.responseMetric;
   const active = arms.filter((arm) => !arm.archived).sort((a, b) => a.sortOrder - b.sortOrder);
 
+  const byEvent = new Map<string, MeasurementEvent>(
+    events.map((event) => [event.eventId, event]),
+  );
+
   return active.map((arm) => {
-    if (!response) return { armId: arm.armId, armName: arm.name, n: 0, mean: null, se: null };
-    const eventIds = new Set(
-      events
-        .filter(
-          (event) => event.armId === arm.armId && (!siteId || event.siteId === siteId),
-        )
-        .map((event) => event.eventId),
+    const empty = { armId: arm.armId, armName: arm.name, n: 0, records: 0, mean: null, se: null };
+    if (!response) return empty;
+
+    const mine = events.filter(
+      (event) => event.armId === arm.armId && (!siteId || event.siteId === siteId),
     );
-    const values = metrics
-      .filter((metric) => eventIds.has(metric.eventId) && metric.metricName === response)
-      .map((metric) => metricNumber(metric.value))
-      .filter((value): value is number => value !== null);
+    const eventIds = new Set(mine.map((event) => event.eventId));
+
+    // Collect every reading, keyed by the plot it came from.
+    const perUnit = new Map<string, number[]>();
+    const loose: number[] = [];
+    let records = 0;
+    for (const metric of metrics) {
+      if (!eventIds.has(metric.eventId) || metric.metricName !== response) continue;
+      const value = metricNumber(metric.value);
+      if (value === null) continue;
+      records += 1;
+      const unit = experimentalUnit(byEvent.get(metric.eventId) as MeasurementEvent);
+      if (unit === null) {
+        loose.push(value);
+        continue;
+      }
+      const bucket = perUnit.get(unit);
+      if (bucket) bucket.push(value);
+      else perUnit.set(unit, [value]);
+    }
+
+    // One number per plot, then compare across plots.
+    const values = [
+      ...[...perUnit.values()].map(
+        (readings) => readings.reduce((sum, value) => sum + value, 0) / readings.length,
+      ),
+      ...loose,
+    ];
 
     const n = values.length;
-    if (n === 0) return { armId: arm.armId, armName: arm.name, n, mean: null, se: null };
+    if (n === 0) return { ...empty, records };
     const mean = values.reduce((sum, value) => sum + value, 0) / n;
-    if (n < 2) return { armId: arm.armId, armName: arm.name, n, mean, se: null };
-    const variance =
-      values.reduce((sum, value) => sum + (value - mean) ** 2, 0) / (n - 1);
-    return { armId: arm.armId, armName: arm.name, n, mean, se: Math.sqrt(variance / n) };
+    if (n < 2) return { armId: arm.armId, armName: arm.name, n, records, mean, se: null };
+    const variance = values.reduce((sum, value) => sum + (value - mean) ** 2, 0) / (n - 1);
+    return {
+      armId: arm.armId,
+      armName: arm.name,
+      n,
+      records,
+      mean,
+      se: Math.sqrt(variance / n),
+    };
   });
 }

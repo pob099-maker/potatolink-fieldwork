@@ -294,7 +294,20 @@ export function TrialDetailPage() {
         />
       ) : null}
 
-      {trial.design === "replicated" ? (
+      {/* Without a response variable there is nothing to summarise, and the
+          card rendered a column of dashes under the heading "— response",
+          which reads as a broken app rather than an unfinished setup. */}
+      {trial.design === "replicated" && trial.responseMetric === null ? (
+        <Card>
+          <h2 className="font-display text-lg font-bold">Response summary</h2>
+          <p className="mt-1 text-sm text-ink/60 dark:text-ink-dark/60">
+            Choose the response variable under Trial design — the one number this trial
+            exists to compare, usually yield. Until then there is nothing to summarise.
+          </p>
+        </Card>
+      ) : null}
+
+      {trial.design === "replicated" && trial.responseMetric !== null ? (
         <ResponseSummaryCard
           word={word}
           stats={responseSummary(
@@ -847,6 +860,7 @@ function ResponseSummaryCard({
   responseUnit: string;
   word: Words;
 }) {
+  const subSampled = stats.some((stat) => stat.records > stat.n);
   return (
     <Card>
       <h2 className="font-display text-lg font-bold">Response summary — {responseLabel}</h2>
@@ -854,12 +868,26 @@ function ResponseSummaryCard({
         Descriptive means ± standard error per {word.one}. This is not a significance test —
         export the tidy data for statistical analysis.
       </p>
+      {/* Say it, rather than quietly producing a smaller number than the
+          reader expects. Somebody who took six readings down a strip and sees
+          n=3 needs to know why, and somebody who did not needs to know the app
+          would have handled it. */}
+      {subSampled ? (
+        <p className="mt-2 rounded-lg bg-accent/20 p-3 text-sm">
+          Several readings were taken in the same plot. They are averaged within the plot
+          before the {word.many} are compared, because randomisation was applied to plots
+          — counting each reading separately would understate the error by roughly the
+          square root of the number of samples. <strong>n</strong> below is plots.
+        </p>
+      ) : null}
       <div className="mt-3 overflow-x-auto">
         <table className="w-full text-sm">
           <thead>
             <tr className="text-left text-ink/60 dark:text-ink-dark/60">
               <th className="py-1">{word.One}</th>
-              <th className="py-1">n</th>
+              <th className="py-1" title="Independent plots, not records">
+                n
+              </th>
               <th className="py-1">Mean{responseUnit ? ` (${responseUnit})` : ""}</th>
               <th className="py-1">± SE</th>
             </tr>
@@ -868,7 +896,15 @@ function ResponseSummaryCard({
             {stats.map((stat) => (
               <tr key={stat.armId} className="border-t border-ink/10 dark:border-ink-dark/10">
                 <td className="py-1 font-medium">{stat.armName}</td>
-                <td className="py-1">{stat.n}</td>
+                <td className="py-1">
+                  {stat.n}
+                  {stat.records > stat.n ? (
+                    <span className="text-ink/50 dark:text-ink-dark/50">
+                      {" "}
+                      ({stat.records} readings)
+                    </span>
+                  ) : null}
+                </td>
                 <td className="py-1">{stat.mean === null ? "–" : stat.mean.toFixed(2)}</td>
                 <td className="py-1">{stat.se === null ? "–" : stat.se.toFixed(2)}</td>
               </tr>
