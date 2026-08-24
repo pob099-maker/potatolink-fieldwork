@@ -50,6 +50,12 @@ export interface ParsedTrial {
   objective: string;
   design: TrialDesign;
   replicates: number;
+  /**
+   * How the plots are arranged. Absent means "decide from the design", which
+   * for a replicated trial means blocks — the arrangement a paddock almost
+   * always wants, and the one the trial page already defaults to.
+   */
+  blocking?: "none" | "blocks";
   sites: ParsedSite[];
   practices: ParsedPractice[];
   forms: ParsedForm[];

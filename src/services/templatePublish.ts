@@ -41,6 +41,11 @@ export async function publishParsedTrial(parsed: ParsedTrial): Promise<Result<Tr
       ...trial,
       design: "replicated",
       replicates: parsed.replicates,
+      // Blocked unless told otherwise. Neither route set this, so a trial
+      // created by answering "how many blocks?" came out completely
+      // randomised — the wizard's own words promising an arrangement the
+      // trial did not have, silently.
+      blocking: parsed.blocking ?? "blocks",
       responseMetric: responseField?.fieldName ?? null,
     });
     if (!updated.success) return { success: false, error: updated.error };

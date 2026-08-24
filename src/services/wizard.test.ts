@@ -159,3 +159,18 @@ describe("which number the trial is comparing", () => {
     expect(wizardProblems(answers)).toContain("Choose which number the trial is comparing.");
   });
 });
+
+// The wizard asks "how many blocks?" and then has to produce blocks. It did
+// not: ParsedTrial carried no blocking, so a designed experiment came out
+// completely randomised — the wizard's own words promising an arrangement the
+// trial did not have, and nothing on screen contradicting it.
+describe("the arrangement the wizard promised", () => {
+  it("blocks a designed experiment", () => {
+    const parsed = toParsedTrial(filled({ kind: "experiment", replicates: 3 }));
+    expect(parsed.blocking).toBe("blocks");
+  });
+
+  it("leaves a comparison unblocked, since it was never asked", () => {
+    expect(toParsedTrial(filled()).blocking).toBe("none");
+  });
+});
