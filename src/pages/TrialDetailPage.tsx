@@ -15,6 +15,7 @@ import { buildEntryUrl, summariseArm } from "../services/entryLinks";
 import { buildTrialCsv, csvFileName, downloadCsv } from "../services/export";
 import { describeEvent, describeEventScope, eventsForTrial, tallySync } from "../services/events";
 import { isSeedTrial } from "../services/seed";
+import { TRIAL_STATES, canRecord, closedReason } from "../services/lifecycle";
 import { metricDisplay } from "../services/metricValue";
 import { replicationStatus, responseSummary, type Completeness, type TreatmentStat } from "../services/replication";
 import { saveTrial } from "../services/store";
@@ -31,6 +32,7 @@ import {
 } from "../components/ui";
 import { SetupChecklist, SiteManager } from "../components/TrialSetup";
 import { PlotLayout } from "../components/PlotLayout";
+import { DataSources } from "../components/DataSources";
 import { generateLayout, layoutProblem } from "../services/layout";
 import { describePlot } from "../services/plotArea";
 import { useAccess } from "../contexts/AccessContext";
@@ -196,7 +198,7 @@ export function TrialDetailPage() {
       ) : null}
 
       <div className="flex flex-wrap gap-2">
-        {growerForm && trialSites.length > 0 && activeArms.length > 0 ? (
+        {canRecord(trial) && growerForm && trialSites.length > 0 && activeArms.length > 0 ? (
           <Link
             to={`/trials/${trial.trialId}/entry?form=${growerForm.templateId}${
               selectedSiteId ? `&site=${selectedSiteId}` : ""
@@ -271,13 +273,27 @@ export function TrialDetailPage() {
         title="Collecting observations"
         who={`For whoever is in the paddock — a contractor, a staff member or the grower. One link per site and ${word.one}, and the form works with no signal.`}
       >
-      <EntryLinks trial={trial} sites={trialSites} arms={activeArms} selectedSiteId={selectedSiteId} word={word} />
+      <DataSources trial={trial} sites={trialSites} arms={activeArms} />
+
+      {closedReason(trial) ? (
+        <Card>
+          <h2 className="font-display text-lg font-bold">Recording has stopped</h2>
+          <p className="mt-1 text-sm text-ink/60 dark:text-ink-dark/60">
+            {closedReason(trial)} Move the trial back to Active under Stage if it needs to
+            take entries again.
+          </p>
+        </Card>
+      ) : (
+        <EntryLinks trial={trial} sites={trialSites} arms={activeArms} selectedSiteId={selectedSiteId} word={word} />
+      )}
       </RoleSection>
 
       <RoleSection
         title="Managing and reviewing"
         who="For whoever runs the trial — what has come back, whether the design is filled in, and getting the data out."
       >
+      <TrialStage trial={trial} />
+
       <Card>
         <h2 className="font-display text-lg font-bold">This trial's entries</h2>
         {/* This trial's, not the device's. What is queued on a phone is a
@@ -823,6 +839,66 @@ function TrialDesignCard({
           })}
         </div>
       </fieldset>
+    </Card>
+  );
+}
+
+/**
+ * Where the trial is in its life.
+ *
+ * The four states existed and nothing could set them, so every trial stayed a
+ * draft forever and the lists filled up with finished work. Put here rather
+ * than in setup because it is the running of a trial, not its design — and
+ * whoever runs it is the person who knows collection has stopped.
+ */
+function TrialStage({ trial }: { trial: Trial }) {
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  async function choose(status: Trial["status"]): Promise<void> {
+    setSaving(true);
+    setError(null);
+    const result = await saveTrial({ ...trial, status });
+    setSaving(false);
+    if (!result.success) setError(result.error);
+  }
+
+  return (
+    <Card>
+      <h2 className="font-display text-lg font-bold">Stage</h2>
+      <p className="mt-1 text-sm text-ink/60 dark:text-ink-dark/60">
+        Nothing is ever deleted by this. Archiving takes a finished trial out of the lists
+        and no more; its results, economics and CSV export all keep working, and it comes
+        back with one tap.
+      </p>
+      <div className="mt-3 space-y-2">
+        {TRIAL_STATES.map((state) => (
+          <label
+            key={state.value}
+            className={`flex cursor-pointer gap-3 rounded-lg border p-3 ${
+              trial.status === state.value
+                ? "border-primary bg-primary/5"
+                : "border-ink/15 dark:border-ink-dark/15"
+            }`}
+          >
+            <input
+              type="radio"
+              name="stage"
+              checked={trial.status === state.value}
+              disabled={saving}
+              onChange={() => void choose(state.value)}
+              className="mt-1 size-4 shrink-0"
+            />
+            <span>
+              <span className="block font-medium">{state.label}</span>
+              <span className="block text-sm text-ink/60 dark:text-ink-dark/60">
+                {state.detail}
+              </span>
+            </span>
+          </label>
+        ))}
+      </div>
+      {error ? <ErrorState message={error} /> : null}
     </Card>
   );
 }

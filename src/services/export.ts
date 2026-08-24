@@ -14,6 +14,7 @@ import type {
 import { eventsForTrial, templateForEvent } from "./events";
 import { metricExportValues, metricNumber } from "./metricValue";
 import { areaAsM2, areaUnit, plotAreaM2, weightUnit, yieldPerHectare } from "./plotArea";
+import { sourcesForRow } from "./dataSourceScope";
 
 const COLUMNS = [
   "trial",
@@ -46,6 +47,11 @@ const COLUMNS = [
   // than as arithmetic somebody did once in a paddock and nobody can check.
   "yield_t_ha",
   "plot_area_m2",
+  // Which recorded source covers this observation, narrowest first. A row can
+  // have several — the protocol covers the trial while a flow meter covers one
+  // plot — so both columns are pipe-separated and line up with each other.
+  "data_sources",
+  "data_source_refs",
   "media_url",
 ] as const;
 
@@ -111,9 +117,12 @@ export function buildTrialCsv(
       return unit && value !== null ? areaAsM2(value, unit) : null;
     }, null);
     const area = recordArea ?? plotAreaM2(trial);
+    const covering = sourcesForRow(trial.dataSources ?? [], event);
+    const sourceLabels = covering.map((source) => source.label).join(" | ");
+    const sourceRefs = covering.map((source) => source.reference).join(" | ");
 
     if (eventMetrics.length === 0) {
-      rows.push([...base, "", "", "", "", "", ""]);
+      rows.push([...base, "", "", "", "", "", "", sourceLabels, sourceRefs]);
       continue;
     }
     for (const metric of eventMetrics) {
@@ -133,6 +142,8 @@ export function buildTrialCsv(
           metric.unit,
           perHectare === null ? "" : perHectare.toFixed(3),
           area === null ? "" : String(area),
+          sourceLabels,
+          sourceRefs,
           isUrl ? (metric.photoUrl as string) : "",
         ]);
       }

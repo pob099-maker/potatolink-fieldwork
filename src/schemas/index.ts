@@ -23,6 +23,23 @@ export const projectSchema = z.object({
   updatedAt: isoDate,
 });
 
+export const dataSourceSchema = z
+  .object({
+    label: z.string().min(1),
+    kind: z.enum(["sensorthings", "isoxml", "weather", "document", "other"]),
+    reference: z.string().min(1),
+    siteId: id.nullish().transform((v) => v ?? null),
+    armId: id.nullish().transform((v) => v ?? null),
+    plot: z.number().int().positive().nullish().transform((v) => v ?? null),
+    note: z.string().nullish().transform((v) => v ?? ""),
+  })
+  // Plots are numbered from one in every paddock, so a plot number without a
+  // site does not identify anything.
+  .refine((source) => source.plot === null || source.siteId !== null, {
+    message: "A plot needs the site it is in",
+    path: ["plot"],
+  });
+
 export const trialSchema = z.object({
   trialId: id,
   projectId: id,
@@ -35,6 +52,7 @@ export const trialSchema = z.object({
   vocabulary: z.enum(["treatment", "practice"]).nullish().transform((v) => v ?? null),
   plotLengthM: z.number().positive().nullish().transform((v) => v ?? null),
   plotWidthM: z.number().positive().nullish().transform((v) => v ?? null),
+  dataSources: z.array(dataSourceSchema).nullish().transform((v) => v ?? []),
   layoutSeed: z.string().nullish().transform((v) => v ?? null),
   responseMetric: z.string().nullable().default(null),
   createdAt: isoDate,
@@ -215,14 +233,22 @@ export function buildEntryFormSchema(
         let num = z.coerce.number({ invalid_type_error: "Enter a number" });
         if (field.min !== null) num = num.min(field.min);
         if (field.max !== null) num = num.max(field.max);
-        value = num;
+        // An empty box is not a zero. z.coerce.number() turns "" into 0, so a
+        // required yield left blank saved silently as 0 t/ha — which drags a
+        // treatment mean down and looks like a real observation for the rest
+        // of the trial. Blank becomes undefined, and a required field then
+        // fails the way it should.
+        value = z.preprocess(
+          (raw) => (raw === "" || raw === null ? undefined : raw),
+          num,
+        );
         break;
       }
       case "slider": {
         let num = z.coerce.number();
         if (field.min !== null) num = num.min(field.min);
         if (field.max !== null) num = num.max(field.max);
-        value = num;
+        value = z.preprocess((raw) => (raw === "" || raw === null ? undefined : raw), num);
         break;
       }
       case "boolean":

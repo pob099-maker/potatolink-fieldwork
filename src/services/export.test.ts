@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { buildTrialCsv, csvFileName } from "./export";
-import type {
+import type { DataSource,
   FormTemplate,
   MeasurementEvent,
   Metric,
@@ -24,6 +24,7 @@ const trial: Trial = {
   vocabulary: null,
   plotLengthM: null,
   plotWidthM: null,
+  dataSources: [],
   layoutSeed: null,
   responseMetric: null,
   createdAt: T0,
@@ -251,5 +252,48 @@ describe("derived yield", () => {
     );
     const head = csv.split("\r\n")[0].split(",");
     expect(csv.split("\r\n")[1].split(",")[head.indexOf("yield_t_ha")]).toBe("");
+  });
+});
+
+// A number in the file should be traceable to the instrument that produced it.
+describe("provenance in the export", () => {
+  const source = (over: Partial<DataSource>): DataSource => ({
+    label: "x", kind: "other", reference: "r", siteId: null, armId: null, plot: null, note: "",
+    ...over,
+  });
+
+  it("names the sources covering a row, narrowest first", () => {
+    const withSources = {
+      ...trial,
+      dataSources: [
+        source({ label: "Protocol", reference: "S:/protocol.pdf" }),
+        source({ label: "Flow meter", reference: "https://vri/ds(88)", siteId: "site-1", plot: 7 }),
+      ],
+    };
+    const csv = buildTrialCsv(
+      withSources, sites, arms, templates,
+      [{ ...event("e1"), plot: 7 }],
+      [{ metricId: "m1", eventId: "e1", metricName: "yield", value: 46.2,
+         unit: "t/ha", photoUrl: null, createdAt: T0 }],
+    );
+    const head = csv.split("\r\n")[0].split(",");
+    const row = csv.split("\r\n")[1].split(",");
+    // Unquoted: the separator is a pipe precisely so a cell holding several
+    // sources needs no escaping and still splits cleanly.
+    expect(row[head.indexOf("data_sources")]).toBe("Flow meter | Protocol");
+    expect(row[head.indexOf("data_source_refs")]).toBe(
+      "https://vri/ds(88) | S:/protocol.pdf",
+    );
+  });
+
+  it("leaves the columns empty when nothing covers the row", () => {
+    const csv = buildTrialCsv(
+      trial, sites, arms, templates, [event("e1")],
+      [{ metricId: "m1", eventId: "e1", metricName: "yield", value: 1,
+         unit: "t/ha", photoUrl: null, createdAt: T0 }],
+    );
+    const head = csv.split("\r\n")[0].split(",");
+    const row = csv.split("\r\n")[1].split(",");
+    expect(row[head.indexOf("data_sources")]).toBe("");
   });
 });

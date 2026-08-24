@@ -48,3 +48,29 @@ h2 {
   text-transform: uppercase;
   letter-spacing: 0.03em;
 }
+
+/* Keyboard focus.
+ *
+ * Tailwind's reset removes the browser outline and nothing was putting one
+ * back, so every control in the app — including the grower entry form — was
+ * focusable with no visible sign of where you were. That is WCAG 2.4.7, and
+ * more to the point it makes the app unusable without a mouse.
+ *
+ * :focus-visible rather than :focus, so the ring appears for keyboard and
+ * assistive navigation but not on a mouse click. The dark theme uses the
+ * golden tan: the brown is close to invisible against a dark ground, and a
+ * focus ring that cannot be seen is the bug this fixes. */
+:focus-visible {
+  outline: 3px solid var(--color-primary);
+  outline-offset: 2px;
+}
+
+.dark :focus-visible {
+  outline-color: var(--color-primary-soft);
+}
+
+/* A control sitting on the primary colour needs the ring to contrast with
+   that, not with the page behind it. */
+.bg-primary:focus-visible {
+  outline-color: var(--color-ink-dark);
+}

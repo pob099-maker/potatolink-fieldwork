@@ -1,7 +1,9 @@
+import { useState } from "react";
 import { Link } from "react-router-dom";
 import { useArms, useEvents, useSites, useTrials } from "../hooks/useCollections";
 import { eventsForTrial, tallySync } from "../services/events";
 import { isSeedTrial } from "../services/seed";
+import { hiddenCount, visibleTrials } from "../services/lifecycle";
 import {
   Card,
   EmptyState,
@@ -18,6 +20,9 @@ export function TrialsPage() {
   const sites = useSites();
   const arms = useArms();
   const events = useEvents();
+  // Archived trials are kept out of the way rather than out of reach — one
+  // tap brings them back, and everything about them stays readable.
+  const [showArchived, setShowArchived] = useState(false);
 
   if (trials.isError) {
     return (
@@ -27,7 +32,21 @@ export function TrialsPage() {
 
   return (
     <div className="space-y-4">
-      <PageTitle>Trials</PageTitle>
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <PageTitle>Trials</PageTitle>
+        {hiddenCount(trials.data ?? []) > 0 ? (
+          <button
+            type="button"
+            aria-pressed={showArchived}
+            onClick={() => setShowArchived(!showArchived)}
+            className="min-h-11 rounded-lg border border-ink/20 px-4 py-2.5 font-medium dark:border-ink-dark/20"
+          >
+            {showArchived
+              ? "Hide archived"
+              : `Show archived (${hiddenCount(trials.data ?? [])})`}
+          </button>
+        ) : null}
+      </div>
       {trials.isPending ? (
         <Card>
           <Skeleton lines={4} />
@@ -38,7 +57,7 @@ export function TrialsPage() {
           action={{ label: "Go to dashboard", to: "/" }}
         />
       ) : (
-        (trials.data ?? []).map((trial) => (
+        visibleTrials(trials.data ?? [], showArchived).map((trial) => (
           <Card key={trial.trialId}>
             <Link
               to={`/trials/${trial.trialId}`}
