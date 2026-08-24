@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useMemo, useState, type ReactNode } from "react";
 import { Link, useParams } from "react-router-dom";
 import { format } from "date-fns";
 import {
@@ -150,7 +150,7 @@ export function TrialDetailPage() {
             to={`/trials/${trial.trialId}/entry?form=${growerForm.templateId}&site=${trialSites[0].siteId}&arm=${activeArms[0].armId}&preview=1`}
             className="min-h-11 rounded-lg border border-ink/20 px-4 py-2.5 font-medium dark:border-ink-dark/20"
           >
-            Preview as grower
+            Preview the observation form
           </Link>
         ) : null}
         <Link
@@ -180,8 +180,34 @@ export function TrialDetailPage() {
         </button>
       </div>
 
-      <TrialDesignCard trial={trial} templates={trialTemplates} />
 
+      <RoleSection
+        title="Setting up the trial"
+        who="For whoever designs the trial — the sites it runs at, the practices being compared, and the questions asked in the field."
+      >
+      <SetupChecklist
+        trial={trial}
+        sites={trialSites}
+        arms={activeArms}
+        templates={trialTemplates}
+      />
+      <TrialDesignCard trial={trial} templates={trialTemplates} />
+      <SiteManager trialId={trial.trialId} sites={trialSites} />
+      <ArmManager trialId={trial.trialId} arms={trialArms} />
+      <TrialForms trial={trial} templates={trialTemplates} />
+      </RoleSection>
+
+      <RoleSection
+        title="Collecting observations"
+        who="For whoever is in the paddock — a contractor, a staff member or the grower. One link per site and practice, and the form works with no signal."
+      >
+      <EntryLinks trial={trial} sites={trialSites} arms={activeArms} selectedSiteId={selectedSiteId} />
+      </RoleSection>
+
+      <RoleSection
+        title="Managing and reviewing"
+        who="For whoever runs the trial — what has come back, whether the design is filled in, and getting the data out."
+      >
       {trial.design === "replicated" ? (
         <ReplicationStatusCard
           status={replicationStatus(trial, activeArms, trialSites, trialEvents)}
@@ -226,20 +252,10 @@ export function TrialDetailPage() {
         selectedSiteId={selectedSiteId}
       />
 
-      <SetupChecklist
-        trial={trial}
-        sites={trialSites}
-        arms={activeArms}
-        templates={trialTemplates}
-      />
 
-      <SiteManager trialId={trial.trialId} sites={trialSites} />
 
-      <ArmManager trialId={trial.trialId} arms={trialArms} />
 
-      <TrialForms trial={trial} templates={trialTemplates} />
 
-      <EntryLinks trial={trial} sites={trialSites} arms={activeArms} selectedSiteId={selectedSiteId} />
 
       {activeArms.length === 0 ? (
         <EmptyState message="No practice arms configured for this trial yet." />
@@ -358,7 +374,34 @@ export function TrialDetailPage() {
           );
         })
       )}
+      </RoleSection>
     </div>
+  );
+}
+
+/**
+ * A trial page serves three different people and they were interleaved: trial
+ * design, then completeness, then records, then back to sites and practices.
+ * Grouping by whose job it is means each of them can find their part without
+ * reading the others.
+ */
+function RoleSection({
+  title,
+  who,
+  children,
+}: {
+  title: string;
+  who: string;
+  children: ReactNode;
+}) {
+  return (
+    <section className="space-y-4">
+      <div className="border-b-2 border-accent/50 pb-2 dark:border-accent/30">
+        <h2 className="font-display text-lg font-bold">{title}</h2>
+        <p className="mt-0.5 text-sm text-ink/60 dark:text-ink-dark/60">{who}</p>
+      </div>
+      {children}
+    </section>
   );
 }
 
@@ -839,7 +882,7 @@ function TrialForms({ trial, templates }: { trial: Trial; templates: FormTemplat
       {growerForms.length > 0 ? (
         <>
           <h3 className="mt-2 text-sm font-semibold text-ink/60 dark:text-ink-dark/60">
-            Filled in by growers
+            Filled in on site
           </h3>
           <ul className="divide-y divide-ink/10 dark:divide-ink-dark/10">
             {growerForms.map(row)}
@@ -887,7 +930,7 @@ function EntryLinks({
         onClick={() => setOpen(true)}
         className="min-h-11 w-full rounded-lg border border-dashed border-ink/30 px-4 py-2.5 font-medium text-ink/70 dark:border-ink-dark/30 dark:text-ink-dark/70"
       >
-        🔗 Show entry links to send to growers
+        🔗 Show the links for recording in the field
       </button>
     );
   }

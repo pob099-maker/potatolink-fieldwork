@@ -11,24 +11,32 @@ const NAV_ITEMS = [
   { to: "/settings", label: "Settings" },
 ];
 
-/** Stylised overlapping potatoes, echoing the PotatoLink logo mark. */
-function PotatoMark() {
+/**
+ * The AgAims mark: a green field above, the brown bowl of the soil below, and
+ * a seedling rising through both.
+ *
+ * Drawn inline rather than loaded as an image so it stays crisp at any size,
+ * needs no network request, and survives both themes. The green is fixed
+ * because it is the brand colour; the brown follows currentColor, since a
+ * dark background would otherwise swallow it.
+ */
+function AgAimsMark() {
   return (
     <svg
-      viewBox="0 0 48 32"
-      aria-hidden="true"
-      className="h-8 w-12 shrink-0 text-primary dark:text-primary-soft"
+      viewBox="0 0 48 48"
+      role="img"
+      aria-label="AgAims"
+      className="h-9 w-9 shrink-0 text-primary dark:text-primary-soft"
     >
-      <g fill="none" stroke="currentColor" strokeWidth="2.6">
-        <ellipse cx="17" cy="16" rx="12" ry="9.5" transform="rotate(-18 17 16)" />
-        <ellipse cx="31" cy="16" rx="12" ry="9.5" transform="rotate(14 31 16)" />
-      </g>
-      <g fill="currentColor">
-        <circle cx="13" cy="13" r="1.1" />
-        <circle cx="18" cy="19" r="1.1" />
-        <circle cx="29" cy="12" r="1.1" />
-        <circle cx="34" cy="18" r="1.1" />
-        <circle cx="24" cy="15" r="1.1" />
+      {/* The field */}
+      <rect x="2" y="3" width="44" height="21" fill="#6ba80f" />
+      {/* The soil, a bowl narrowing to a point */}
+      <path d="M2 24 C2 38 11 46 24 46 C37 46 46 38 46 24 Z" fill="currentColor" />
+      {/* The seedling, breaking the line between them */}
+      <g fill="#ffffff">
+        <rect x="22.8" y="12" width="2.4" height="24" rx="1.2" />
+        <path d="M24 20C24 12.5 28.6 7 35 6.4 35 13.9 30.4 19.4 24 20Z" />
+        <path d="M24 24C24 17.6 20.1 13 14.6 12.5 14.6 18.9 18.5 23.5 24 24Z" />
       </g>
     </svg>
   );
@@ -47,14 +55,13 @@ export function Layout({ children }: { children: ReactNode }) {
       <header className="border-b-2 border-accent/60 bg-surface dark:border-accent/40 dark:bg-surface-dark">
         <div className="mx-auto flex max-w-4xl items-center justify-between gap-2 px-4 py-3">
           <NavLink to="/" className="flex items-center gap-2.5 text-primary dark:text-primary-soft">
-            <PotatoMark />
+            <AgAimsMark />
             <span className="leading-tight">
               <span className="block font-display text-lg font-extrabold">
-                Potato<span className="font-medium opacity-80">Link</span>{" "}
-                <span className="font-semibold">Fieldwork</span>
+                Fieldwork
               </span>
               <span className="hidden text-[0.6rem] font-medium uppercase tracking-[0.18em] text-ink/50 dark:text-ink-dark/50 sm:block">
-                Australian Potato Industry Extension Project
+                Trial data collection
               </span>
             </span>
           </NavLink>

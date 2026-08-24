@@ -89,7 +89,7 @@ export function TemplateEditorPage() {
     const result = await saveTemplate(draft);
     setStatus(
       result.success
-        ? { kind: "saved", message: "Form saved. Growers see the change immediately." }
+        ? { kind: "saved", message: "Form saved. Anyone recording sees the change immediately." }
         : { kind: "error", message: result.error },
     );
   }

@@ -190,6 +190,7 @@ export function EntryPage() {
   if (needsSite || needsArm || needsReplicate) {
     return (
       <ContextChooser
+        preview={preview}
         trialName={trial.name}
         sites={trialSites}
         arms={trialArms}
@@ -236,6 +237,7 @@ export function EntryPage() {
  * attribute a run to the wrong place.
  */
 function ContextChooser({
+  preview,
   trialName,
   sites,
   arms,
@@ -246,6 +248,10 @@ function ContextChooser({
   onPickArm,
   onPickReplicate,
 }: {
+  /** Staff looking at what a grower sees. Said on every screen, not just the
+      form — somebody who works through two choosers before being told they are
+      in a preview has been misled by omission. */
+  preview: boolean;
   trialName: string;
   sites: Site[];
   arms: PracticeArm[];
@@ -267,6 +273,7 @@ function ContextChooser({
       step === "site" ? "a site" : step === "arm" ? "a practice" : "its replicate count";
     return (
       <Card className="mx-auto max-w-md">
+        {preview ? <PreviewBanner /> : null}
         <PageTitle>Not ready for entries yet</PageTitle>
         <p className="mt-2 text-ink/60 dark:text-ink-dark/60">
           {trialName} still needs {missing} before anything can be recorded. A staff member
@@ -285,6 +292,7 @@ function ContextChooser({
         : "Choose the replicate (plot) this record is for.";
   return (
     <Card className="mx-auto max-w-md">
+      {preview ? <PreviewBanner /> : null}
       <PageTitle>{title}</PageTitle>
       <p className="mt-1 text-ink/60 dark:text-ink-dark/60">
         {trialName}. {help}
@@ -338,6 +346,15 @@ function ContextChooser({
   );
 }
 
+/** Says which mode you are in, on every screen of the grower flow. */
+function PreviewBanner() {
+  return (
+    <p className="mb-3 rounded-lg bg-accent/20 p-3 text-sm font-medium text-ink dark:text-ink-dark">
+      Preview of the form as it appears on site. Nothing here is saved.
+    </p>
+  );
+}
+
 /** Live badge for a just-saved entry: reads the event's real sync status. */
 function SavedSyncBadge({ eventId }: { eventId: string }) {
   const events = useEvents();
@@ -365,7 +382,7 @@ function AccessGate({
         <p className="text-sm text-ink/60 dark:text-ink-dark/60">📍 {siteName}</p>
       ) : null}
       <p className="mt-2 text-ink/60 dark:text-ink-dark/60">
-        Enter the access code from your PotatoLink contact to continue. This device will
+        Enter the access code you were given to continue. This device will
         remember it.
       </p>
       <form
@@ -391,7 +408,7 @@ function AccessGate({
         />
         {failed ? (
           <p role="alert" className="text-sm text-danger">
-            That code doesn't match. Check with your PotatoLink contact.
+            That code doesn't match. Check with whoever sent you the link.
           </p>
         ) : null}
         <button
@@ -608,11 +625,7 @@ function EntryForm({
 
   return (
     <form onSubmit={onSubmit} className="mx-auto max-w-md space-y-4">
-      {preview ? (
-        <p className="rounded-lg bg-accent/20 p-3 text-sm font-medium text-ink dark:text-ink-dark">
-          Preview of what a grower sees. Nothing here is saved.
-        </p>
-      ) : null}
+      {preview ? <PreviewBanner /> : null}
       {editing ? (
         <p className="rounded-lg bg-accent/20 p-3 text-sm text-ink dark:text-ink-dark">
           <span className="font-medium">Correcting the entry from </span>

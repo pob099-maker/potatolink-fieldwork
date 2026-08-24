@@ -1,4 +1,4 @@
-// Domain types for PotatoLink Fieldwork, adapted from docs/schema.md.
+// Domain types for Fieldwork, adapted from docs/schema.md.
 // The schema is project-agnostic: new trial types only need new FormTemplate
 // configs, never new types. Arms are never hardcoded as A/B.
 
