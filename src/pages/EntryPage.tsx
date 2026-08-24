@@ -284,6 +284,7 @@ export function EntryPage() {
       key={editing?.eventId ?? "new"}
       editing={editing}
       onAddAnother={clearPickedContext}
+      onChangePlot={laidOut && pickedPlot !== null ? () => setPickedPlot(null) : null}
       formName={template.name}
       trialId={trial.trialId}
       trialName={trial.name}
@@ -457,6 +458,14 @@ function ContextChooser({
           Recording at {site.location}.
         </p>
       ) : null}
+      {/* A tap on the wrong site or plot used to be unrecoverable without a
+          reload — the only way on was forward. */}
+      <Link
+        to="/record"
+        className="mt-3 inline-block min-h-11 py-2.5 font-medium text-primary underline dark:text-primary-soft"
+      >
+        ← Somewhere else
+      </Link>
     </Card>
   );
 }
@@ -603,6 +612,7 @@ function EntryForm({
   replicateLabel,
   plot,
   onAddAnother,
+  onChangePlot,
   frequency,
   eventType,
   siteId,
@@ -625,6 +635,8 @@ function EntryForm({
   plot: number | null;
   /** Clears the plot/practice chosen on this device, ready for the next one. */
   onAddAnother: () => void;
+  /** Back to the plot picker, when a plot was chosen here rather than by link. */
+  onChangePlot: (() => void) | null;
   frequency: string;
   eventType: string;
   siteId: string | null;
@@ -829,6 +841,18 @@ function EntryForm({
             <span className="rounded-full bg-accent/20 px-2.5 py-0.5 font-medium text-ink dark:text-ink-dark">
               {replicateLabel}
             </span>
+          ) : null}
+          {/* Tapping the wrong plot happens, and every way out of this screen
+              used to be forwards. Only offered when the plot was chosen here —
+              a link that named it is the link's answer, not a mistake. */}
+          {onChangePlot ? (
+            <button
+              type="button"
+              onClick={onChangePlot}
+              className="min-h-11 py-2.5 font-medium text-primary underline dark:text-primary-soft"
+            >
+              Change plot
+            </button>
           ) : null}
         </p>
       </div>

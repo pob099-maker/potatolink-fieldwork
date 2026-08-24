@@ -5,8 +5,9 @@ import { AccessProvider } from "./contexts/AccessContext";
 import { AuthProvider } from "./contexts/AuthContext";
 import { RequireStaff } from "./components/RequireStaff";
 import { ThemeProvider } from "./contexts/ThemeContext";
-import { useStoreInvalidation } from "./hooks/useCollections";
+import { useDeviceRole, useStoreInvalidation } from "./hooks/useCollections";
 import { DashboardPage } from "./pages/DashboardPage";
+import { RecordPage } from "./pages/RecordPage";
 import { EntryPage } from "./pages/EntryPage";
 import { ImportTrialPage } from "./pages/ImportTrialPage";
 import { NewTrialPage } from "./pages/NewTrialPage";
@@ -28,6 +29,24 @@ function LegacyResultsRedirect() {
   return <Navigate to={`/trials/${trialId}/economics`} replace />;
 }
 
+/**
+ * What the app opens on. A device that last recorded an observation is a field
+ * device, and sending it to the staff dashboard costs three taps before the
+ * only screen it wants. Deciding here rather than inside the staff guard
+ * matters: a contractor must reach the front door without an account, the same
+ * way they reach the form.
+ */
+function HomeRoute() {
+  const role = useDeviceRole();
+  if (role.isPending) return null;
+  if (role.data === "recording") return <Navigate to="/record" replace />;
+  return (
+    <RequireStaff>
+      <DashboardPage />
+    </RequireStaff>
+  );
+}
+
 function AppRoutes() {
   useStoreInvalidation();
   return (
@@ -40,12 +59,13 @@ function AppRoutes() {
           behind staff sign-in.
         */}
         <Route path="/trials/:trialId/entry" element={<EntryPage />} />
+        <Route path="/record" element={<RecordPage />} />
+        <Route path="/" element={<HomeRoute />} />
         <Route
           path="*"
           element={
             <RequireStaff>
               <Routes>
-                <Route path="/" element={<DashboardPage />} />
                 <Route path="/trials" element={<TrialsPage />} />
                 <Route path="/trials/new" element={<NewTrialPage />} />
                 <Route path="/trials/import" element={<ImportTrialPage />} />

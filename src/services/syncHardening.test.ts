@@ -192,10 +192,7 @@ describe("records deleted elsewhere", () => {
   it("keeps a record the cloud still has", async () => {
     const trial = await addTrial({ projectId: "p1", name: "Still there", objective: "" });
     if (!trial.success) return;
-    const all = await listTrials();
-    const mine = all.find((t) => t.trialId === trial.data.trialId);
-
-    await reconcileForTest("trials", [mine as unknown as Record<string, unknown>]);
+    await reconcileForTest("trials", [trial.data.trialId]);
     const left = await listTrials();
     expect(left.some((t) => t.trialId === trial.data.trialId)).toBe(true);
   });
@@ -215,5 +212,19 @@ describe("records deleted elsewhere", () => {
     await reconcileForTest("measurementEvents", []);
     const events = await listEvents();
     expect(events.some((e) => e.trialId === trial.data.trialId)).toBe(true);
+  });
+
+  it("keeps a record the cloud returned but the app could not parse", async () => {
+    // A row that fails validation is a schema drift, not a deletion. Treating
+    // the two the same would let one bad column wipe the local copy of
+    // everything it affected.
+    const trial = await addTrial({ projectId: "p1", name: "Unparseable", objective: "" });
+    if (!trial.success) return;
+
+    // The id is present in what the cloud returned, even though the row itself
+    // never made it through the schema.
+    await reconcileForTest("trials", [trial.data.trialId]);
+    const left = await listTrials();
+    expect(left.some((t) => t.trialId === trial.data.trialId)).toBe(true);
   });
 });

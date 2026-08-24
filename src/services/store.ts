@@ -209,6 +209,32 @@ export async function waitingToSync(): Promise<number> {
   return queued + deletions + events.filter((event) => event.syncStatus !== "synced").length;
 }
 
+/**
+ * What this device is for.
+ *
+ * A phone that has recorded an observation is almost certainly a field phone,
+ * and sending it to a staff dashboard every time costs the person three taps
+ * before they reach the only screen they want. A laptop that sets trials up
+ * should keep opening on the dashboard.
+ *
+ * It follows the last thing actually done rather than asking: saving an entry
+ * makes a device a recording device, and following the "setting up trials"
+ * link back makes it a setup one. Both are explicit acts, so the guess is
+ * always one tap from being corrected — and it is stated in Settings rather
+ * than left as magic.
+ */
+export type DeviceRole = "recording" | "setup";
+
+export async function deviceRole(): Promise<DeviceRole> {
+  const stored = await dbGet<{ key: string; role: DeviceRole }>("meta", "deviceRole");
+  return stored?.role ?? "setup";
+}
+
+export async function setDeviceRole(role: DeviceRole): Promise<void> {
+  await dbPut("meta", { key: "deviceRole", role });
+  notify();
+}
+
 /** The last unresolved push refusal, or null when everything has gone through. */
 export async function syncTrouble(): Promise<SyncTrouble | null> {
   const stored = await dbGet<{ key: string } & SyncTrouble>("meta", "syncTrouble");
@@ -572,6 +598,10 @@ export async function addEntry(input: NewEntryInput): Promise<Result<Measurement
   } catch {
     return { success: false, error: "Could not save the entry on this device." };
   }
+
+  // Saving an observation is what makes this a field device, so the next time
+  // it opens it lands on recording rather than the staff dashboard.
+  await setDeviceRole("recording");
 
   notify();
   void syncPending();
@@ -1100,11 +1130,11 @@ export async function pullFromCloud(): Promise<Result<string>> {
  */
 async function reconcileDeleted(
   collection: CollectionName,
-  cloudRows: Record<string, unknown>[],
+  cloudIdList: string[],
   outbox: OutboxItem[],
   deletions: DeletionItem[],
 ): Promise<number> {
-  const cloudIds = new Set(cloudRows.map((row) => recordId(collection, row)));
+  const cloudIds = new Set(cloudIdList);
   const queued = new Set(
     outbox.filter((item) => item.collection === collection).map((item) => item.id),
   );
@@ -1130,9 +1160,9 @@ async function reconcileDeleted(
  */
 export async function reconcileForTest(
   collection: CollectionName,
-  cloudRows: Record<string, unknown>[],
+  cloudIds: string[],
 ): Promise<number> {
-  return reconcileDeleted(collection, cloudRows, await readOutbox(), await readDeletions());
+  return reconcileDeleted(collection, cloudIds, await readOutbox(), await readDeletions());
 }
 
 async function pullTables(): Promise<Result<string>> {
@@ -1192,7 +1222,13 @@ async function pullTables(): Promise<Result<string>> {
 
       await dbPutMany(toWrite.map((value) => ({ collection: spec.collection, value })));
       pulled += toWrite.length;
-      removed += await reconcileDeleted(spec.collection, valid, outbox, deletions);
+      // Every id the cloud returned, including rows that failed validation.
+      // Passing only the parsed ones would let a single schema drift read as
+      // "deleted everywhere" and take the local copy with it.
+      const cloudIds = (data ?? []).map((row) =>
+        String((row as Record<string, unknown>)[toColumn(PRIMARY_KEY[spec.collection])]),
+      );
+      removed += await reconcileDeleted(spec.collection, cloudIds, outbox, deletions);
     }
     if (pulled > 0 || removed > 0) notify();
     const goneNote =

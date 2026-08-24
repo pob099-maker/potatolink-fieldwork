@@ -48,9 +48,9 @@ function StartHere({ presence }: { presence: SeedPresence }) {
       what: "What has been recorded, whether a replicated design is filled in, and the data out as a CSV for analysis.",
     },
     {
-      to: "/trials",
+      to: "/record",
       role: "Recording observations",
-      what: "Open a trial and use its entry links. Four questions a screen, photos and video, and it keeps working with no signal.",
+      what: "Pick where you are and start. Four questions a screen, photos and video, and it keeps working with no signal. A device used for this opens straight here next time.",
     },
   ];
 

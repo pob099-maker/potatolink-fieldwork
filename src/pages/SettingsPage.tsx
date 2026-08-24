@@ -2,13 +2,15 @@ import { useState } from "react";
 import { useTheme } from "../contexts/ThemeContext";
 import { useAuth } from "../contexts/AuthContext";
 import { isBackendConfigured } from "../lib/supabase";
-import { pullFromCloud, pushBaseData, syncPending } from "../services/store";
+import { pullFromCloud, pushBaseData, setDeviceRole, syncPending } from "../services/store";
+import { useDeviceRole } from "../hooks/useCollections";
 import { Card, PageTitle } from "../components/ui";
 
 export function SettingsPage() {
   const { theme, toggleTheme } = useTheme();
   const { email, required: staffRequired, signOut } = useAuth();
   const [pushResult, setPushResult] = useState<string | null>(null);
+  const deviceRole = useDeviceRole();
 
   return (
     <div className="space-y-4">
@@ -55,6 +57,32 @@ export function SettingsPage() {
         >
           Switch to {theme === "dark" ? "light" : "dark"} mode
         </button>
+      </Card>
+
+      <Card>
+        <h2 className="font-semibold">What this device opens on</h2>
+        <p className="mt-1 text-sm text-ink/60 dark:text-ink-dark/60">
+          Stated rather than left as magic: a device that records observations opens
+          straight on recording, and one that sets trials up opens on the dashboard. It
+          follows whatever was last done here, and can be set either way.
+        </p>
+        <div className="mt-3 flex flex-wrap gap-2">
+          {(["recording", "setup"] as const).map((role) => (
+            <button
+              key={role}
+              type="button"
+              aria-pressed={deviceRole.data === role}
+              onClick={() => void setDeviceRole(role)}
+              className={`min-h-11 rounded-lg border px-4 py-2.5 font-medium ${
+                deviceRole.data === role
+                  ? "border-primary bg-primary text-white"
+                  : "border-ink/20 dark:border-ink-dark/20"
+              }`}
+            >
+              {role === "recording" ? "Recording observations" : "Setting up trials"}
+            </button>
+          ))}
+        </div>
       </Card>
 
       <Card>
