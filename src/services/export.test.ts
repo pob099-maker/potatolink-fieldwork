@@ -21,6 +21,7 @@ const trial: Trial = {
   design: "observational",
   replicates: 0,
   blocking: "none" as const,
+  vocabulary: null,
   layoutSeed: null,
   responseMetric: null,
   createdAt: T0,
@@ -123,14 +124,14 @@ describe("buildTrialCsv", () => {
     expect(csv).toContain('"rot, greening"');
   });
 
-  it("includes trial-level staff records with blank site and practice", () => {
+  it("includes trial-level staff records with blank site and treatment", () => {
     const events = [event("cost", { siteId: null, armId: null, eventType: "cost_log" })];
     const metrics = [metric("m1", "cost", "leaseCost", 18000, { unit: "$" })];
     const csv = buildTrialCsv(trial, sites, arms, templates, events, metrics);
     const row = csv.split("\r\n")[1].split(",");
-    // site and practice columns are empty, but the trial and metric are present
+    // site and treatment columns are empty, but the trial and metric are present
     expect(row[2]).toBe(""); // site
-    expect(row[4]).toBe(""); // practice
+    expect(row[4]).toBe(""); // treatment
     expect(csv).toContain("cost_log");
     expect(csv).toContain("leaseCost");
   });

@@ -1,10 +1,23 @@
 import { Link } from "react-router-dom";
-import { useSites, useTrials } from "../hooks/useCollections";
-import { Card, EmptyState, ErrorState, PageTitle, Skeleton, StatusPill } from "../components/ui";
+import { useArms, useEvents, useSites, useTrials } from "../hooks/useCollections";
+import { eventsForTrial, tallySync } from "../services/events";
+import { isSeedTrial } from "../services/seed";
+import {
+  Card,
+  EmptyState,
+  ExamplePill,
+  ErrorState,
+  PageTitle,
+  Skeleton,
+  StatusPill,
+  SyncTallyLine,
+} from "../components/ui";
 
 export function TrialsPage() {
   const trials = useTrials();
   const sites = useSites();
+  const arms = useArms();
+  const events = useEvents();
 
   if (trials.isError) {
     return (
@@ -34,8 +47,9 @@ export function TrialsPage() {
               {trial.name}
             </Link>
             <p className="mt-1 text-sm text-ink/70 dark:text-ink-dark/70">{trial.objective}</p>
-            <p className="mt-2 flex items-center gap-2 text-sm">
+            <p className="mt-2 flex flex-wrap items-center gap-2 text-sm">
               <StatusPill status={trial.status} />
+              {isSeedTrial(trial.trialId) ? <ExamplePill /> : null}
               <span className="text-ink/60 dark:text-ink-dark/60">
                 {(() => {
                   const count = (sites.data ?? []).filter(
@@ -44,6 +58,18 @@ export function TrialsPage() {
                   return `${count} ${count === 1 ? "site" : "sites"}`;
                 })()}
               </span>
+              {/* Per trial, so a team scanning this list sees the state of
+                  theirs rather than a total across everybody's. */}
+              <SyncTallyLine
+                tally={tallySync(
+                  eventsForTrial(
+                    events.data ?? [],
+                    trial.trialId,
+                    sites.data ?? [],
+                    arms.data ?? [],
+                  ),
+                )}
+              />
             </p>
           </Card>
         ))

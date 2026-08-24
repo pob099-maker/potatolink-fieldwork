@@ -15,6 +15,7 @@ import {
   listTrials,
   subscribeStore,
   syncTrouble,
+  waitingToSync,
 } from "../services/store";
 
 // React Query owns server/store state (CLAUDE.md). The store notifies on
@@ -48,3 +49,5 @@ export const useScenarios = () =>
 export const useResults = () => useQuery({ queryKey: ["results"], queryFn: listResults });
 export const useSyncTrouble = () =>
   useQuery({ queryKey: ["syncTrouble"], queryFn: syncTrouble });
+export const useWaitingToSync = () =>
+  useQuery({ queryKey: ["waitingToSync"], queryFn: waitingToSync });

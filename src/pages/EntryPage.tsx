@@ -8,6 +8,7 @@ import { addEntry, removeEntry, updateEntry } from "../services/store";
 import { metricFormValue } from "../services/metricValue";
 import { templateForEvent } from "../services/events";
 import { generateLayout, layoutProblem, plotContext } from "../services/layout";
+import { words } from "../services/vocabulary";
 import { isBackendConfigured } from "../lib/supabase";
 import {
   useArms,
@@ -23,6 +24,7 @@ import { EntryField } from "../components/fields";
 import { RecentEntries, SyncReassurance } from "../components/EntryStatus";
 import { useAccess } from "../contexts/AccessContext";
 import type { PlotAssignment } from "../services/layout";
+import type { Words } from "../services/vocabulary";
 import type {
   DeviceType,
   FormField,
@@ -233,6 +235,7 @@ export function EntryPage() {
         arm={needsArm ? undefined : arm}
         replicates={needsSite || needsArm ? 0 : trial.replicates}
         plots={needsSite ? [] : needsPlot ? plots : []}
+        word={words(trial)}
         onPickSite={setPickedSiteId}
         onPickArm={setPickedArmId}
         onPickReplicate={setPickedReplicate}
@@ -291,6 +294,7 @@ function ContextChooser({
   arm,
   replicates,
   plots,
+  word,
   onPickSite,
   onPickArm,
   onPickReplicate,
@@ -307,6 +311,7 @@ function ContextChooser({
   arm: PracticeArm | undefined;
   replicates: number;
   plots: PlotAssignment[];
+  word: Words;
   onPickSite: (siteId: string) => void;
   onPickArm: (armId: string) => void;
   onPickReplicate: (replicate: number) => void;
@@ -326,7 +331,7 @@ function ContextChooser({
   // than showing a question with no answers.
   if (optionCount === 0) {
     const missing =
-      step === "site" ? "a site" : step === "arm" ? "a practice" : "its replicate count";
+      step === "site" ? "a site" : step === "arm" ? `a ${word.one}` : "its replicate count";
     return (
       <Card className="mx-auto max-w-md">
         {preview ? <PreviewBanner /> : null}
@@ -344,7 +349,7 @@ function ContextChooser({
       : step === "plot"
         ? "Which plot?"
         : step === "arm"
-          ? "Which practice?"
+          ? `Which ${word.one}?`
           : "Which replicate?";
   const help =
     step === "site"
@@ -352,7 +357,7 @@ function ContextChooser({
       : step === "plot"
         ? "Tap the number on the peg. The app already knows what is planted there."
         : step === "arm"
-          ? "Choose the practice this run used."
+          ? `Choose the ${word.one} this run used.`
           : "Choose the replicate (plot) this record is for.";
   return (
     <Card className="mx-auto max-w-md">

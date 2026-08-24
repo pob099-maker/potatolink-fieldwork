@@ -1,4 +1,5 @@
 import type { ReactNode } from "react";
+import type { SyncTally } from "../services/events";
 import { Link } from "react-router-dom";
 import type { SyncStatus } from "../types";
 
@@ -94,6 +95,52 @@ export function StatusPill({ status }: { status: string }) {
   return (
     <span className="inline-block rounded-full bg-primary/10 px-2.5 py-0.5 text-xs font-medium capitalize text-primary dark:bg-primary-soft/20 dark:text-primary-soft">
       {status}
+    </span>
+  );
+}
+
+/**
+ * One trial's entry count and how much of it has reached the cloud. Says
+ * "all synced" rather than repeating the total, because the interesting case
+ * is the one where something is outstanding.
+ */
+export function SyncTallyLine({ tally }: { tally: SyncTally }) {
+  if (tally.total === 0) {
+    return (
+      <span className="text-ink/60 dark:text-ink-dark/60">No entries yet</span>
+    );
+  }
+  return (
+    <span className="inline-flex flex-wrap items-center gap-2">
+      <span className="text-ink/60 dark:text-ink-dark/60">
+        {tally.total} {tally.total === 1 ? "entry" : "entries"}
+      </span>
+      {tally.pending > 0 ? (
+        <span className="inline-flex items-center gap-1">
+          <SyncBadge status="pending" /> {tally.pending}
+        </span>
+      ) : null}
+      {tally.error > 0 ? (
+        <span className="inline-flex items-center gap-1">
+          <SyncBadge status="error" /> {tally.error}
+        </span>
+      ) : null}
+      {tally.pending === 0 && tally.error === 0 ? (
+        <span className="text-success">all synced</span>
+      ) : null}
+    </span>
+  );
+}
+
+/**
+ * Marks one trial as built-in demonstration data. Per trial rather than a
+ * blanket notice, because the moment somebody adds a real trial alongside the
+ * examples a blanket notice is wrong about half the list.
+ */
+export function ExamplePill() {
+  return (
+    <span className="rounded-full bg-accent/30 px-2 py-0.5 text-xs font-medium text-ink dark:text-ink-dark">
+      Example
     </span>
   );
 }

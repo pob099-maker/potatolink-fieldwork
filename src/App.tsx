@@ -1,4 +1,4 @@
-import { HashRouter, Route, Routes } from "react-router-dom";
+import { HashRouter, Navigate, Route, Routes, useParams } from "react-router-dom";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { Layout } from "./components/Layout";
 import { AccessProvider } from "./contexts/AccessContext";
@@ -11,12 +11,22 @@ import { EntryPage } from "./pages/EntryPage";
 import { ImportTrialPage } from "./pages/ImportTrialPage";
 import { NewTrialPage } from "./pages/NewTrialPage";
 import { TemplateEditorPage } from "./pages/TemplateEditorPage";
-import { ResultsPage } from "./pages/ResultsPage";
+import { EconomicsPage } from "./pages/EconomicsPage";
 import { SettingsPage } from "./pages/SettingsPage";
 import { TrialDetailPage } from "./pages/TrialDetailPage";
 import { TrialsPage } from "./pages/TrialsPage";
 
 const queryClient = new QueryClient();
+
+/**
+ * The economics page used to be called "results". These routes are flat rather
+ * than nested, so a relative redirect pops the whole path and loses the trial
+ * — the id has to be carried across explicitly.
+ */
+function LegacyResultsRedirect() {
+  const { trialId } = useParams<{ trialId: string }>();
+  return <Navigate to={`/trials/${trialId}/economics`} replace />;
+}
 
 function AppRoutes() {
   useStoreInvalidation();
@@ -41,7 +51,10 @@ function AppRoutes() {
                 <Route path="/trials/import" element={<ImportTrialPage />} />
                 <Route path="/trials/:trialId" element={<TrialDetailPage />} />
                 <Route path="/trials/:trialId/template" element={<TemplateEditorPage />} />
-                <Route path="/trials/:trialId/results" element={<ResultsPage />} />
+                <Route path="/trials/:trialId/economics" element={<EconomicsPage />} />
+                {/* The page was called "results" while it only ever held the
+                    economics. Old links keep working. */}
+                <Route path="/trials/:trialId/results" element={<LegacyResultsRedirect />} />
                 <Route path="/settings" element={<SettingsPage />} />
               </Routes>
             </RequireStaff>

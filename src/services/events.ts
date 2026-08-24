@@ -93,3 +93,22 @@ export function recentEntriesAtSite(
       return { event, summary };
     });
 }
+
+/**
+ * How one trial's entries are travelling. Scoped to a trial on purpose: the
+ * dashboard used to add these up across everything, which told a team using
+ * one trial nothing about their own, and told nobody anything once several
+ * teams shared the app.
+ */
+export interface SyncTally {
+  pending: number;
+  synced: number;
+  error: number;
+  total: number;
+}
+
+export function tallySync(events: MeasurementEvent[]): SyncTally {
+  const tally: SyncTally = { pending: 0, synced: 0, error: 0, total: events.length };
+  for (const event of events) tally[event.syncStatus] += 1;
+  return tally;
+}

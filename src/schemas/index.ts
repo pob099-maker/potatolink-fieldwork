@@ -32,6 +32,7 @@ export const trialSchema = z.object({
   design: z.enum(["observational", "replicated"]).default("observational"),
   replicates: z.number().int().min(0).default(0),
   blocking: z.enum(["none", "blocks"]).default("none"),
+  vocabulary: z.enum(["treatment", "practice"]).nullish().transform((v) => v ?? null),
   layoutSeed: z.string().nullish().transform((v) => v ?? null),
   responseMetric: z.string().nullable().default(null),
   createdAt: isoDate,

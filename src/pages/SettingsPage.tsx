@@ -7,7 +7,7 @@ import { Card, PageTitle } from "../components/ui";
 
 export function SettingsPage() {
   const { theme, toggleTheme } = useTheme();
-  const { email, required, signOut } = useAuth();
+  const { email, required: staffRequired, signOut } = useAuth();
   const [pushResult, setPushResult] = useState<string | null>(null);
 
   return (
@@ -35,7 +35,7 @@ export function SettingsPage() {
           </>
         ) : (
           <p className="mt-1 text-sm text-ink/60 dark:text-ink-dark/60">
-            {required
+            {staffRequired
               ? "Not signed in."
               : "Sign-in is switched off for this deployment, so staff pages are open to anyone with the address."}
           </p>
@@ -55,6 +55,40 @@ export function SettingsPage() {
         >
           Switch to {theme === "dark" ? "light" : "dark"} mode
         </button>
+      </Card>
+
+      <Card>
+        <h2 className="font-semibold">Who can get in</h2>
+        {/* Stated in the app rather than only in a doc, because "we'll lock it
+            down before go-live" is the kind of intention that survives right
+            up until nobody can remember what it covered. Reads its own
+            configuration, so it stops warning once the app is actually
+            locked down instead of needing to be edited. */}
+        {staffRequired ? (
+          <>
+            <p className="mt-1 text-sm text-success">
+              Staff sign-in is required to change a trial.
+            </p>
+            <p className="mt-2 text-sm text-ink/70 dark:text-ink-dark/70">
+              Check the database rules are in place too — the sign-in screen guards the
+              pages, not the data. Step 4 of the go-live checklist in{" "}
+              <code>docs/GO-LIVE.md</code>.
+            </p>
+          </>
+        ) : (
+          <>
+            <p className="mt-1 text-sm text-warning">
+              Open for testing — anyone with the link can change a trial.
+            </p>
+            <p className="mt-2 text-sm text-ink/70 dark:text-ink-dark/70">
+              Deliberate while the app is being tried out, so nothing blocks exploring it.
+              Before real growers or real contact details go in, work through{" "}
+              <code>docs/GO-LIVE.md</code> — six steps, and the order matters: closing
+              sign-ups comes before requiring them, or anyone can sign themselves up and
+              the login screen only looks like protection.
+            </p>
+          </>
+        )}
       </Card>
 
       <Card>

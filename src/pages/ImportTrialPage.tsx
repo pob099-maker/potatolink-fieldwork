@@ -7,6 +7,7 @@ import {
 } from "../services/templateImport";
 import { validateTemplate, type TemplateIssue } from "../services/templateValidate";
 import { publishParsedTrial } from "../services/templatePublish";
+import { words } from "../services/vocabulary";
 import { Card, ErrorState, PageTitle } from "../components/ui";
 
 export function ImportTrialPage() {
@@ -127,7 +128,9 @@ export function ImportTrialPage() {
                     filled in by {form.audience}
                     {form.frequency ? ` · ${form.frequency}` : ""}
                     {form.requiresSite ? " · per site" : " · whole trial"}
-                    {form.requiresArm ? " · per practice" : ""}
+                    {form.requiresArm
+                      ? ` · per ${words({ vocabulary: null, design: parsed.design }).one}`
+                      : ""}
                   </span>
                   <ul className="mt-1 flex flex-wrap gap-1">
                     {form.fields.map((field) => (

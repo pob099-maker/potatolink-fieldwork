@@ -8,9 +8,22 @@ import {
   useSyncTrouble,
   useTemplates,
   useTrials,
+  useWaitingToSync,
 } from "../hooks/useCollections";
-import { describeEvent, describeEventScope, eventsForTrial } from "../services/events";
-import { Card, EmptyState, ErrorState, PageTitle, Skeleton, StatusPill, SyncBadge } from "../components/ui";
+import { describeEvent, describeEventScope, eventsForTrial, tallySync } from "../services/events";
+import { isSeedTrial, seedPresence, type SeedPresence } from "../services/seed";
+import { useOnline } from "../hooks/useOnline";
+import {
+  Card,
+  EmptyState,
+  ExamplePill,
+  ErrorState,
+  PageTitle,
+  Skeleton,
+  StatusPill,
+  SyncBadge,
+  SyncTallyLine,
+} from "../components/ui";
 
 /**
  * What this is, and which part of it is yours.
@@ -21,12 +34,13 @@ import { Card, EmptyState, ErrorState, PageTitle, Skeleton, StatusPill, SyncBadg
  * field. Each arrives looking for a different thing, and none of them was
  * being pointed anywhere.
  */
-function StartHere() {
+function StartHere({ presence }: { presence: SeedPresence }) {
   const routes = [
     {
       to: "/trials/new",
       role: "Designing a trial",
-      what: "Import a written protocol as a spreadsheet, or build one here: sites, the practices being compared, and the questions asked in the field.",
+      // App-wide, so no one trial's vocabulary applies — kept neutral.
+      what: "Import a written protocol as a spreadsheet, or build one here: sites, what is being compared, and the questions asked in the field.",
     },
     {
       to: "/trials",
@@ -45,8 +59,8 @@ function StartHere() {
       <h2 className="font-display text-lg font-bold">Start here</h2>
       <p className="mt-1 text-ink/70 dark:text-ink-dark/70">
         Fieldwork records what happens in a field trial and turns it into data you can
-        analyse. Nothing in it is specific to one crop — trials, sites, practices and
-        questions are all set up in the app.
+        analyse. Nothing in it is specific to one crop — trials, sites, what is being
+        compared and the questions asked are all set up in the app.
       </p>
       <ul className="mt-3 divide-y divide-ink/10 dark:divide-ink-dark/10">
         {routes.map((route) => (
@@ -61,11 +75,22 @@ function StartHere() {
           </li>
         ))}
       </ul>
-      <p className="mt-3 border-t border-ink/10 pt-3 text-sm text-ink/60 dark:border-ink-dark/10 dark:text-ink-dark/60">
-        <span className="font-medium text-warning">The trials below are examples.</span>{" "}
-        The costs and returns behind Results &amp; economics are stand-in figures, not any
-        grower's real numbers — the page says so above every total.
-      </p>
+      {/* Only while the demonstration data is actually here. A standing
+          warning that the trials are examples becomes false the moment a real
+          one is created, and a warning that is wrong about your own data
+          teaches you to ignore warnings. */}
+      {presence === "none" ? null : (
+        <p className="mt-3 border-t border-ink/10 pt-3 text-sm text-ink/60 dark:border-ink-dark/10 dark:text-ink-dark/60">
+          <span className="font-medium text-warning">
+            {presence === "all"
+              ? "The trials below are examples."
+              : "Trials marked Example are demonstration data."}
+          </span>{" "}
+          Their costs and returns are stand-in figures, not any grower's real numbers. The
+          Economics page tracks that per figure, and stops saying it once each one is
+          marked confirmed.
+        </p>
+      )}
     </Card>
   );
 }
@@ -81,12 +106,8 @@ export function DashboardPage() {
   const failed = trials.isError || sites.isError || events.isError;
 
   const trouble = useSyncTrouble();
-  const syncSummary = useMemo(() => {
-    const summary = { pending: 0, synced: 0, error: 0 };
-    for (const event of events.data ?? []) summary[event.syncStatus] += 1;
-    return summary;
-  }, [events.data]);
-
+  const waiting = useWaitingToSync();
+  const online = useOnline();
   const recentEvents = useMemo(
     () =>
       [...(events.data ?? [])]
@@ -116,31 +137,40 @@ export function DashboardPage() {
         </Link>
       </div>
 
-      <StartHere />
+      <StartHere presence={seedPresence((trials.data ?? []).map((trial) => trial.trialId))} />
 
       <Card>
-        <h2 className="mb-2 font-semibold">Sync status</h2>
-        {events.isPending ? (
+        <h2 className="mb-2 font-semibold">This device</h2>
+        {/* Deliberately not a count of everything recorded anywhere. The queue
+            and the connection belong to this device; how much of one trial is
+            outstanding belongs to that trial, and is shown against it. Merging
+            the two produced a number nobody could act on once more than one
+            team was using the app. */}
+        <p className="text-sm">
+          {online ? (
+            <span className="text-success">Online</span>
+          ) : (
+            <span className="text-warning">
+              Offline — entries are saved here and go up when a connection returns
+            </span>
+          )}
+        </p>
+        {waiting.isPending ? (
           <Skeleton lines={1} />
+        ) : (waiting.data ?? 0) > 0 ? (
+          <p className="mt-1 text-sm text-ink/70 dark:text-ink-dark/70">
+            {waiting.data} {waiting.data === 1 ? "record is" : "records are"} waiting to
+            leave this device.
+          </p>
         ) : (
-          <div className="flex flex-wrap gap-4">
-            <span>
-              <SyncBadge status="pending" /> {syncSummary.pending}
-            </span>
-            <span>
-              <SyncBadge status="synced" /> {syncSummary.synced}
-            </span>
-            <span>
-              <SyncBadge status="error" /> {syncSummary.error}
-            </span>
-          </div>
+          <p className="mt-1 text-sm text-ink/60 dark:text-ink-dark/60">
+            Everything on this device has reached the cloud.
+          </p>
         )}
         {trouble.data ? (
           <div className="mt-3 rounded-lg bg-warning/15 p-3 text-sm">
             <p className="font-medium text-warning">
-              {trouble.data.count} setup{" "}
-              {trouble.data.count === 1 ? "record is" : "records are"} waiting to reach the
-              cloud, and the last attempt was refused.
+              The last attempt to send was refused.
             </p>
             <p className="mt-1 text-ink/70 dark:text-ink-dark/70">
               Nothing has been lost — it is all saved on this device and will go up once
@@ -163,12 +193,6 @@ export function DashboardPage() {
               const siteCount = (sites.data ?? []).filter(
                 (site) => site.trialId === trial.trialId,
               ).length;
-              const entryCount = eventsForTrial(
-                events.data ?? [],
-                trial.trialId,
-                sites.data ?? [],
-                arms.data ?? [],
-              ).length;
               return (
                 <li key={trial.trialId} className="py-3">
                   <Link
@@ -179,12 +203,20 @@ export function DashboardPage() {
                   </Link>
                   <p className="mt-1 flex flex-wrap items-center gap-2 text-sm text-ink/60 dark:text-ink-dark/60">
                     <StatusPill status={trial.status} />
+                    {isSeedTrial(trial.trialId) ? <ExamplePill /> : null}
                     <span>
                       {siteCount} {siteCount === 1 ? "site" : "sites"}
                     </span>
-                    <span>
-                      {entryCount} {entryCount === 1 ? "entry" : "entries"}
-                    </span>
+                    <SyncTallyLine
+                      tally={tallySync(
+                        eventsForTrial(
+                          events.data ?? [],
+                          trial.trialId,
+                          sites.data ?? [],
+                          arms.data ?? [],
+                        ),
+                      )}
+                    />
                   </p>
                 </li>
               );

@@ -19,8 +19,11 @@ const COLUMNS = [
   "trial_id",
   "site",
   "site_id",
-  "practice",
-  "practice_type",
+  // One fixed name whichever word the trial shows, so two trials still pool
+  // into one data frame. "treatment" is the analysis convention, and matches
+  // the fieldbook the layout exports.
+  "treatment",
+  "treatment_type",
   "arm_id",
   // The plot is what analysis keys on once a trial has a layout — it is the
   // one column that ties a row back to a square of ground. Empty for a trial
