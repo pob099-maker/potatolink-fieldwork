@@ -98,8 +98,8 @@ export function StaffSignIn() {
         </button>
       </form>
       <p className="mt-4 border-t border-ink/10 pt-3 text-sm text-ink/60 dark:border-ink-dark/10 dark:text-ink-dark/60">
-        Recording data in the paddock does not need an account — growers use the link and
-        code they were given, and are unaffected by this.
+        Recording in the field does not need an account — whoever is on site uses the
+        link and code they were given, and is unaffected by this.
       </p>
     </Card>
   );

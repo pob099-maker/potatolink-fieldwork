@@ -111,8 +111,33 @@ const EDITABLE: Partial<Record<CollectionName, string>> = {
   dataEntryLogs: "entryId",
 };
 
+/**
+ * The primary key of every collection, which is a different question from
+ * whether a record is editable. EDITABLE was doing both jobs, so a collection
+ * that can be deleted but never carries an updatedAt — sites — had no key at
+ * all: its queued deletions were dropped on the floor, and identifying one of
+ * its rows fell back to a field that does not exist.
+ */
+const PRIMARY_KEY: Record<CollectionName, string> = {
+  projects: "projectId",
+  contacts: "contactId",
+  trials: "trialId",
+  sites: "siteId",
+  practiceArms: "armId",
+  armAssumptions: "assumptionId",
+  formTemplates: "templateId",
+  measurementEvents: "eventId",
+  metrics: "metricId",
+  economicScenarios: "scenarioId",
+  resultSets: "resultId",
+  dataEntryLogs: "entryId",
+  adoptionFollowups: "followupId",
+  media: "mediaId",
+  meta: "key",
+};
+
 function recordId(collection: CollectionName, record: Record<string, unknown>): string {
-  return String(record[EDITABLE[collection] ?? "id"]);
+  return String(record[PRIMARY_KEY[collection]]);
 }
 
 function recordTimestamp(record: { updatedAt?: string; createdAt?: string }): string {
@@ -147,6 +172,35 @@ async function dequeueOutbox(collection: CollectionName, id: string): Promise<vo
   );
 }
 
+// A queued save is retried on every sync, which is right for a dropped
+// connection and wrong for a permanent refusal — a column the cloud doesn't
+// have yet, a row-level security policy that says no. Those retry forever, and
+// until now nothing said so: the app looked connected, the dashboard counted
+// entries as synced, and the setup records sat on one device. So the last
+// refusal is kept and shown.
+export interface SyncTrouble {
+  /** How many records are waiting. */
+  count: number;
+  /** What the cloud said, verbatim — it usually names the real problem. */
+  message: string;
+  at: string;
+}
+
+async function recordTrouble(count: number, message: string): Promise<void> {
+  await dbPut("meta", { key: "syncTrouble", count, message, at: nowIso() });
+}
+
+async function clearTrouble(): Promise<void> {
+  await dbDelete("meta", "syncTrouble");
+}
+
+/** The last unresolved push refusal, or null when everything has gone through. */
+export async function syncTrouble(): Promise<SyncTrouble | null> {
+  const stored = await dbGet<{ key: string } & SyncTrouble>("meta", "syncTrouble");
+  if (!stored) return null;
+  return { count: stored.count, message: stored.message, at: stored.at };
+}
+
 // Deletions need their own queue: a deleted record is gone from the local
 // store, so the save outbox — which re-reads the record before pushing — has
 // nothing left to work from. Without this a delete made offline never left
@@ -173,10 +227,10 @@ async function drainDeletions(): Promise<void> {
   if (!supabase || !navigator.onLine) return;
   const items = await readDeletions();
   if (items.length === 0) return;
-  const remaining: DeletionItem[] = [];
+  const done = new Set<string>();
   for (const item of items) {
     const table = TABLE_NAMES[item.collection];
-    const key = EDITABLE[item.collection];
+    const key = PRIMARY_KEY[item.collection];
     if (!table || !key) {
       console.warn(`No cloud table or key for a queued ${item.collection} deletion.`);
       continue;
@@ -185,11 +239,19 @@ async function drainDeletions(): Promise<void> {
       .from(table)
       .delete()
       .eq(toColumn(key), item.id);
-    if (error) remaining.push(item);
+    if (!error) done.add(`${item.collection}:${item.id}`);
   }
-  if (remaining.length !== items.length) {
-    await dbPut("meta", { key: "deletions", items: remaining });
-  }
+  if (done.size === 0) return;
+
+  // Re-read before writing. The deletes above are slow, and anything enqueued
+  // while they were in flight is not in `items` — writing that snapshot back
+  // would drop those deletions on the floor without a trace. Removing only
+  // what we know succeeded leaves new arrivals alone.
+  const current = await readDeletions();
+  await dbPut("meta", {
+    key: "deletions",
+    items: current.filter((item) => !done.has(`${item.collection}:${item.id}`)),
+  });
 }
 
 /**
@@ -224,13 +286,17 @@ async function saveRecord<T extends object>(
   const { error } = await supabase.from(table).upsert(toRow(stamped));
   if (error) {
     await enqueueOutbox(collection, id);
+    await recordTrouble((await readOutbox()).length, `${table}: ${error.message}`);
     return {
       success: true,
       data: stamped,
       // Not surfaced as failure: the record is safe locally and queued to retry.
+      // The refusal itself is recorded, so a queue that will never drain shows
+      // up on the dashboard rather than looking like everything is fine.
     };
   }
   await dequeueOutbox(collection, id);
+  if ((await readOutbox()).length === 0) await clearTrouble();
   return { success: true, data: stamped };
 }
 
@@ -250,6 +316,7 @@ async function drainOutbox(): Promise<void> {
   const ordered = [...items].sort(
     (a, b) => OUTBOX_ORDER.indexOf(a.collection) - OUTBOX_ORDER.indexOf(b.collection),
   );
+  let lastError: string | null = null;
   for (const item of ordered) {
     const table = TABLE_NAMES[item.collection];
     if (!table) {
@@ -263,7 +330,18 @@ async function drainOutbox(): Promise<void> {
       continue;
     }
     const { error } = await supabase.from(table).upsert(toRow(record));
-    if (!error) await dequeueOutbox(item.collection, item.id);
+    if (error) {
+      lastError = `${table}: ${error.message}`;
+      continue;
+    }
+    await dequeueOutbox(item.collection, item.id);
+  }
+
+  const left = await readOutbox();
+  if (left.length === 0) {
+    await clearTrouble();
+  } else if (lastError) {
+    await recordTrouble(left.length, lastError);
   }
 }
 
@@ -330,6 +408,8 @@ export interface NewEntryInput {
   siteId: string | null;
   armId: string | null;
   replicate: number | null;
+  /** The numbered plot, when the trial has a generated layout. */
+  plot: number | null;
   eventType: string;
   enteredBy: string;
   deviceType: DataEntryLog["deviceType"];
@@ -435,6 +515,7 @@ export async function addEntry(input: NewEntryInput): Promise<Result<Measurement
     siteId: input.siteId,
     armId: input.armId,
     replicate: input.replicate,
+    plot: input.plot,
     eventDate: createdAt,
     eventType: input.eventType,
     enteredBy: input.enteredBy,
@@ -496,6 +577,8 @@ export async function addTrial(input: {
     status: "draft",
     design: "observational",
     replicates: 0,
+    blocking: "none" as const,
+    layoutSeed: null,
     responseMetric: null,
     createdAt,
     updatedAt: createdAt,
@@ -629,6 +712,71 @@ export async function saveSite(site: Site): Promise<Result<Site>> {
 }
 
 /** Whether any record has been filed against a site. */
+/** Anything recorded against this trial, at any of its sites or practices? */
+export async function trialHasData(trialId: string): Promise<boolean> {
+  const [events, sites, arms] = await Promise.all([listEvents(), listSites(), listArms()]);
+  const siteIds = new Set(sites.filter((s) => s.trialId === trialId).map((s) => s.siteId));
+  const armIds = new Set(arms.filter((a) => a.trialId === trialId).map((a) => a.armId));
+  return events.some(
+    (event) =>
+      event.trialId === trialId ||
+      (event.siteId !== null && siteIds.has(event.siteId)) ||
+      (event.armId !== null && armIds.has(event.armId)),
+  );
+}
+
+/**
+ * Remove a trial that was created in error, along with the scaffolding that
+ * belongs only to it — its sites, practices, forms, scenarios and assumptions.
+ *
+ * Only a trial with nothing recorded against it can go. That is the same stance
+ * as sites and practices take, and it means this can never destroy field data.
+ *
+ * Deleting straight from the database was not enough on its own: this app is
+ * local-first, so any browser still holding the trial pushes it back on the
+ * next sync. The deletion has to happen here and be queued, or it does not
+ * stick.
+ */
+export async function removeTrial(trial: Trial): Promise<Result<string>> {
+  if (await trialHasData(trial.trialId)) {
+    return {
+      success: false,
+      error: `"${trial.name}" has records against it, so it cannot be removed. Archive it instead.`,
+    };
+  }
+
+  const [sites, arms, templates, scenarios, assumptions] = await Promise.all([
+    listSites(), listArms(), listTemplates(), listScenarios(), listAssumptions(),
+  ]);
+  const ownSites = sites.filter((s) => s.trialId === trial.trialId);
+  const ownArms = arms.filter((a) => a.trialId === trial.trialId);
+  const ownTemplates = templates.filter((f) => f.trialId === trial.trialId);
+  const ownScenarios = scenarios.filter((s) => s.trialId === trial.trialId);
+  const armIds = new Set(ownArms.map((a) => a.armId));
+  const ownAssumptions = assumptions.filter((a) => armIds.has(a.armId));
+
+  // Children first, so the foreign keys hold when the queue is replayed.
+  const plan: Array<[CollectionName, string]> = [
+    ...ownAssumptions.map((a) => ["armAssumptions", a.assumptionId] as [CollectionName, string]),
+    ...ownScenarios.map((s) => ["economicScenarios", s.scenarioId] as [CollectionName, string]),
+    ...ownTemplates.map((f) => ["formTemplates", f.templateId] as [CollectionName, string]),
+    ...ownArms.map((a) => ["practiceArms", a.armId] as [CollectionName, string]),
+    ...ownSites.map((s) => ["sites", s.siteId] as [CollectionName, string]),
+    ["trials", trial.trialId],
+  ];
+
+  try {
+    for (const [collection, id] of plan) await dbDelete(collection, id);
+  } catch {
+    return { success: false, error: "Could not remove the trial on this device." };
+  }
+  for (const [collection, id] of plan) await enqueueDeletion(collection, id);
+
+  notify();
+  void syncPending();
+  return { success: true, data: `Removed "${trial.name}".` };
+}
+
 export async function siteHasData(siteId: string): Promise<boolean> {
   const events = await listEvents();
   return events.some((event) => event.siteId === siteId);

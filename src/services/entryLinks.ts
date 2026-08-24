@@ -1,13 +1,19 @@
 // Entry links and per-site summaries.
 //
-// A grower's entry link always names both the site and the arm, so a run can
-// never be filed against the wrong site. Staff copy these links from the trial
-// page rather than hand-building them.
+// A grower's entry link names the site, so a run can never be filed against
+// the wrong one. It names the practice too, unless the trial has a plot
+// layout — then the plot the grower taps decides the practice, and one link
+// per site is all that is needed. Staff copy these from the trial page rather
+// than hand-building them.
 
 import type { MeasurementEvent, Metric } from "../types";
 
-export function buildEntryPath(trialId: string, siteId: string, armId: string): string {
-  const query = new URLSearchParams({ site: siteId, arm: armId });
+export function buildEntryPath(
+  trialId: string,
+  siteId: string,
+  armId: string | null,
+): string {
+  const query = new URLSearchParams(armId ? { site: siteId, arm: armId } : { site: siteId });
   return `/trials/${trialId}/entry?${query.toString()}`;
 }
 
@@ -23,7 +29,7 @@ export function buildEntryUrl(
   base: string,
   trialId: string,
   siteId: string,
-  armId: string,
+  armId: string | null,
 ): string {
   const path = buildEntryPath(trialId, siteId, armId);
   const prefix = base.endsWith("/") ? base : `${base}/`;

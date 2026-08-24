@@ -12,6 +12,8 @@ const trial: Trial = {
   status: "active",
   design: "replicated",
   replicates: 3,
+  blocking: "none" as const,
+  layoutSeed: null,
   responseMetric: "yield",
   createdAt: T0,
   updatedAt: T0,
@@ -27,7 +29,7 @@ function arm(armId: string, sortOrder: number, archived = false): PracticeArm {
 const arms = [arm("std", 0), arm("high", 1), arm("split", 2)];
 
 function ev(armId: string, rep: number, eventId: string): MeasurementEvent {
-  return { eventId, trialId: "trial-1", siteId: "s1", armId, replicate: rep, eventDate: T0, eventType: "field_record", enteredBy: "", syncStatus: "synced", createdAt: T0 };
+  return { eventId, trialId: "trial-1", siteId: "s1", armId, replicate: rep, plot: null, eventDate: T0, eventType: "field_record", enteredBy: "", syncStatus: "synced", createdAt: T0 };
 }
 function yieldMetric(eventId: string, value: number): Metric {
   return { metricId: `${eventId}-y`, eventId, metricName: "yield", value, unit: "t/ha", photoUrl: null, createdAt: T0 };

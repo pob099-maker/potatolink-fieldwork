@@ -3,6 +3,7 @@
 // biometrician receives analysable data rather than a reconciliation job.
 
 import type {
+  Contact,
   FormTemplate,
   MeasurementEvent,
   Metric,
@@ -21,12 +22,16 @@ const COLUMNS = [
   "practice",
   "practice_type",
   "arm_id",
+  // The plot is what analysis keys on once a trial has a layout — it is the
+  // one column that ties a row back to a square of ground. Empty for a trial
+  // laid out on paper, or none at all.
+  "plot",
   "replicate",
   "form",
   "event_type",
   "event_id",
   "event_date",
-  "entered_by",
+  "recorded_by",
   "sync_status",
   "metric_name",
   "value",
@@ -54,11 +59,16 @@ export function buildTrialCsv(
   templates: FormTemplate[],
   events: MeasurementEvent[],
   metrics: Metric[],
+  contacts: Contact[] = [],
 ): string {
   const trialEvents = eventsForTrial(events, trial.trialId, sites, arms);
   const siteName = (id: string | null) =>
     id ? (sites.find((site) => site.siteId === id)?.location ?? "") : "";
   const arm = (id: string | null) => (id ? arms.find((a) => a.armId === id) : undefined);
+  // Whoever receives this file has no way to look a contact id up. Resolve it
+  // to a name, and fall back to the raw value rather than losing it.
+  const recordedBy = (id: string) =>
+    contacts.find((contact) => contact.contactId === id)?.name ?? id;
 
   const rows: string[][] = [];
   for (const event of trialEvents) {
@@ -72,12 +82,13 @@ export function buildTrialCsv(
       armRecord?.name ?? "",
       armRecord?.type ?? "",
       event.armId ?? "",
+      event.plot === null ? "" : String(event.plot),
       event.replicate === null ? "" : String(event.replicate),
       template?.name ?? "",
       event.eventType,
       event.eventId,
       event.eventDate,
-      event.enteredBy,
+      recordedBy(event.enteredBy),
       event.syncStatus,
     ];
     const eventMetrics = metrics.filter((metric) => metric.eventId === event.eventId);

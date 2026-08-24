@@ -65,7 +65,11 @@ export function SetupChecklist({
     },
   ];
 
-  const outstanding = steps.filter((step) => !step.done && step.blocking);
+  // Only show what this trial actually needs. A replicate count is
+  // meaningless for an observational trial, and listing it as an unticked
+  // step made the count disagree with the ticks on screen.
+  const relevant = steps.filter((step) => step.blocking || step.done);
+  const outstanding = relevant.filter((step) => !step.done);
   if (outstanding.length === 0) return null;
 
   return (
@@ -80,7 +84,7 @@ export function SetupChecklist({
         Entries cannot be recorded until these are in place.
       </p>
       <ul className="mt-2 space-y-1.5 text-sm">
-        {steps.map((step) => (
+        {relevant.map((step) => (
           <li key={step.key} className="flex flex-wrap items-baseline gap-2">
             <span className={step.done ? "text-success" : "text-warning"}>
               {step.done ? "✓" : "○"}

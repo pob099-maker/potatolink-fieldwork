@@ -1,4 +1,4 @@
-// Domain types for PotatoLink Fieldwork, adapted from docs/schema.md.
+// Domain types for Fieldwork, adapted from docs/schema.md.
 // The schema is project-agnostic: new trial types only need new FormTemplate
 // configs, never new types. Arms are never hardcoded as A/B.
 
@@ -71,6 +71,19 @@ export interface Trial {
   design: TrialDesign;
   /** Target replicates per treatment per site, when design is "replicated". */
   replicates: number;
+  /**
+   * How the plots are arranged. "blocks" is a randomised complete block —
+   * each block holds one plot of every treatment, so a slope or drainage line
+   * is absorbed by the block rather than being read as a treatment effect.
+   * "none" is completely randomised, which suits uniform ground.
+   */
+  blocking: "none" | "blocks";
+  /**
+   * The seed the plot layout was generated from, or null before one exists.
+   * Stored so the same layout can be reproduced and checked; a layout nobody
+   * can regenerate is a layout nobody can verify.
+   */
+  layoutSeed: string | null;
   /** fieldName of the response variable the analysis is about, or null. */
   responseMetric: string | null;
   createdAt: string;
@@ -135,6 +148,13 @@ export interface MeasurementEvent {
   armId: string | null;
   /** Replicate/block number for a replicated trial; null otherwise. */
   replicate: number | null;
+  /**
+   * The plot this was recorded in, once the trial has a generated layout. It
+   * is the number painted on the peg, so it is what the person in the paddock
+   * can actually see — and it pins the record to one square of ground rather
+   * than to "some plot of this treatment". null for a trial with no layout.
+   */
+  plot: number | null;
   eventDate: string;
   eventType: string;
   enteredBy: string;

@@ -89,7 +89,7 @@ export function TemplateEditorPage() {
     const result = await saveTemplate(draft);
     setStatus(
       result.success
-        ? { kind: "saved", message: "Form saved. Growers see the change immediately." }
+        ? { kind: "saved", message: "Form saved. Anyone recording sees the change immediately." }
         : { kind: "error", message: result.error },
     );
   }
@@ -103,7 +103,7 @@ export function TemplateEditorPage() {
           {stored.frequency ? ` · ${stored.frequency}` : ""}
         </p>
         <p className="mt-1 text-sm text-ink/50 dark:text-ink-dark/50">
-          Filled in by {stored.audience === "staff" ? "staff" : "growers"}.
+          Filled in {stored.audience === "staff" ? "by staff" : "on site"}.
         </p>
       </div>
 
@@ -167,7 +167,7 @@ export function TemplateEditorPage() {
 
           <div>
             <label htmlFor={`label-${index}`} className="mb-1 block text-sm font-medium">
-              Question shown to the {stored.audience === "staff" ? "person filling it in" : "grower"}
+              Question shown to the person filling it in
             </label>
             <input
               id={`label-${index}`}
