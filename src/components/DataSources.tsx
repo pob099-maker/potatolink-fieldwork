@@ -15,7 +15,9 @@
 import { useState } from "react";
 import { saveTrial } from "../services/store";
 import { Card, ErrorState } from "./ui";
-import type { DataSource, DataSourceKind, Site, Trial } from "../types";
+import { describeScope, scopeProblem } from "../services/dataSourceScope";
+import { words } from "../services/vocabulary";
+import type { DataSource, DataSourceKind, PracticeArm, Site, Trial } from "../types";
 
 const KINDS: Array<{ value: DataSourceKind; label: string; hint: string }> = [
   {
@@ -50,7 +52,15 @@ function isLink(reference: string): boolean {
   return /^https?:\/\//i.test(reference.trim());
 }
 
-export function DataSources({ trial, sites }: { trial: Trial; sites: Site[] }) {
+export function DataSources({
+  trial,
+  sites,
+  arms,
+}: {
+  trial: Trial;
+  sites: Site[];
+  arms: PracticeArm[];
+}) {
   const [open, setOpen] = useState(false);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -59,8 +69,11 @@ export function DataSources({ trial, sites }: { trial: Trial; sites: Site[] }) {
     kind: "sensorthings",
     reference: "",
     siteId: null,
+    armId: null,
+    plot: null,
     note: "",
   });
+  const word = words(trial);
 
   const sources = trial.dataSources ?? [];
 
@@ -74,13 +87,26 @@ export function DataSources({ trial, sites }: { trial: Trial; sites: Site[] }) {
 
   async function add(): Promise<void> {
     if (!draft.label.trim() || !draft.reference.trim()) return;
-    await write([...sources, { ...draft, label: draft.label.trim(), reference: draft.reference.trim() }]);
-    setDraft({ label: "", kind: draft.kind, reference: "", siteId: null, note: "" });
+    const problem = scopeProblem(draft);
+    if (problem) {
+      setError(problem);
+      return;
+    }
+    await write([
+      ...sources,
+      { ...draft, label: draft.label.trim(), reference: draft.reference.trim() },
+    ]);
+    setDraft({
+      label: "",
+      kind: draft.kind,
+      reference: "",
+      siteId: null,
+      armId: null,
+      plot: null,
+      note: "",
+    });
     setOpen(false);
   }
-
-  const siteName = (siteId: string | null) =>
-    siteId ? (sites.find((site) => site.siteId === siteId)?.location ?? null) : null;
 
   return (
     <Card>
@@ -95,14 +121,13 @@ export function DataSources({ trial, sites }: { trial: Trial; sites: Site[] }) {
         <ul className="mt-3 divide-y divide-ink/10 dark:divide-ink-dark/10">
           {sources.map((source, index) => {
             const kind = KINDS.find((entry) => entry.value === source.kind);
-            const where = siteName(source.siteId);
+            const where = describeScope(source, sites, arms, word.One);
             return (
               <li key={`${source.reference}-${index}`} className="flex flex-wrap gap-2 py-3">
                 <span className="flex-1">
                   <span className="block font-medium">{source.label}</span>
                   <span className="block text-sm text-ink/60 dark:text-ink-dark/60">
-                    {kind?.label ?? source.kind}
-                    {where ? ` · ${where}` : " · whole trial"}
+                    {kind?.label ?? source.kind} · {where}
                   </span>
                   {isLink(source.reference) ? (
                     <a
@@ -192,25 +217,66 @@ export function DataSources({ trial, sites }: { trial: Trial; sites: Site[] }) {
               className={inputClass}
             />
           </label>
-          {sites.length > 0 ? (
+          <fieldset>
+            <legend className="text-sm font-medium">What does it measure?</legend>
+            <span className="mt-1 block text-sm text-ink/60 dark:text-ink-dark/60">
+              A probe covers a paddock; a flow meter under a variable-rate pivot covers
+              one plot, because each zone gets its own rate.
+            </span>
+            <select
+              aria-label="What the source measures"
+              value={
+                draft.armId
+                  ? `arm:${draft.armId}`
+                  : draft.siteId
+                    ? `site:${draft.siteId}`
+                    : "trial"
+              }
+              onChange={(event) => {
+                const [level, id] = event.target.value.split(":");
+                setDraft({
+                  ...draft,
+                  siteId: level === "site" ? id : null,
+                  armId: level === "arm" ? id : null,
+                  // A plot number only means something inside a site.
+                  plot: level === "site" ? draft.plot : null,
+                });
+              }}
+              className={inputClass}
+            >
+              <option value="trial">The whole trial</option>
+              {sites.map((site) => (
+                <option key={site.siteId} value={`site:${site.siteId}`}>
+                  📍 {site.location}
+                </option>
+              ))}
+              {arms.map((arm) => (
+                <option key={arm.armId} value={`arm:${arm.armId}`}>
+                  {word.One}: {arm.name}
+                </option>
+              ))}
+            </select>
+          </fieldset>
+
+          {draft.siteId ? (
             <label className="block text-sm font-medium">
-              Belongs to
-              <select
-                value={draft.siteId ?? ""}
+              One plot only (optional)
+              <input
+                type="number"
+                min={1}
+                value={draft.plot ?? ""}
                 onChange={(event) =>
-                  setDraft({ ...draft, siteId: event.target.value || null })
+                  setDraft({ ...draft, plot: Number(event.target.value) || null })
                 }
+                placeholder="Leave blank for the whole site"
                 className={inputClass}
-              >
-                <option value="">The whole trial</option>
-                {sites.map((site) => (
-                  <option key={site.siteId} value={site.siteId}>
-                    {site.location}
-                  </option>
-                ))}
-              </select>
+              />
+              <span className="mt-1 block text-sm font-normal text-ink/60 dark:text-ink-dark/60">
+                The number painted on the peg at this site.
+              </span>
             </label>
           ) : null}
+
           <label className="block text-sm font-medium">
             Anything worth noting
             <input

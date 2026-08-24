@@ -143,8 +143,17 @@ export interface DataSource {
   kind: DataSourceKind;
   /** A URL, or a path to a file kept somewhere else. */
   reference: string;
-  /** The site it belongs to, when it belongs to one rather than the trial. */
+  /**
+   * What it measures, narrowest first. A flow meter under a variable-rate
+   * pivot belongs to one plot; a probe belongs to a paddock; a protocol
+   * belongs to the trial. All null means the whole trial.
+   *
+   * A plot number is meaningless without its site — plots are numbered from
+   * one in every paddock — so a plot always carries the site it is in.
+   */
   siteId: string | null;
+  armId: string | null;
+  plot: number | null;
   note: string;
 }
 

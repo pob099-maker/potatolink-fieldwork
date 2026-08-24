@@ -23,13 +23,22 @@ export const projectSchema = z.object({
   updatedAt: isoDate,
 });
 
-export const dataSourceSchema = z.object({
-  label: z.string().min(1),
-  kind: z.enum(["sensorthings", "isoxml", "weather", "document", "other"]),
-  reference: z.string().min(1),
-  siteId: id.nullable().default(null),
-  note: z.string().default(""),
-});
+export const dataSourceSchema = z
+  .object({
+    label: z.string().min(1),
+    kind: z.enum(["sensorthings", "isoxml", "weather", "document", "other"]),
+    reference: z.string().min(1),
+    siteId: id.nullish().transform((v) => v ?? null),
+    armId: id.nullish().transform((v) => v ?? null),
+    plot: z.number().int().positive().nullish().transform((v) => v ?? null),
+    note: z.string().nullish().transform((v) => v ?? ""),
+  })
+  // Plots are numbered from one in every paddock, so a plot number without a
+  // site does not identify anything.
+  .refine((source) => source.plot === null || source.siteId !== null, {
+    message: "A plot needs the site it is in",
+    path: ["plot"],
+  });
 
 export const trialSchema = z.object({
   trialId: id,

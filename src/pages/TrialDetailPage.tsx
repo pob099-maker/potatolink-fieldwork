@@ -273,7 +273,7 @@ export function TrialDetailPage() {
         title="Collecting observations"
         who={`For whoever is in the paddock — a contractor, a staff member or the grower. One link per site and ${word.one}, and the form works with no signal.`}
       >
-      <DataSources trial={trial} sites={trialSites} />
+      <DataSources trial={trial} sites={trialSites} arms={activeArms} />
 
       {closedReason(trial) ? (
         <Card>
