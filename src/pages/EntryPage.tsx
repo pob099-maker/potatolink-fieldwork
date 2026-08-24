@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { format } from "date-fns";
 import { Link, useNavigate, useParams, useSearchParams } from "react-router-dom";
-import { useForm } from "react-hook-form";
+import { useForm, useWatch } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { buildEntryFormSchema } from "../schemas";
 import { addEntry, removeEntry, updateEntry } from "../services/store";
@@ -9,7 +9,7 @@ import { metricFormValue } from "../services/metricValue";
 import { templateForEvent } from "../services/events";
 import { generateLayout, layoutProblem, plotContext } from "../services/layout";
 import { words } from "../services/vocabulary";
-import { plotAreaM2 as plotArea } from "../services/plotArea";
+import { areaAsM2, areaUnit, plotAreaM2 as plotArea } from "../services/plotArea";
 import { isBackendConfigured } from "../lib/supabase";
 import {
   useArms,
@@ -302,6 +302,7 @@ export function EntryPage() {
       replicate={trial.design === "replicated" ? replicate : null}
       plot={plotNumber}
       plotAreaM2={plotArea(trial)}
+      plotWidthM={trial.plotWidthM}
       replicateLabel={
         // With a layout the plot number is what is painted on the peg, so it
         // is what the person recording recognises; the replicate is bookkeeping.
@@ -614,6 +615,7 @@ function EntryForm({
   replicateLabel,
   plot,
   plotAreaM2,
+  plotWidthM,
   onAddAnother,
   onChangePlot,
   frequency,
@@ -638,6 +640,8 @@ function EntryForm({
   plot: number | null;
   /** The plot's area, so a weight can be shown as a yield while it is typed. */
   plotAreaM2: number | null;
+  /** The working width, so a strip's area can be measured by walking it. */
+  plotWidthM: number | null;
   /** Clears the plot/practice chosen on this device, ready for the next one. */
   onAddAnother: () => void;
   /** Back to the plot picker, when a plot was chosen here rather than by link. */
@@ -692,12 +696,29 @@ function EntryForm({
     handleSubmit,
     trigger,
     reset,
+    setValue,
     formState: { errors, isSubmitting },
   } = useForm<Record<string, unknown>>({
     resolver: zodResolver(schema),
     mode: "onTouched",
     defaultValues,
   });
+
+  // The area a weight should be divided by: whatever this record measured,
+  // falling back to the trial's plot size. Without this the live conversion
+  // stayed blank on exactly the trials that need it — a strip carries its own
+  // area because strips differ in length, so the trial has no single one.
+  const areaFieldNames = fields
+    .filter((candidate) => candidate.type === "number" && areaUnit(candidate.unit))
+    .map((candidate) => candidate.fieldName);
+  const areaValues = useWatch({ control, name: areaFieldNames });
+  const measuredArea = areaFieldNames.reduce<number | null>((found, name, index) => {
+    if (found !== null) return found;
+    const unit = areaUnit(fields.find((f) => f.fieldName === name)?.unit ?? null);
+    const raw = Number((areaValues as unknown[])[index]);
+    return unit && Number.isFinite(raw) && raw > 0 ? areaAsM2(raw, unit) : null;
+  }, null);
+  const effectiveArea = measuredArea ?? plotAreaM2;
 
   const currentScreen = screens[screenIndex];
   const isLastScreen = screenIndex === screens.length - 1;
@@ -880,7 +901,9 @@ function EntryForm({
             register={register}
             control={control}
             error={errors[field.fieldName]?.message as string | undefined}
-            plotAreaM2={plotAreaM2}
+            plotAreaM2={effectiveArea}
+            plotWidthM={plotWidthM}
+            setValue={setValue}
           />
         ))}
       </Card>

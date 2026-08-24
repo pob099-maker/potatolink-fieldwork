@@ -2,10 +2,18 @@
 // are never hardcoded here — everything comes from the template config.
 
 import { useEffect, useRef, useState } from "react";
-import type { Control, FieldValues, Path, UseFormRegister } from "react-hook-form";
+import type {
+  Control,
+  FieldValues,
+  Path,
+  PathValue,
+  UseFormRegister,
+  UseFormSetValue,
+} from "react-hook-form";
 import { Controller, useWatch } from "react-hook-form";
 import { getMedia, isMediaPointer, mediaIdFromPointer, saveMedia } from "../services/media";
-import { weightUnit, yieldPerHectare } from "../services/plotArea";
+import { areaUnit, weightUnit, yieldPerHectare } from "../services/plotArea";
+import { accuracyNote, stripArea, type Fix } from "../services/stripMeasure";
 import type { FormField, MediaKind } from "../types";
 
 const inputClass =
@@ -19,6 +27,14 @@ interface FieldProps<T extends FieldValues> {
   error: string | undefined;
   /** The plot's area in square metres, when the trial records one. */
   plotAreaM2?: number | null;
+  /** The working width, for measuring a strip by walking its length. */
+  plotWidthM?: number | null;
+  /**
+   * Needed to fill a measured area in. The number inputs are registered
+   * uncontrolled, so writing through a Controller updates form state while
+   * leaving the box on screen empty — setValue writes to both.
+   */
+  setValue?: UseFormSetValue<T>;
 }
 
 export function EntryField<T extends FieldValues>({
@@ -27,6 +43,8 @@ export function EntryField<T extends FieldValues>({
   control,
   error,
   plotAreaM2 = null,
+  plotWidthM = null,
+  setValue,
 }: FieldProps<T>) {
   const labelId = `label-${field.fieldName}`;
 
@@ -38,10 +56,127 @@ export function EntryField<T extends FieldValues>({
         {field.required ? <span aria-hidden className="text-danger"> *</span> : null}
       </label>
       <FieldInput field={field} register={register} control={control} labelId={labelId} />
+      <StripMeasure field={field} widthM={plotWidthM} setValue={setValue} />
       <YieldHint field={field} control={control} plotAreaM2={plotAreaM2} />
       {error ? (
         <p role="alert" className="mt-1 text-sm text-danger">
           {error}
+        </p>
+      ) : null}
+    </div>
+  );
+}
+
+/**
+ * Fills in a strip's area by walking it: mark one end, drive to the other,
+ * mark again.
+ *
+ * Only the length is measured. The width is the machine's and is already
+ * recorded on the trial, which is what makes this worth doing at all — four
+ * corners of a small plot would carry more error than the plot has area, but
+ * five metres of uncertainty on an eight hundred metre run is under a percent.
+ *
+ * Whatever the device claims for accuracy is shown rather than swallowed, and
+ * a reading too rough to use says so instead of quietly landing in the file.
+ */
+function StripMeasure<T extends FieldValues>({
+  field,
+  widthM,
+  setValue,
+}: {
+  field: FormField;
+  widthM: number | null;
+  setValue: UseFormSetValue<T> | undefined;
+}) {
+  const unit = areaUnit(field.unit);
+  const [start, setStart] = useState<Fix | null>(null);
+  const [busy, setBusy] = useState(false);
+  const [note, setNote] = useState<string | null>(null);
+
+  if (!unit || field.type !== "number" || !setValue) return null;
+
+  function locate(): Promise<Fix> {
+    return new Promise((resolve, reject) => {
+      if (!("geolocation" in navigator)) {
+        reject(new Error("This device can't provide a location."));
+        return;
+      }
+      navigator.geolocation.getCurrentPosition(
+        (position) =>
+          resolve({
+            lat: position.coords.latitude,
+            lng: position.coords.longitude,
+            accuracyM: position.coords.accuracy,
+          }),
+        () => reject(new Error("Couldn't get a location. Check location permission.")),
+        { enableHighAccuracy: true, timeout: 20_000 },
+      );
+    });
+  }
+
+  async function mark(): Promise<void> {
+    setNote(null);
+    setBusy(true);
+    try {
+      const fix = await locate();
+      if (!start) {
+        setStart(fix);
+        return;
+      }
+      const measured = stripArea(start, fix, widthM as number);
+      setStart(null);
+      if (!measured) {
+        setNote(
+          "That is too short to be a strip — the two ends are within the device's own margin of error.",
+        );
+        return;
+      }
+      const accuracy = accuracyNote(measured);
+      if (accuracy.level === "poor") {
+        setNote(accuracy.message);
+        return;
+      }
+      const area = unit === "ha" ? measured.areaHa : measured.areaM2;
+      setValue!(
+        field.fieldName as Path<T>,
+        Number(area.toFixed(unit === "ha" ? 3 : 0)) as PathValue<T, Path<T>>,
+        { shouldValidate: true, shouldDirty: true },
+      );
+      setNote(`${measured.lengthM.toFixed(0)} m × ${widthM} m — ${accuracy.message}`);
+    } catch (caught) {
+      setNote(caught instanceof Error ? caught.message : "Couldn't get a location.");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  if (widthM === null) {
+    return (
+      <p className="mt-1 text-sm text-ink/50 dark:text-ink-dark/50">
+        Set the plot width on the trial and this can be measured by walking the strip
+        instead of typed.
+      </p>
+    );
+  }
+
+  return (
+    <div className="mt-2">
+      <button
+        type="button"
+        disabled={busy}
+        onClick={() => void mark()}
+        className="min-h-11 w-full rounded-lg border border-dashed border-ink/30 px-4 py-2.5 font-medium text-ink/70 disabled:opacity-60 dark:border-ink-dark/30 dark:text-ink-dark/70"
+      >
+        📍{" "}
+        {busy
+          ? "Getting a fix…"
+          : start
+            ? "At the far end — mark the finish"
+            : `Measure by walking (${widthM} m wide)`}
+      </button>
+      {note ? (
+        <p role="status" className="mt-1 text-sm text-ink/60 dark:text-ink-dark/60">
+          {note}
         </p>
       ) : null}
     </div>
@@ -57,6 +192,13 @@ export function EntryField<T extends FieldValues>({
  * result as they type turns a silent arithmetic error into an obviously wrong
  * number on screen.
  */
+/** The area a conversion used, said the way the person would say it. */
+function areaLabel(areaM2: number): string {
+  return areaM2 >= 1_000
+    ? `${(areaM2 / 10_000).toFixed(2)} ha`
+    : `${Math.round(areaM2)} m²`;
+}
+
 function YieldHint<T extends FieldValues>({
   field,
   control,
@@ -75,7 +217,8 @@ function YieldHint<T extends FieldValues>({
   if (perHectare === null) return null;
   return (
     <p className="mt-1 text-sm text-ink/60 dark:text-ink-dark/60">
-      ≈ <span className="font-medium">{perHectare.toFixed(1)} t/ha</span> at this plot size
+      ≈ <span className="font-medium">{perHectare.toFixed(1)} t/ha</span> over{" "}
+      {areaLabel(plotAreaM2)}
     </p>
   );
 }
