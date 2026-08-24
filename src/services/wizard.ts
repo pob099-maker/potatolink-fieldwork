@@ -173,6 +173,8 @@ export function toParsedTrial(answers: WizardAnswers): ParsedTrial {
     objective: answers.objective.trim(),
     design: answers.kind === "experiment" ? "replicated" : "observational",
     replicates: answers.kind === "experiment" ? answers.replicates : 0,
+    // The wizard asks "how many blocks?", so it had better produce blocks.
+    blocking: answers.kind === "experiment" ? "blocks" : "none",
     sites: [
       {
         location: answers.siteName.trim(),

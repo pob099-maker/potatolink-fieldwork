@@ -297,8 +297,11 @@ export function EntryPage() {
   return (
     <EntryForm
       // A fresh form per entry, so switching between adding and correcting
-      // never leaves the previous record's answers behind.
-      key={editing?.eventId ?? "new"}
+      // never leaves the previous record's answers behind — and per context,
+      // because following a link for a different site while the "entry saved"
+      // confirmation was up left that confirmation on screen. The context had
+      // changed underneath it and the screen had not.
+      key={editing?.eventId ?? `new:${contextSiteId ?? ""}:${template.templateId}:${plotNumber ?? ""}`}
       editing={editing}
       onAddAnother={clearPickedContext}
       onChangePlot={laidOut && pickedPlot !== null ? () => setPickedPlot(null) : null}

@@ -6,6 +6,16 @@ existing post-harvest handling against optical sorter practices at Walkers Flat 
 and Tasmania. The platform is project-agnostic — new trial types only need new form
 template configs, not schema or code changes.
 
+## Connecting to other systems
+
+What it would take to pull data from sensor networks, machinery or farm
+management software, what has to be settled first, and what cannot be promised
+without real data to test against: [docs/INTEGRATIONS.md](docs/INTEGRATIONS.md).
+
+Nothing is fetched today. A trial records *where* its data comes from — a
+datastream, a machinery export, a protocol — scoped to a plot, a treatment, a
+site or the trial, and every exported row names the sources covering it.
+
 ## What's in the MVP
 
 - **Grower data entry** — mobile-first, form-template driven, works fully offline.
