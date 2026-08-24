@@ -42,17 +42,37 @@ export function NewTrialPage() {
       <div>
         <PageTitle>Start a new trial</PageTitle>
         <p className="mt-1 text-ink/60 dark:text-ink-dark/60">
-          Two ways in. Either lands on a trial page with a checklist of anything still to
-          set up, so nothing is missed before the first entry.
+          Three ways in, all landing on the same trial page with a checklist of anything
+          still to set up.
         </p>
       </div>
+
+      {/* First, and deliberately. The other two ask you to already know the
+          model — one as a sixteen-column CSV, the other as a blank trial to
+          furnish from five separate cards. This one asks questions. */}
+      <Card className="border-accent/50">
+        <h2 className="font-display text-lg font-bold">Answer a few questions</h2>
+        <p className="mt-1 text-sm text-ink/60 dark:text-ink-dark/60">
+          The quickest way in, and it suits both ends: a grower comparing two practices is
+          finished in four screens, and anybody who already has the brief can skip
+          straight to the review and correct the defaults. You end up with a trial you can
+          record against — sites, what is being compared, and the questions asked in the
+          field.
+        </p>
+        <Link
+          to="/trials/wizard"
+          className="mt-3 inline-block min-h-11 rounded-lg bg-primary px-4 py-2.5 font-medium text-white"
+        >
+          Set up a trial
+        </Link>
+      </Card>
 
       <Card>
         <h2 className="font-display text-lg font-bold">Import a template</h2>
         <p className="mt-1 text-sm text-ink/60 dark:text-ink-dark/60">
-          Best when the protocol is already written. The template covers the whole trial —
-          sites, practices and one row per question — so everything is created at once,
-          checked before it goes to the field.
+          For a protocol that already lives in a spreadsheet. The template covers the whole
+          trial in one file — every site, practice and question — which is more to fill in
+          than the questions above, and the only way to bring a lot of fields at once.
         </p>
         <div className="mt-3 flex flex-wrap gap-2">
           <button
@@ -74,8 +94,8 @@ export function NewTrialPage() {
       <Card>
         <h2 className="font-display text-lg font-bold">Build it here</h2>
         <p className="mt-1 text-sm text-ink/60 dark:text-ink-dark/60">
-          Best for a quick trial or when the protocol is still taking shape. Start with a
-          name, then add sites, practices and questions on the trial page.
+          A bare trial with nothing in it, to furnish card by card on the trial page. Worth
+          it only if you want to build the structure by hand.
         </p>
         <form
           className="mt-3 space-y-3"

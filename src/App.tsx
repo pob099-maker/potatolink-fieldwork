@@ -11,6 +11,7 @@ import { RecordPage } from "./pages/RecordPage";
 import { EntryPage } from "./pages/EntryPage";
 import { ImportTrialPage } from "./pages/ImportTrialPage";
 import { NewTrialPage } from "./pages/NewTrialPage";
+import { WizardPage } from "./pages/WizardPage";
 import { TemplateEditorPage } from "./pages/TemplateEditorPage";
 import { EconomicsPage } from "./pages/EconomicsPage";
 import { SettingsPage } from "./pages/SettingsPage";
@@ -68,6 +69,7 @@ function AppRoutes() {
               <Routes>
                 <Route path="/trials" element={<TrialsPage />} />
                 <Route path="/trials/new" element={<NewTrialPage />} />
+                <Route path="/trials/wizard" element={<WizardPage />} />
                 <Route path="/trials/import" element={<ImportTrialPage />} />
                 <Route path="/trials/:trialId" element={<TrialDetailPage />} />
                 <Route path="/trials/:trialId/template" element={<TemplateEditorPage />} />
