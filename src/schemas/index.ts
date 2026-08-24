@@ -23,6 +23,14 @@ export const projectSchema = z.object({
   updatedAt: isoDate,
 });
 
+export const dataSourceSchema = z.object({
+  label: z.string().min(1),
+  kind: z.enum(["sensorthings", "isoxml", "weather", "document", "other"]),
+  reference: z.string().min(1),
+  siteId: id.nullable().default(null),
+  note: z.string().default(""),
+});
+
 export const trialSchema = z.object({
   trialId: id,
   projectId: id,
@@ -35,6 +43,7 @@ export const trialSchema = z.object({
   vocabulary: z.enum(["treatment", "practice"]).nullish().transform((v) => v ?? null),
   plotLengthM: z.number().positive().nullish().transform((v) => v ?? null),
   plotWidthM: z.number().positive().nullish().transform((v) => v ?? null),
+  dataSources: z.array(dataSourceSchema).nullish().transform((v) => v ?? []),
   layoutSeed: z.string().nullish().transform((v) => v ?? null),
   responseMetric: z.string().nullable().default(null),
   createdAt: isoDate,

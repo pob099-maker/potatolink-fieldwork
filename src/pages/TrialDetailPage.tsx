@@ -32,6 +32,7 @@ import {
 } from "../components/ui";
 import { SetupChecklist, SiteManager } from "../components/TrialSetup";
 import { PlotLayout } from "../components/PlotLayout";
+import { DataSources } from "../components/DataSources";
 import { generateLayout, layoutProblem } from "../services/layout";
 import { describePlot } from "../services/plotArea";
 import { useAccess } from "../contexts/AccessContext";
@@ -272,6 +273,8 @@ export function TrialDetailPage() {
         title="Collecting observations"
         who={`For whoever is in the paddock — a contractor, a staff member or the grower. One link per site and ${word.one}, and the form works with no signal.`}
       >
+      <DataSources trial={trial} sites={trialSites} />
+
       {closedReason(trial) ? (
         <Card>
           <h2 className="font-display text-lg font-bold">Recording has stopped</h2>

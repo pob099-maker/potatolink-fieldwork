@@ -96,6 +96,14 @@ export interface Trial {
   plotLengthM: number | null;
   plotWidthM: number | null;
   /**
+   * Where data about this trial comes from besides the app itself — a soil
+   * probe's SensorThings endpoint, a machinery export, the written protocol.
+   * Recorded, not ingested: nothing here is fetched or parsed, and saying so
+   * is the point. Provenance is the question a reviewer asks first and the
+   * one nothing else in the app could answer.
+   */
+  dataSources: DataSource[];
+  /**
    * The seed the plot layout was generated from, or null before one exists.
    * Stored so the same layout can be reproduced and checked; a layout nobody
    * can regenerate is a layout nobody can verify.
@@ -116,6 +124,28 @@ export interface Site {
   soilType: string;
   coordinates: { lat: number; lng: number } | null;
   createdAt: string;
+}
+
+/**
+ * What kind of thing a source is. Worth recording even though nothing reads
+ * it yet: it is the difference between a note somebody has to interpret and a
+ * reference something could later follow.
+ */
+export type DataSourceKind =
+  | "sensorthings"
+  | "isoxml"
+  | "weather"
+  | "document"
+  | "other";
+
+export interface DataSource {
+  label: string;
+  kind: DataSourceKind;
+  /** A URL, or a path to a file kept somewhere else. */
+  reference: string;
+  /** The site it belongs to, when it belongs to one rather than the trial. */
+  siteId: string | null;
+  note: string;
 }
 
 export interface PracticeArm {

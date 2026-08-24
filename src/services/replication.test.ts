@@ -16,6 +16,7 @@ const trial: Trial = {
   vocabulary: null,
   plotLengthM: null,
   plotWidthM: null,
+  dataSources: [],
   layoutSeed: null,
   responseMetric: "yield",
   createdAt: T0,
