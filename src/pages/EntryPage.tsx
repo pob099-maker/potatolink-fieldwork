@@ -9,6 +9,7 @@ import { metricFormValue } from "../services/metricValue";
 import { templateForEvent } from "../services/events";
 import { generateLayout, layoutProblem, plotContext } from "../services/layout";
 import { words } from "../services/vocabulary";
+import { canRecord, closedReason } from "../services/lifecycle";
 import { areaAsM2, areaUnit, plotAreaM2 as plotArea } from "../services/plotArea";
 import { isBackendConfigured } from "../lib/supabase";
 import {
@@ -226,6 +227,21 @@ export function EntryPage() {
         >
           Back to the form
         </Link>
+      </Card>
+    );
+  }
+
+  // An entry link outlives the trial it points at. Somebody arriving on one
+  // after collection has finished should be told, not handed a working form
+  // that files an observation into a closed trial.
+  if (!canRecord(trial) && !preview) {
+    return (
+      <Card className="mx-auto max-w-md">
+        <PageTitle>{trial.name}</PageTitle>
+        <p className="mt-2 text-ink/60 dark:text-ink-dark/60">{closedReason(trial)}</p>
+        <p className="mt-2 text-sm text-ink/50 dark:text-ink-dark/50">
+          If that is wrong, a staff member can reopen it on the trial page.
+        </p>
       </Card>
     );
   }

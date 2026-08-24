@@ -12,6 +12,7 @@ import {
 } from "../hooks/useCollections";
 import { describeEvent, describeEventScope, eventsForTrial, tallySync } from "../services/events";
 import { isSeedTrial, seedPresence, type SeedPresence } from "../services/seed";
+import { hiddenCount, visibleTrials } from "../services/lifecycle";
 import { useOnline } from "../hooks/useOnline";
 import {
   Card,
@@ -183,13 +184,24 @@ export function DashboardPage() {
 
       <Card>
         <h2 className="mb-2 font-semibold">Trials</h2>
+        {/* The dashboard is a starting point, not an archive: archived trials
+            are listed on the Trials page, which has the control to show them. */}
+        {hiddenCount(trials.data ?? []) > 0 ? (
+          <p className="mb-2 text-sm text-ink/60 dark:text-ink-dark/60">
+            {hiddenCount(trials.data ?? [])} archived, on the{" "}
+            <Link to="/trials" className="underline">
+              Trials page
+            </Link>
+            .
+          </p>
+        ) : null}
         {loading ? (
           <Skeleton lines={4} />
         ) : (trials.data ?? []).length === 0 ? (
           <EmptyState message="No trials yet. Create the first one to get started." />
         ) : (
           <ul className="divide-y divide-ink/10 dark:divide-ink-dark/10">
-            {(trials.data ?? []).map((trial) => {
+            {visibleTrials(trials.data ?? [], false).map((trial) => {
               const siteCount = (sites.data ?? []).filter(
                 (site) => site.trialId === trial.trialId,
               ).length;
