@@ -155,3 +155,45 @@ describe("record schemas", () => {
     expect(parsed.success).toBe(true);
   });
 });
+
+// An empty box is not a zero. z.coerce.number() turns "" into 0, so a required
+// yield left blank saved silently as 0 t/ha — an observation that never
+// happened, dragging the treatment mean down for the rest of the trial.
+describe("an empty number is not zero", () => {
+  const numberField = (required: boolean) => ({
+    fieldName: "yield",
+    label: "Plot yield",
+    type: "number" as const,
+    required,
+    options: null,
+    min: 0,
+    max: null,
+    unit: "t/ha",
+    displayOrder: 0,
+  });
+
+  it("refuses a required number left blank", () => {
+    const schema = buildEntryFormSchema([numberField(true)]);
+    expect(schema.safeParse({ yield: "" }).success).toBe(false);
+  });
+
+  it("still accepts a real zero, which is a legitimate reading", () => {
+    // A nil plot really can yield nothing, and that must stay recordable.
+    const schema = buildEntryFormSchema([numberField(true)]);
+    const parsed = schema.safeParse({ yield: "0" });
+    expect(parsed.success).toBe(true);
+    if (parsed.success) expect(parsed.data.yield).toBe(0);
+  });
+
+  it("lets an optional number be left blank", () => {
+    const schema = buildEntryFormSchema([numberField(false)]);
+    expect(schema.safeParse({ yield: "" }).success).toBe(true);
+  });
+
+  it("still reads a typed number normally", () => {
+    const schema = buildEntryFormSchema([numberField(true)]);
+    const parsed = schema.safeParse({ yield: "46.2" });
+    expect(parsed.success).toBe(true);
+    if (parsed.success) expect(parsed.data.yield).toBe(46.2);
+  });
+});

@@ -47,19 +47,32 @@ export function EntryField<T extends FieldValues>({
   setValue,
 }: FieldProps<T>) {
   const labelId = `label-${field.fieldName}`;
+  const errorId = `${field.fieldName}-error`;
 
   return (
     <div>
       <label id={labelId} htmlFor={field.fieldName} className="mb-1.5 block font-medium">
         {field.label}
         {field.unit ? <span className="text-ink/50 dark:text-ink-dark/50"> ({field.unit})</span> : null}
+        {/* The asterisk is decoration — hidden from assistive technology, and
+            the only thing that said "required". Without aria-required a screen
+            reader user filled in what they thought was needed and met a
+            validation error they had no way to see coming. */}
         {field.required ? <span aria-hidden className="text-danger"> *</span> : null}
       </label>
-      <FieldInput field={field} register={register} control={control} labelId={labelId} />
+      <FieldInput
+        field={field}
+        register={register}
+        control={control}
+        labelId={labelId}
+        required={field.required}
+        invalid={Boolean(error)}
+        describedBy={error ? errorId : undefined}
+      />
       <StripMeasure field={field} widthM={plotWidthM} setValue={setValue} />
       <YieldHint field={field} control={control} plotAreaM2={plotAreaM2} />
       {error ? (
-        <p role="alert" className="mt-1 text-sm text-danger">
+        <p id={errorId} role="alert" className="mt-1 text-sm text-danger">
           {error}
         </p>
       ) : null}
@@ -228,13 +241,26 @@ function FieldInput<T extends FieldValues>({
   register,
   control,
   labelId,
+  required,
+  invalid,
+  describedBy,
 }: {
   field: FormField;
   register: UseFormRegister<T>;
   control: Control<T>;
   labelId: string;
+  required: boolean;
+  invalid: boolean;
+  describedBy: string | undefined;
 }) {
   const name = field.fieldName as Path<T>;
+  // Carried on every control that takes typed input, so the state a sighted
+  // user reads from an asterisk and a red message is available to everyone.
+  const aria = {
+    "aria-required": required || undefined,
+    "aria-invalid": invalid || undefined,
+    "aria-describedby": describedBy,
+  };
 
   switch (field.type) {
     case "number":
@@ -247,18 +273,39 @@ function FieldInput<T extends FieldValues>({
           min={field.min ?? undefined}
           max={field.max ?? undefined}
           className={inputClass}
+          {...aria}
           {...register(name)}
         />
       );
     case "date":
-      return <input id={field.fieldName} type="date" className={inputClass} {...register(name)} />;
+      return (
+        <input
+          id={field.fieldName}
+          type="date"
+          className={inputClass}
+          {...aria}
+          {...register(name)}
+        />
+      );
     case "text":
       return (
-        <textarea id={field.fieldName} rows={3} className={inputClass} {...register(name)} />
+        <textarea
+          id={field.fieldName}
+          rows={3}
+          className={inputClass}
+          {...aria}
+          {...register(name)}
+        />
       );
     case "select":
       return (
-        <select id={field.fieldName} className={inputClass} {...register(name)} defaultValue="">
+        <select
+          id={field.fieldName}
+          className={inputClass}
+          {...aria}
+          {...register(name)}
+          defaultValue=""
+        >
           <option value="">Choose one…</option>
           {(field.options ?? []).map((option) => (
             <option key={option} value={option}>

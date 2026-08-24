@@ -215,14 +215,22 @@ export function buildEntryFormSchema(
         let num = z.coerce.number({ invalid_type_error: "Enter a number" });
         if (field.min !== null) num = num.min(field.min);
         if (field.max !== null) num = num.max(field.max);
-        value = num;
+        // An empty box is not a zero. z.coerce.number() turns "" into 0, so a
+        // required yield left blank saved silently as 0 t/ha — which drags a
+        // treatment mean down and looks like a real observation for the rest
+        // of the trial. Blank becomes undefined, and a required field then
+        // fails the way it should.
+        value = z.preprocess(
+          (raw) => (raw === "" || raw === null ? undefined : raw),
+          num,
+        );
         break;
       }
       case "slider": {
         let num = z.coerce.number();
         if (field.min !== null) num = num.min(field.min);
         if (field.max !== null) num = num.max(field.max);
-        value = num;
+        value = z.preprocess((raw) => (raw === "" || raw === null ? undefined : raw), num);
         break;
       }
       case "boolean":
