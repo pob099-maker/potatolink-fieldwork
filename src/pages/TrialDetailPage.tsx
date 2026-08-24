@@ -14,12 +14,14 @@ import { addArm, removeArm, removeTrial, saveArm } from "../services/store";
 import { buildEntryUrl, summariseArm } from "../services/entryLinks";
 import { buildTrialCsv, csvFileName, downloadCsv } from "../services/export";
 import { describeEvent, describeEventScope, eventsForTrial, tallySync } from "../services/events";
+import { isSeedTrial } from "../services/seed";
 import { metricDisplay } from "../services/metricValue";
 import { replicationStatus, responseSummary, type Completeness, type TreatmentStat } from "../services/replication";
 import { saveTrial } from "../services/store";
 import {
   Card,
   EmptyState,
+  ExamplePill,
   ErrorState,
   PageTitle,
   Skeleton,
@@ -118,7 +120,15 @@ export function TrialDetailPage() {
         <p className="mt-1 text-ink/70 dark:text-ink-dark/70">{trial.objective}</p>
         <p className="mt-2 flex flex-wrap items-center gap-2 text-sm">
           <StatusPill status={trial.status} />
+          {isSeedTrial(trial.trialId) ? <ExamplePill /> : null}
         </p>
+        {isSeedTrial(trial.trialId) ? (
+          <p className="mt-2 rounded-lg bg-accent/20 p-3 text-sm">
+            Demonstration data that ships with the app, so there is something to look at
+            before a real trial exists. Everything here works exactly as it would on a real
+            one — the numbers are just invented. Remove it once you no longer need it.
+          </p>
+        ) : null}
       </div>
 
       {trialSites.length > 1 ? (

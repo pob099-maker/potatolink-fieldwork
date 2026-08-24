@@ -11,10 +11,12 @@ import {
   useWaitingToSync,
 } from "../hooks/useCollections";
 import { describeEvent, describeEventScope, eventsForTrial, tallySync } from "../services/events";
+import { isSeedTrial, seedPresence, type SeedPresence } from "../services/seed";
 import { useOnline } from "../hooks/useOnline";
 import {
   Card,
   EmptyState,
+  ExamplePill,
   ErrorState,
   PageTitle,
   Skeleton,
@@ -32,7 +34,7 @@ import {
  * field. Each arrives looking for a different thing, and none of them was
  * being pointed anywhere.
  */
-function StartHere() {
+function StartHere({ presence }: { presence: SeedPresence }) {
   const routes = [
     {
       to: "/trials/new",
@@ -73,11 +75,22 @@ function StartHere() {
           </li>
         ))}
       </ul>
-      <p className="mt-3 border-t border-ink/10 pt-3 text-sm text-ink/60 dark:border-ink-dark/10 dark:text-ink-dark/60">
-        <span className="font-medium text-warning">The trials below are examples.</span>{" "}
-        The costs and returns on the Economics page are stand-in figures, not any grower's
-        real numbers — that page says so above every total.
-      </p>
+      {/* Only while the demonstration data is actually here. A standing
+          warning that the trials are examples becomes false the moment a real
+          one is created, and a warning that is wrong about your own data
+          teaches you to ignore warnings. */}
+      {presence === "none" ? null : (
+        <p className="mt-3 border-t border-ink/10 pt-3 text-sm text-ink/60 dark:border-ink-dark/10 dark:text-ink-dark/60">
+          <span className="font-medium text-warning">
+            {presence === "all"
+              ? "The trials below are examples."
+              : "Trials marked Example are demonstration data."}
+          </span>{" "}
+          Their costs and returns are stand-in figures, not any grower's real numbers. The
+          Economics page tracks that per figure, and stops saying it once each one is
+          marked confirmed.
+        </p>
+      )}
     </Card>
   );
 }
@@ -124,7 +137,7 @@ export function DashboardPage() {
         </Link>
       </div>
 
-      <StartHere />
+      <StartHere presence={seedPresence((trials.data ?? []).map((trial) => trial.trialId))} />
 
       <Card>
         <h2 className="mb-2 font-semibold">This device</h2>
@@ -190,6 +203,7 @@ export function DashboardPage() {
                   </Link>
                   <p className="mt-1 flex flex-wrap items-center gap-2 text-sm text-ink/60 dark:text-ink-dark/60">
                     <StatusPill status={trial.status} />
+                    {isSeedTrial(trial.trialId) ? <ExamplePill /> : null}
                     <span>
                       {siteCount} {siteCount === 1 ? "site" : "sites"}
                     </span>

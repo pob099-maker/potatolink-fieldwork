@@ -1,9 +1,11 @@
 import { Link } from "react-router-dom";
 import { useArms, useEvents, useSites, useTrials } from "../hooks/useCollections";
 import { eventsForTrial, tallySync } from "../services/events";
+import { isSeedTrial } from "../services/seed";
 import {
   Card,
   EmptyState,
+  ExamplePill,
   ErrorState,
   PageTitle,
   Skeleton,
@@ -47,6 +49,7 @@ export function TrialsPage() {
             <p className="mt-1 text-sm text-ink/70 dark:text-ink-dark/70">{trial.objective}</p>
             <p className="mt-2 flex flex-wrap items-center gap-2 text-sm">
               <StatusPill status={trial.status} />
+              {isSeedTrial(trial.trialId) ? <ExamplePill /> : null}
               <span className="text-ink/60 dark:text-ink-dark/60">
                 {(() => {
                   const count = (sites.data ?? []).filter(

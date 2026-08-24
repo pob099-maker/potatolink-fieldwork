@@ -131,3 +131,16 @@ export function SyncTallyLine({ tally }: { tally: SyncTally }) {
     </span>
   );
 }
+
+/**
+ * Marks one trial as built-in demonstration data. Per trial rather than a
+ * blanket notice, because the moment somebody adds a real trial alongside the
+ * examples a blanket notice is wrong about half the list.
+ */
+export function ExamplePill() {
+  return (
+    <span className="rounded-full bg-accent/30 px-2 py-0.5 text-xs font-medium text-ink dark:text-ink-dark">
+      Example
+    </span>
+  );
+}

@@ -925,6 +925,30 @@ const ntMetrics: Metric[] = ntPlots.flatMap(([, , plot, yieldValue], index) => {
   ];
 });
 
+/**
+ * Every record the seed writes shares this prefix, which is what makes a
+ * demonstration trial recognisable later. It matters because the app has to
+ * warn that the example figures are not anybody's real numbers — and that
+ * warning has to disappear on its own once real trials arrive, or it becomes
+ * a lie about the user's own data and teaches them to ignore warnings.
+ */
+const SEED_ID_PREFIX = "5f0a6c1e-";
+
+/** Whether this trial came from the built-in demonstration data. */
+export function isSeedTrial(trialId: string): boolean {
+  return trialId.startsWith(SEED_ID_PREFIX);
+}
+
+export type SeedPresence = "none" | "some" | "all";
+
+/** How the demonstration trials sit among the real ones, if any. */
+export function seedPresence(trialIds: string[]): SeedPresence {
+  if (trialIds.length === 0) return "none";
+  const seeded = trialIds.filter(isSeedTrial).length;
+  if (seeded === 0) return "none";
+  return seeded === trialIds.length ? "all" : "some";
+}
+
 const SEED_FLAG = { key: "seeded", version: 11 };
 
 export async function seedIfNeeded(): Promise<void> {
