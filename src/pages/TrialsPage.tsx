@@ -37,7 +37,12 @@ export function TrialsPage() {
             <p className="mt-2 flex items-center gap-2 text-sm">
               <StatusPill status={trial.status} />
               <span className="text-ink/60 dark:text-ink-dark/60">
-                {(sites.data ?? []).filter((site) => site.trialId === trial.trialId).length} sites
+                {(() => {
+                  const count = (sites.data ?? []).filter(
+                    (site) => site.trialId === trial.trialId,
+                  ).length;
+                  return `${count} ${count === 1 ? "site" : "sites"}`;
+                })()}
               </span>
             </p>
           </Card>

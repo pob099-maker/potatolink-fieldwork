@@ -3,6 +3,7 @@ import { Link, useParams } from "react-router-dom";
 import { format } from "date-fns";
 import {
   useArms,
+  useContacts,
   useEvents,
   useMetrics,
   useSites,
@@ -25,6 +26,7 @@ export function TrialDetailPage() {
   const trials = useTrials();
   const sites = useSites();
   const arms = useArms();
+  const contacts = useContacts();
   const events = useEvents();
   const metrics = useMetrics();
   const templates = useTemplates();
@@ -135,7 +137,7 @@ export function TrialDetailPage() {
       ) : null}
 
       <div className="flex flex-wrap gap-2">
-        {growerForm ? (
+        {growerForm && trialSites.length > 0 && activeArms.length > 0 ? (
           <Link
             to={`/trials/${trial.trialId}/entry?form=${growerForm.templateId}${
               selectedSiteId ? `&site=${selectedSiteId}` : ""
@@ -171,6 +173,7 @@ export function TrialDetailPage() {
                 trialTemplates,
                 trialEvents,
                 metrics.data ?? [],
+                contacts.data ?? [],
               ),
             )
           }

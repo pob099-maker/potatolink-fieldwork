@@ -170,3 +170,26 @@ describe("buildTrialCsv", () => {
     expect(csvFileName(trial)).toMatch(/^cropvision-comparison-\d{4}-\d{2}-\d{2}\.csv$/);
   });
 });
+
+describe("who recorded it", () => {
+  const contacts = [
+    { contactId: "c1", name: "Jo Reid", business: "", role: "grower" as const,
+      region: "", email: "", phone: "", tags: [], createdAt: T0 },
+  ];
+
+  it("names the person instead of printing their id", () => {
+    // The file goes to a biometrician who has no way to look an id up.
+    const events = [event("e1", { enteredBy: "c1" })];
+    const metrics = [metric("m1", "e1", "tonnesHandled", 40)];
+    const csv = buildTrialCsv(trial, sites, arms, templates, events, metrics, contacts);
+    expect(csv.split("\r\n")[0]).toContain("recorded_by");
+    expect(csv.split("\r\n")[1]).toContain("Jo Reid");
+  });
+
+  it("keeps the raw value when the contact is unknown, rather than blanking it", () => {
+    const events = [event("e1", { enteredBy: "missing-id" })];
+    const metrics = [metric("m1", "e1", "tonnesHandled", 40)];
+    const csv = buildTrialCsv(trial, sites, arms, templates, events, metrics, contacts);
+    expect(csv.split("\r\n")[1]).toContain("missing-id");
+  });
+});
