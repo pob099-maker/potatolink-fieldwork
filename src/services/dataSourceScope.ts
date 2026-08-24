@@ -61,3 +61,41 @@ export function scopeProblem(source: Pick<DataSource, "siteId" | "plot">): strin
   }
   return null;
 }
+
+/** How specific a scope is, for putting the most telling one first. */
+const NARROWNESS: Record<ScopeLevel, number> = {
+  plot: 0,
+  treatment: 1,
+  site: 2,
+  trial: 3,
+};
+
+/**
+ * Which recorded sources cover one observation, narrowest first.
+ *
+ * Provenance you cannot trace in the exported file is not really provenance:
+ * a reviewer asking where a number came from is looking at a spreadsheet, not
+ * at the app. A row can be covered by more than one — the written protocol
+ * covers the whole trial while a flow meter covers the single plot — and both
+ * are worth carrying, with the specific one first.
+ */
+export function sourcesForRow(
+  sources: DataSource[],
+  event: { siteId: string | null; armId: string | null; plot: number | null },
+): DataSource[] {
+  const covers = (source: DataSource): boolean => {
+    switch (scopeLevel(source)) {
+      case "plot":
+        return event.siteId === source.siteId && event.plot === source.plot;
+      case "treatment":
+        return event.armId === source.armId;
+      case "site":
+        return event.siteId === source.siteId;
+      case "trial":
+        return true;
+    }
+  };
+  return sources
+    .filter(covers)
+    .sort((a, b) => NARROWNESS[scopeLevel(a)] - NARROWNESS[scopeLevel(b)]);
+}

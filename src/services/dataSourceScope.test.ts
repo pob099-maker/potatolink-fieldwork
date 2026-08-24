@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { describeScope, scopeLevel, scopeProblem } from "./dataSourceScope";
-import type { PracticeArm, Site } from "../types";
+import { describeScope, scopeLevel, scopeProblem, sourcesForRow } from "./dataSourceScope";
+import type { DataSource, PracticeArm, Site } from "../types";
 
 const sites = [
   { siteId: "s1", location: "Walkers Flat" },
@@ -71,5 +71,52 @@ describe("refusing a scope that identifies nothing", () => {
   it("accepts every scope that leaves the plot out", () => {
     expect(scopeProblem(at({}))).toBeNull();
     expect(scopeProblem(at({ siteId: "s1" }))).toBeNull();
+  });
+});
+
+// Provenance you cannot trace in the exported file is not really provenance:
+// a reviewer asking where a number came from is looking at a spreadsheet.
+describe("which sources cover an observation", () => {
+  const src = (over: Partial<DataSource>): DataSource => ({
+    label: "x", kind: "other", reference: "r", siteId: null, armId: null, plot: null, note: "",
+    ...over,
+  });
+  const row = (over: Partial<{ siteId: string | null; armId: string | null; plot: number | null }> = {}) => ({
+    siteId: "s1", armId: "a1", plot: 7, ...over,
+  });
+
+  it("puts the most telling one first", () => {
+    // The protocol covers everything; the flow meter covers this one plot.
+    const sources = [
+      src({ label: "Protocol" }),
+      src({ label: "Flow meter", siteId: "s1", plot: 7 }),
+      src({ label: "Probe", siteId: "s1" }),
+    ];
+    expect(sourcesForRow(sources, row()).map((s) => s.label)).toEqual([
+      "Flow meter",
+      "Probe",
+      "Protocol",
+    ]);
+  });
+
+  it("matches a plot only in its own site", () => {
+    // Plot 7 exists in every paddock, so the site has to match too.
+    const meter = src({ label: "Flow meter", siteId: "s1", plot: 7 });
+    expect(sourcesForRow([meter], row({ siteId: "s2" }))).toEqual([]);
+    expect(sourcesForRow([meter], row({ plot: 3 }))).toEqual([]);
+  });
+
+  it("matches a treatment wherever it was recorded", () => {
+    const source = src({ label: "Rate log", armId: "a1" });
+    expect(sourcesForRow([source], row({ siteId: "s2", plot: 2 }))).toHaveLength(1);
+    expect(sourcesForRow([source], row({ armId: "a2" }))).toEqual([]);
+  });
+
+  it("covers a trial-level record that has no site or practice at all", () => {
+    // A cost log belongs to the trial and still deserves its provenance.
+    const protocol = src({ label: "Protocol" });
+    const probe = src({ label: "Probe", siteId: "s1" });
+    const covering = sourcesForRow([protocol, probe], { siteId: null, armId: null, plot: null });
+    expect(covering.map((s) => s.label)).toEqual(["Protocol"]);
   });
 });
