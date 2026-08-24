@@ -13,6 +13,7 @@ const trial: Trial = {
   design: "replicated",
   replicates: 3,
   blocking: "none" as const,
+  vocabulary: null,
   layoutSeed: null,
   responseMetric: "yield",
   createdAt: T0,

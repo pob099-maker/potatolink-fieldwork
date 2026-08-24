@@ -18,7 +18,9 @@ import {
   type LayoutDesign,
 } from "../services/layout";
 import { downloadCsv } from "../services/export";
+import { words } from "../services/vocabulary";
 import { Card, ErrorState } from "./ui";
+import type { Words } from "../services/vocabulary";
 import type { PracticeArm, Site, Trial } from "../types";
 
 // Enough hues to tell treatments apart, in the brand's register. The hue is
@@ -53,6 +55,7 @@ export function PlotLayout({
 }) {
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  const word = words(trial);
 
   // Only a replicated trial has plots to arrange.
   if (trial.design !== "replicated") return null;
@@ -83,7 +86,7 @@ export function PlotLayout({
     <Card>
       <h2 className="font-display text-lg font-bold">Plot layout</h2>
       <p className="mt-1 text-sm text-ink/60 dark:text-ink-dark/60">
-        Which treatment sits in which plot, decided by chance rather than by whoever holds
+        Which {word.one} sits in which plot, decided by chance rather than by whoever holds
         the clipboard — and written down before anyone walks the paddock.
       </p>
 
@@ -95,14 +98,14 @@ export function PlotLayout({
             disabled={busy || recorded > 0}
             onChoose={() => void setBlocking("blocks")}
             title="Randomised complete block"
-            detail="Each block holds one plot of every treatment, ordered at random within the block. Blocks absorb a known gradient — a slope, a drainage line, a change in soil — so it cannot masquerade as a treatment effect. The usual choice for a paddock."
+            detail={`Each block holds one plot of every ${word.one}, ordered at random within the block. Blocks absorb a known gradient — a slope, a drainage line, a change in soil — so it cannot masquerade as an effect of the ${word.one}. The usual choice for a paddock.`}
           />
           <DesignChoice
             checked={trial.blocking === "none"}
             disabled={busy || recorded > 0}
             onChoose={() => void setBlocking("none")}
             title="Completely randomised"
-            detail="Every plot drawn from one pool, so a treatment can land anywhere. Suits uniform ground, and a glasshouse more than a field."
+            detail={`Every plot drawn from one pool, so a ${word.one} can land anywhere. Suits uniform ground, and a glasshouse more than a field.`}
           />
         </div>
       </fieldset>
@@ -115,7 +118,7 @@ export function PlotLayout({
         </p>
       ) : trial.layoutSeed ? (
         <LayoutMap trial={trial} arms={arms} sites={sites} design={design} busy={busy}
-          recorded={recorded} onRegenerate={() => void generate()} />
+          recorded={recorded} word={word} onRegenerate={() => void generate()} />
       ) : (
         <div className="mt-3">
           <button
@@ -174,6 +177,7 @@ function LayoutMap({
   design,
   busy,
   recorded,
+  word,
   onRegenerate,
 }: {
   trial: Trial;
@@ -181,6 +185,7 @@ function LayoutMap({
   sites: Site[];
   design: LayoutDesign;
   busy: boolean;
+  word: Words;
   recorded: number;
   onRegenerate: () => void;
 }) {
@@ -204,7 +209,7 @@ function LayoutMap({
         {plots.length} plots · {design === "rcb" ? `${blocks.length} blocks` : "one pool"} ·
         seed <span className="font-mono font-medium">{seed}</span>
         {isBalanced(plots) ? null : (
-          <span className="text-warning"> · treatments are not evenly replicated</span>
+          <span className="text-warning"> · {word.many} are not evenly replicated</span>
         )}
       </p>
 
@@ -272,7 +277,7 @@ function LayoutMap({
 
       <p className="text-sm text-ink/50 dark:text-ink-dark/50">
         Keep the seed with the trial records. It regenerates this exact layout, which is
-        how anyone else can check it. Randomising again, or changing the treatments,
+        how anyone else can check it. Randomising again, or changing the {word.many},
         produces a different arrangement — so do it before the trial goes in, not after.
       </p>
     </div>

@@ -578,6 +578,7 @@ export async function addTrial(input: {
     design: "observational",
     replicates: 0,
     blocking: "none" as const,
+    vocabulary: null,
     layoutSeed: null,
     responseMetric: null,
     createdAt,

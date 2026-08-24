@@ -24,6 +24,7 @@ import {
   useSites,
   useTrials,
 } from "../hooks/useCollections";
+import { words } from "../services/vocabulary";
 import { Card, EmptyState, ErrorState, PageTitle, Skeleton, StatusPill } from "../components/ui";
 import type { ArmAssumption, AssumptionCategory, Metric, PracticeArm } from "../types";
 
@@ -42,6 +43,7 @@ export function ResultsPage() {
   const metrics = useMetrics();
 
   const trial = trials.data?.find((candidate) => candidate.trialId === trialId);
+  const word = words(trial ?? { vocabulary: null, design: "observational" });
   const trialArms = useMemo(
     () =>
       (arms.data ?? [])
@@ -327,9 +329,9 @@ export function ResultsPage() {
       </section>
 
       <section aria-label="Assumptions" className="space-y-3">
-        <h2 className="font-display text-lg font-bold">Assumptions per practice</h2>
+        <h2 className="font-display text-lg font-bold">Assumptions per {word.one}</h2>
         <p className="text-sm text-ink/60 dark:text-ink-dark/60">
-          These describe what each practice costs and returns, and apply across every site
+          These describe what each {word.one} costs and returns, and apply across every site
           — what differs by site is the season scenario above. Units: $ one-off · $/yr flat
           annual · $/t and hr/t scale with season throughput · %yield values a
           marketable-yield change at the scenario price.

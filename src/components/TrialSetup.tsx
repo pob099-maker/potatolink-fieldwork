@@ -6,6 +6,7 @@
 import { useState } from "react";
 import { Link } from "react-router-dom";
 import { addSite, removeSite, saveSite } from "../services/store";
+import { words } from "../services/vocabulary";
 import { Card } from "./ui";
 import type { FormTemplate, PracticeArm, Site, Trial } from "../types";
 
@@ -21,6 +22,7 @@ export function SetupChecklist({
   templates: FormTemplate[];
 }) {
   const trialId = trial.trialId;
+  const word = words(trial);
   const growerForm = templates.find((template) => template.audience === "grower");
   const needsSite = growerForm?.requiresSite ?? true;
   const needsArm = growerForm?.requiresArm ?? true;
@@ -39,7 +41,10 @@ export function SetupChecklist({
     {
       key: "practices",
       done: arms.length > 1,
-      label: arms.length > 1 ? `${arms.length} practices` : "Add a practice to compare",
+      label:
+        arms.length > 1
+          ? `${arms.length} ${word.many}`
+          : `Add a ${word.one} to compare`,
       hint: "A control plus at least one alternative makes a comparison.",
       blocking: needsArm,
     },

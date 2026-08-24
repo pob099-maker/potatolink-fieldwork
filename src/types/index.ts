@@ -79,6 +79,12 @@ export interface Trial {
    */
   blocking: "none" | "blocks";
   /**
+   * What this trial calls the things it compares — see services/vocabulary.
+   * null means "follow the design", which is what every trial does until
+   * somebody chooses otherwise.
+   */
+  vocabulary: "treatment" | "practice" | null;
+  /**
    * The seed the plot layout was generated from, or null before one exists.
    * Stored so the same layout can be reproduced and checked; a layout nobody
    * can regenerate is a layout nobody can verify.

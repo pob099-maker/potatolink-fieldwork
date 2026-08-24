@@ -20,6 +20,7 @@ import { saveTrial } from "../services/store";
 import { Card, EmptyState, ErrorState, PageTitle, Skeleton, StatusPill, SyncBadge } from "../components/ui";
 import { SetupChecklist, SiteManager } from "../components/TrialSetup";
 import { PlotLayout } from "../components/PlotLayout";
+import { VOCABULARY_CHOICES, trialVocabulary, words, type Words } from "../services/vocabulary";
 import type { FormTemplate, MeasurementEvent, Metric, PracticeArm, Site, Trial } from "../types";
 
 export function TrialDetailPage() {
@@ -74,6 +75,10 @@ export function TrialDetailPage() {
     [trialEvents],
   );
   const layoutLocked = plotRecords > 0;
+  // What this trial calls the things it compares. One word, used everywhere on
+  // the page, so a researcher and a grower each read their own vocabulary
+  // rather than both meeting a compromise neither uses.
+  const word = trial ? words(trial) : words({ vocabulary: null, design: "observational" });
 
   // null = every site combined; otherwise one site's figures only.
   const [selectedSiteId, setSelectedSiteId] = useState<string | null>(null);
@@ -197,7 +202,7 @@ export function TrialDetailPage() {
 
       <RoleSection
         title="Setting up the trial"
-        who="For whoever designs the trial — the sites it runs at, the practices being compared, and the questions asked in the field."
+        who={`For whoever designs the trial — the sites it runs at, the ${word.many} being compared, and the questions asked in the field.`}
       >
       <SetupChecklist
         trial={trial}
@@ -207,17 +212,17 @@ export function TrialDetailPage() {
       />
       <TrialDesignCard trial={trial} templates={trialTemplates} layoutLocked={layoutLocked} />
       <SiteManager trialId={trial.trialId} sites={trialSites} />
-      <ArmManager trialId={trial.trialId} arms={trialArms} layoutLocked={layoutLocked} />
+      <ArmManager trialId={trial.trialId} arms={trialArms} layoutLocked={layoutLocked} word={word} />
       <PlotLayout trial={trial} arms={activeArms} sites={trialSites} recorded={plotRecords} />
-      <TrialForms trial={trial} templates={trialTemplates} />
+      <TrialForms trial={trial} templates={trialTemplates} word={word} />
       <RemoveTrial trial={trial} />
       </RoleSection>
 
       <RoleSection
         title="Collecting observations"
-        who="For whoever is in the paddock — a contractor, a staff member or the grower. One link per site and practice, and the form works with no signal."
+        who={`For whoever is in the paddock — a contractor, a staff member or the grower. One link per site and ${word.one}, and the form works with no signal.`}
       >
-      <EntryLinks trial={trial} sites={trialSites} arms={activeArms} selectedSiteId={selectedSiteId} />
+      <EntryLinks trial={trial} sites={trialSites} arms={activeArms} selectedSiteId={selectedSiteId} word={word} />
       </RoleSection>
 
       <RoleSection
@@ -226,6 +231,7 @@ export function TrialDetailPage() {
       >
       {trial.design === "replicated" ? (
         <ReplicationStatusCard
+          word={word}
           status={replicationStatus(trial, activeArms, trialSites, trialEvents)}
           arms={activeArms}
         />
@@ -233,6 +239,7 @@ export function TrialDetailPage() {
 
       {trial.design === "replicated" ? (
         <ResponseSummaryCard
+          word={word}
           stats={responseSummary(
             trial,
             activeArms,
@@ -274,7 +281,7 @@ export function TrialDetailPage() {
 
 
       {activeArms.length === 0 ? (
-        <EmptyState message="No practice arms configured for this trial yet." />
+        <EmptyState message={`No ${word.many} configured for this trial yet.`} />
       ) : (
         activeArms.map((arm) => {
           const armEvents = (events.data ?? []).filter(
@@ -382,7 +389,7 @@ export function TrialDetailPage() {
               ) : (
                 <p className="mt-3 text-sm text-ink/50 dark:text-ink-dark/50">
                   {selectedSite
-                    ? `No entries for this practice at ${selectedSite.location} yet.`
+                    ? `No entries for this ${word.one} at ${selectedSite.location} yet.`
                     : "No measurement events for this arm yet."}
                 </p>
               )}
@@ -416,7 +423,8 @@ function RemoveTrial({ trial }: { trial: Trial }) {
     <Card>
       <h2 className="font-display text-lg font-bold">Remove this trial</h2>
       <p className="mt-1 text-sm text-ink/60 dark:text-ink-dark/60">
-        For a trial set up by mistake. Its sites, practices and forms go with it. A trial
+        For a trial set up by mistake. Its sites, {words(trial).many} and forms go with
+        it. A trial
         with anything recorded against it cannot be removed — archive it instead, so the
         data survives.
       </p>
@@ -580,6 +588,7 @@ function TrialDesignCard({
   templates: FormTemplate[];
   layoutLocked: boolean;
 }) {
+  const word = words(trial);
   const numericFields = templates
     .flatMap((template) => template.fields)
     .filter((field) => field.type === "number");
@@ -628,9 +637,9 @@ function TrialDesignCard({
           <>
             <label className="block text-sm font-medium">
               {/* Under blocking these are blocks, and each block holds one plot
-                  of every treatment — same number, but calling it "replicates"
+                  of every one of them — same number, but calling it "replicates"
                   invites somebody to enter the plot count instead. */}
-              {trial.blocking === "blocks" ? "Blocks" : "Replicates per treatment"}
+              {trial.blocking === "blocks" ? "Blocks" : `Replicates per ${word.one}`}
               <input
                 type="number"
                 min={1}
@@ -663,6 +672,42 @@ function TrialDesignCard({
           </>
         ) : null}
       </div>
+
+      <fieldset className="mt-4">
+        <legend className="text-sm font-medium">What this trial calls them</legend>
+        <p className="mt-1 text-sm text-ink/60 dark:text-ink-dark/60">
+          Only the wording changes, and only on this trial. The exported data uses one
+          fixed column name either way, so two trials still pool together.
+        </p>
+        <div className="mt-2 flex flex-wrap gap-2">
+          {VOCABULARY_CHOICES.map((choice) => {
+            const chosen = trialVocabulary(trial) === choice.value;
+            return (
+              <label
+                key={choice.value}
+                className={`flex max-w-xs flex-1 cursor-pointer gap-2 rounded-lg border p-3 ${
+                  chosen ? "border-primary bg-primary/5" : "border-ink/15 dark:border-ink-dark/15"
+                }`}
+              >
+                <input
+                  type="radio"
+                  name="vocabulary"
+                  checked={chosen}
+                  disabled={saving}
+                  onChange={() => void update({ vocabulary: choice.value })}
+                  className="mt-1 size-4 shrink-0"
+                />
+                <span>
+                  <span className="block font-medium">{choice.label}</span>
+                  <span className="block text-sm text-ink/60 dark:text-ink-dark/60">
+                    {choice.detail}
+                  </span>
+                </span>
+              </label>
+            );
+          })}
+        </div>
+      </fieldset>
     </Card>
   );
 }
@@ -670,9 +715,11 @@ function TrialDesignCard({
 function ReplicationStatusCard({
   status,
   arms,
+  word,
 }: {
   status: Completeness;
   arms: PracticeArm[];
+  word: Words;
 }) {
   const complete = status.recorded === status.expected && status.expected > 0;
   return (
@@ -688,7 +735,7 @@ function ReplicationStatusCard({
         </span>
       </div>
       <p className="mt-1 text-sm text-ink/60 dark:text-ink-dark/60">
-        Each cell is a plot (treatment × replicate). Amber cells are outstanding.
+        Each cell is a plot ({word.one} × replicate). Amber cells are outstanding.
       </p>
       {status.sites.map((site) => (
         <div key={site.siteId} className="mt-3 overflow-x-auto">
@@ -729,23 +776,25 @@ function ResponseSummaryCard({
   stats,
   responseLabel,
   responseUnit,
+  word,
 }: {
   stats: TreatmentStat[];
   responseLabel: string;
   responseUnit: string;
+  word: Words;
 }) {
   return (
     <Card>
       <h2 className="font-display text-lg font-bold">Response summary — {responseLabel}</h2>
       <p className="mt-1 text-sm text-ink/60 dark:text-ink-dark/60">
-        Descriptive means ± standard error per treatment. This is not a significance test —
+        Descriptive means ± standard error per {word.one}. This is not a significance test —
         export the tidy data for statistical analysis.
       </p>
       <div className="mt-3 overflow-x-auto">
         <table className="w-full text-sm">
           <thead>
             <tr className="text-left text-ink/60 dark:text-ink-dark/60">
-              <th className="py-1">Treatment</th>
+              <th className="py-1">{word.One}</th>
               <th className="py-1">n</th>
               <th className="py-1">Mean{responseUnit ? ` (${responseUnit})` : ""}</th>
               <th className="py-1">± SE</th>
@@ -776,10 +825,12 @@ function ArmManager({
   trialId,
   arms,
   layoutLocked,
+  word,
 }: {
   trialId: string;
   arms: PracticeArm[];
   layoutLocked: boolean;
+  word: Words;
 }) {
   const [newName, setNewName] = useState("");
   const [newType, setNewType] = useState<PracticeArm["type"]>("alternative");
@@ -826,15 +877,15 @@ function ArmManager({
 
   return (
     <Card>
-      <h2 className="font-display text-lg font-bold">Practices</h2>
+      <h2 className="font-display text-lg font-bold">{word.Many}</h2>
       <p className="mt-1 text-sm text-ink/60 dark:text-ink-dark/60">
-        The practices this trial compares. Every trial keeps one control; the rest are
+        The {word.many} this trial compares. Every trial keeps one control; the rest are
         the alternatives being tested against it.
       </p>
       {layoutLocked ? (
         <p className="mt-2 rounded-lg bg-accent/20 p-3 text-sm">
-          Records have been taken against the plot layout, so the set of practices is
-          fixed. Adding or removing one now would change which treatment each plot holds,
+          Records have been taken against the plot layout, so the set of {word.many} is
+          fixed. Adding or removing one now would change which {word.one} each plot holds,
           and re-label every record already taken. Renaming is still fine.
         </p>
       ) : null}
@@ -912,7 +963,7 @@ function ArmManager({
         }}
       >
         <input
-          aria-label="New practice name"
+          aria-label={`New ${word.one} name`}
           placeholder="e.g. Improved handling"
           value={newName}
           onChange={(changeEvent) => setNewName(changeEvent.target.value)}
@@ -920,7 +971,7 @@ function ArmManager({
           className="min-h-11 flex-1 rounded-lg border border-ink/20 bg-surface px-3 dark:border-ink-dark/20 dark:bg-surface-dark"
         />
         <select
-          aria-label="Practice type"
+          aria-label={`${word.One} type`}
           value={newType}
           onChange={(changeEvent) => setNewType(changeEvent.target.value as PracticeArm["type"])}
           className="min-h-11 rounded-lg border border-ink/20 bg-surface px-3 dark:border-ink-dark/20 dark:bg-surface-dark"
@@ -929,7 +980,7 @@ function ArmManager({
           <option value="control">Control</option>
         </select>
         <button type="submit" className="min-h-11 rounded-lg bg-primary px-4 font-medium text-white">
-          Add practice
+          Add {word.one}
         </button>
       </form>
       {error ? (
@@ -951,7 +1002,15 @@ function ArmManager({
  * calibration, weather, cost logs and the rest each have their own cadence
  * and their own place to be filled in.
  */
-function TrialForms({ trial, templates }: { trial: Trial; templates: FormTemplate[] }) {
+function TrialForms({
+  trial,
+  templates,
+  word,
+}: {
+  trial: Trial;
+  templates: FormTemplate[];
+  word: Words;
+}) {
   const growerForms = templates.filter((template) => template.audience === "grower");
   const staffForms = templates.filter((template) => template.audience === "staff");
 
@@ -965,7 +1024,7 @@ function TrialForms({ trial, templates }: { trial: Trial; templates: FormTemplat
           <span className="block text-xs text-ink/60 dark:text-ink-dark/60">
             {template.frequency}
             {template.requiresSite ? " · per site" : " · whole trial"}
-            {template.requiresArm ? " · per practice" : ""}
+            {template.requiresArm ? ` · per ${word.one}` : ""}
           </span>
         ) : null}
       </span>
@@ -1020,11 +1079,13 @@ function EntryLinks({
   sites,
   arms,
   selectedSiteId,
+  word,
 }: {
   trial: Trial;
   sites: Site[];
   arms: PracticeArm[];
   selectedSiteId: string | null;
+  word: Words;
 }) {
   const [copied, setCopied] = useState<string | null>(null);
   const [open, setOpen] = useState(false);
@@ -1061,8 +1122,8 @@ function EntryLinks({
       </div>
       <p className="mt-1 text-sm text-ink/60 dark:text-ink-dark/60">
         {laidOut
-          ? "One link per site. The form asks which plot, and works out the practice from the layout — so there is nothing to match up and nothing to send twice."
-          : "Send the link that matches where the grower is and which practice they are using. Each link fills in the site and practice automatically."}
+          ? `One link per site. The form asks which plot, and works out the ${word.one} from the layout — so there is nothing to match up and nothing to send twice.`
+          : `Send the link that matches where the grower is and which ${word.one} they are using. Each link fills in the site and ${word.one} automatically.`}
       </p>
       {shown.map((site) => (
         <div key={site.siteId} className="mt-3">

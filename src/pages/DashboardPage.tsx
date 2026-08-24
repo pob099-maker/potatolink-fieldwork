@@ -26,7 +26,8 @@ function StartHere() {
     {
       to: "/trials/new",
       role: "Designing a trial",
-      what: "Import a written protocol as a spreadsheet, or build one here: sites, the practices being compared, and the questions asked in the field.",
+      // App-wide, so no one trial's vocabulary applies — kept neutral.
+      what: "Import a written protocol as a spreadsheet, or build one here: sites, what is being compared, and the questions asked in the field.",
     },
     {
       to: "/trials",
