@@ -1,5 +1,6 @@
 import type { ReactNode } from "react";
 import { NavLink, useLocation } from "react-router-dom";
+import agAimsMark from "../assets/agaims-mark.png";
 import { useTheme } from "../contexts/ThemeContext";
 import { useAuth } from "../contexts/AuthContext";
 import { isBackendConfigured } from "../lib/supabase";
@@ -12,37 +13,20 @@ const NAV_ITEMS = [
 ];
 
 /**
- * The AgAims mark: a green field above, the brown bowl of the soil below, and
- * a seedling rising through both.
- *
- * Drawn inline rather than loaded as an image so it stays crisp at any size,
- * needs no network request, and survives both themes. The green is fixed
- * because it is the brand colour; the brown follows currentColor, since a
- * dark background would otherwise swallow it.
- */
-/**
- * The AgAims mark: a green field over brown soil, split by a white furrow, with
- * a seedling breaking the line between them. Drawn rather than linked so it
- * survives offline and needs no asset pipeline — the colours are the brand's
- * own, fixed in both themes the way a logo should be.
+ * The AgAims mark, cropped from the supplied logo. The white is part of the
+ * artwork — the furrow between the mounds and the outline around the leaves —
+ * so it sits on its own light chip rather than on the header, which would eat
+ * it in dark mode.
  */
 function AgAimsMark() {
   return (
-    <svg viewBox="0 0 48 48" role="img" aria-label="AgAims" className="h-9 w-9 shrink-0">
-      <rect width="48" height="48" fill="#ffffff" />
-      {/* The field */}
-      <rect width="48" height="19" fill="#5f9c0a" />
-      {/* The soil, with a furrow cut out of it: widest under the field and
-          closing to a point before the bottom edge, so the soil stays whole */}
-      <rect y="19" width="48" height="29" fill="#6b3f12" />
-      <path d="M17 19c0 10 3 17 7 22 4-5 7-12 7-22Z" fill="#ffffff" />
-      {/* The seedling, breaking the line between field and soil */}
-      <g fill="#ffffff">
-        <path d="M22.4 11h3.2v30h-3.2Z" />
-        <path d="M24 20c0-6.6 4.2-11.5 10-12.1C34 14.5 29.8 19.4 24 20Z" />
-        <path d="M24 23c0-5.5-3.4-9.6-8.2-10.1C15.8 18.4 19.2 22.5 24 23Z" />
-      </g>
-    </svg>
+    <img
+      src={agAimsMark}
+      alt="AgAims"
+      width={36}
+      height={36}
+      className="size-9 shrink-0 rounded-md bg-white"
+    />
   );
 }
 
