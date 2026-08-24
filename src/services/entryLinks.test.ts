@@ -104,3 +104,31 @@ describe("summariseArm", () => {
     expect(empty.throughput).toBeNull();
   });
 });
+
+// A link and a separate code are two things to get right in a paddock, and the
+// code is the one that goes missing — which costs a record.
+describe("a link that carries the entry code", () => {
+  it("adds the code when one is given", () => {
+    const path = buildEntryPath("t", "s", "a", "spud26");
+    expect(path).toContain("code=spud26");
+  });
+
+  it("leaves the link alone when no code is given", () => {
+    // A deployment with the gate switched off should not gain an empty
+    // parameter that looks like a setting somebody forgot to fill in.
+    expect(buildEntryPath("t", "s", "a")).not.toContain("code");
+    expect(buildEntryPath("t", "s", "a", "")).not.toContain("code");
+  });
+
+  it("escapes a code that needs it", () => {
+    expect(buildEntryPath("t", "s", null, "two words&more")).toContain(
+      "code=two+words%26more",
+    );
+  });
+
+  it("still carries the site and practice alongside it", () => {
+    const path = buildEntryPath("t", "site-1", "arm-1", "x");
+    expect(path).toContain("site=site-1");
+    expect(path).toContain("arm=arm-1");
+  });
+});

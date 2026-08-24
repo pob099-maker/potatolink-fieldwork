@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { format } from "date-fns";
 import { Link, useNavigate, useParams, useSearchParams } from "react-router-dom";
 import { useForm } from "react-hook-form";
@@ -48,6 +48,14 @@ export function EntryPage() {
   const { trialId } = useParams<{ trialId: string }>();
   const [searchParams] = useSearchParams();
   const { unlocked, tryUnlock } = useAccess();
+
+  // A link that carries the code opens straight onto the form. The gate still
+  // stands for anyone arriving without one; this only saves the person who was
+  // sent a link from typing something they were also sent.
+  const linkCode = searchParams.get("code");
+  useEffect(() => {
+    if (linkCode && !unlocked) tryUnlock(linkCode);
+  }, [linkCode, unlocked, tryUnlock]);
 
   const trials = useTrials();
   const sites = useSites();

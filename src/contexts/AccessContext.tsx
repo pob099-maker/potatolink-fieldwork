@@ -14,6 +14,14 @@ interface AccessContextValue {
   unlocked: boolean;
   tryUnlock: (code: string) => boolean;
   lock: () => void;
+  /**
+   * The configured code, so an entry link can carry it and open straight onto
+   * the form. Sending somebody a link and a code separately is two things to
+   * get right in a paddock, and the one that goes missing is the code — which
+   * costs a record. It gives nothing away either: the code is a VITE_ value,
+   * so it is already sitting in the JavaScript this page was loaded from.
+   */
+  accessCode: string;
 }
 
 // Falls back to something obviously unset rather than a working-looking code.
@@ -54,7 +62,7 @@ export function AccessProvider({ children }: { children: ReactNode }) {
   }
 
   return (
-    <AccessContext.Provider value={{ unlocked, tryUnlock, lock }}>
+    <AccessContext.Provider value={{ unlocked, tryUnlock, lock, accessCode: ACCESS_CODE }}>
       {children}
     </AccessContext.Provider>
   );

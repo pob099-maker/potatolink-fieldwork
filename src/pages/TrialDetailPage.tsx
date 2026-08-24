@@ -31,11 +31,13 @@ import {
 } from "../components/ui";
 import { SetupChecklist, SiteManager } from "../components/TrialSetup";
 import { PlotLayout } from "../components/PlotLayout";
+import { useAccess } from "../contexts/AccessContext";
 import { VOCABULARY_CHOICES, trialVocabulary, words, type Words } from "../services/vocabulary";
 import type { FormTemplate, MeasurementEvent, Metric, PracticeArm, Site, Trial } from "../types";
 
 export function TrialDetailPage() {
   const { trialId } = useParams<{ trialId: string }>();
+  const { accessCode } = useAccess();
   const trials = useTrials();
   const sites = useSites();
   const arms = useArms();
@@ -176,7 +178,7 @@ export function TrialDetailPage() {
           <Link
             to={`/trials/${trial.trialId}/entry?form=${growerForm.templateId}${
               selectedSiteId ? `&site=${selectedSiteId}` : ""
-            }`}
+            }&code=${encodeURIComponent(accessCode)}`}
             className="min-h-11 rounded-lg bg-primary px-4 py-2.5 font-medium text-white"
           >
             + Add an entry
@@ -1118,6 +1120,7 @@ function EntryLinks({
 }) {
   const [copied, setCopied] = useState<string | null>(null);
   const [open, setOpen] = useState(false);
+  const { accessCode } = useAccess();
 
   const shown = selectedSiteId ? sites.filter((site) => site.siteId === selectedSiteId) : sites;
   // With a layout the plot decides the practice, so a per-practice link would
@@ -1154,6 +1157,10 @@ function EntryLinks({
           ? `One link per site. The form asks which plot, and works out the ${word.one} from the layout — so there is nothing to match up and nothing to send twice.`
           : `Send the link that matches where the grower is and which ${word.one} they are using. Each link fills in the site and ${word.one} automatically.`}
       </p>
+      <p className="mt-1 text-sm text-ink/50 dark:text-ink-dark/50">
+        These links carry the entry code, so whoever you send one to taps it and starts
+        recording. Treat a link like the code itself — anyone who has it can add entries.
+      </p>
       {shown.map((site) => (
         <div key={site.siteId} className="mt-3">
           <h3 className="font-semibold">📍 {site.location}</h3>
@@ -1165,6 +1172,7 @@ function EntryLinks({
                 trial.trialId,
                 site.siteId,
                 arm?.armId ?? null,
+                accessCode,
               );
               const key = `${site.siteId}-${arm?.armId ?? "all"}`;
               return (
