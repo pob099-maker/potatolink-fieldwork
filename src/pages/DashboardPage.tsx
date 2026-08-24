@@ -11,6 +11,64 @@ import {
 import { describeEvent, describeEventScope, eventsForTrial } from "../services/events";
 import { Card, EmptyState, ErrorState, PageTitle, Skeleton, StatusPill, SyncBadge } from "../components/ui";
 
+/**
+ * What this is, and which part of it is yours.
+ *
+ * The dashboard used to open on a sync readout — an operator's question,
+ * answered before anybody had been told what the app was for. Three people use
+ * this: whoever designs a trial, whoever runs it, and whoever records in the
+ * field. Each arrives looking for a different thing, and none of them was
+ * being pointed anywhere.
+ */
+function StartHere() {
+  const routes = [
+    {
+      to: "/trials/new",
+      role: "Designing a trial",
+      what: "Import a written protocol as a spreadsheet, or build one here: sites, the practices being compared, and the questions asked in the field.",
+    },
+    {
+      to: "/trials",
+      role: "Running one",
+      what: "What has been recorded, whether a replicated design is filled in, and the data out as a CSV for analysis.",
+    },
+    {
+      to: "/trials",
+      role: "Recording observations",
+      what: "Open a trial and use its entry links. Four questions a screen, photos and video, and it keeps working with no signal.",
+    },
+  ];
+
+  return (
+    <Card className="border-accent/50">
+      <h2 className="font-display text-lg font-bold">Start here</h2>
+      <p className="mt-1 text-ink/70 dark:text-ink-dark/70">
+        Fieldwork records what happens in a field trial and turns it into data you can
+        analyse. Nothing in it is specific to one crop — trials, sites, practices and
+        questions are all set up in the app.
+      </p>
+      <ul className="mt-3 divide-y divide-ink/10 dark:divide-ink-dark/10">
+        {routes.map((route) => (
+          <li key={route.role} className="py-2">
+            <Link
+              to={route.to}
+              className="font-medium text-primary hover:underline dark:text-primary-soft"
+            >
+              {route.role}
+            </Link>
+            <p className="text-sm text-ink/60 dark:text-ink-dark/60">{route.what}</p>
+          </li>
+        ))}
+      </ul>
+      <p className="mt-3 border-t border-ink/10 pt-3 text-sm text-ink/60 dark:border-ink-dark/10 dark:text-ink-dark/60">
+        <span className="font-medium text-warning">The trials below are examples.</span>{" "}
+        The costs and returns behind Results &amp; economics are stand-in figures, not any
+        grower's real numbers — the page says so above every total.
+      </p>
+    </Card>
+  );
+}
+
 export function DashboardPage() {
   const trials = useTrials();
   const sites = useSites();
@@ -55,6 +113,8 @@ export function DashboardPage() {
           + New trial
         </Link>
       </div>
+
+      <StartHere />
 
       <Card>
         <h2 className="mb-2 font-semibold">Sync status</h2>
