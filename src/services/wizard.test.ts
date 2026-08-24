@@ -69,17 +69,34 @@ describe("the trial it builds", () => {
     expect(yieldField?.isResponse).toBe(true);
   });
 
-  it("keeps the catch-all question last", () => {
-    // A free-text box above a specific question gets used instead of it.
-    const fields = toParsedTrial(filled({ observations: ["notes", "yield", "photo"] })).forms[0].fields;
-    expect(fields[fields.length - 1].label).toBe("Anything worth noting?");
+  it("keeps every question in the order they were arranged", () => {
+    // The order on screen is the order in the paddock, so a catch-all left at
+    // the bottom stays at the bottom.
+    const fields = toParsedTrial(filled()).forms[0].fields;
+    expect(fields.map((f) => f.label)).toEqual([
+      "Harvested weight",
+      "Photo",
+      "Anything worth noting?",
+    ]);
   });
 
-  it("never builds a form with nothing on it", () => {
-    // A trial you cannot record against is not a trial.
-    const fields = toParsedTrial(filled({ observations: [] })).forms[0].fields;
-    expect(fields.length).toBeGreaterThan(0);
-    expect(fields[0].required).toBe(true);
+  it("drops questions left blank rather than creating nameless fields", () => {
+    const answers = filled({
+      questions: [
+        { label: "Tuber count", type: "number", unit: "count", required: true },
+        { label: "   ", type: "text", unit: "", required: false },
+      ],
+    });
+    const fields = toParsedTrial(answers).forms[0].fields;
+    expect(fields.map((f) => f.label)).toEqual(["Tuber count"]);
+  });
+
+  it("carries a custom unit through, so the yield conversion can find it", () => {
+    const answers = filled({
+      questions: [{ label: "Plot harvest", type: "number", unit: "t", required: true }],
+      responseIndex: 0,
+    });
+    expect(toParsedTrial(answers).forms[0].fields[0].unit).toBe("t");
   });
 
   it("invents the machine name so nobody is asked for one", () => {
@@ -97,5 +114,48 @@ describe("meeting the importer's validator", () => {
       const errors = validateTemplate(toParsedTrial(answers)).filter((i) => i.level === "error");
       expect(errors).toEqual([]);
     }
+  });
+});
+
+// The response variable is asked for rather than assumed. A nitrogen trial
+// might be comparing tuber count or specific gravity, and quietly picking the
+// first weight would point the whole statistical summary at the wrong column.
+describe("which number the trial is comparing", () => {
+  const experiment = (over: Partial<WizardAnswers> = {}) =>
+    filled({ kind: "experiment", replicates: 4, ...over });
+
+  it("marks the chosen question, not the first number", () => {
+    const answers = experiment({
+      questions: [
+        { label: "Harvested weight", type: "number", unit: "kg", required: true },
+        { label: "Tuber count", type: "number", unit: "count", required: true },
+      ],
+      responseIndex: 1,
+    });
+    const fields = toParsedTrial(answers).forms[0].fields;
+    expect(fields.find((f) => f.isResponse)?.label).toBe("Tuber count");
+  });
+
+  it("will not accept a photo or a note as the response", () => {
+    // There is no mean of a photograph.
+    const answers = experiment({
+      questions: [{ label: "Photo", type: "photo", unit: "", required: false }],
+      responseIndex: 0,
+    });
+    expect(wizardProblems(answers)).toContain("Choose which number the trial is comparing.");
+  });
+
+  it("does not ask a comparison for one at all", () => {
+    // A grower comparing two practices has no response variable to nominate.
+    const answers = filled({
+      questions: [{ label: "Photo", type: "photo", unit: "", required: false }],
+      responseIndex: null,
+    });
+    expect(wizardProblems(answers)).toEqual([]);
+  });
+
+  it("notices when the chosen question was removed", () => {
+    const answers = experiment({ questions: [], responseIndex: 3 });
+    expect(wizardProblems(answers)).toContain("Choose which number the trial is comparing.");
   });
 });

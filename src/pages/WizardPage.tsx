@@ -4,27 +4,35 @@
 // brief already written and wants the questions out of the way; a grower
 // comparing two ways of doing something has never met the word "replicate".
 //
-// Three things let one screen serve both. The first question forks the rest,
-// so a comparison is never asked about blocking. Every question has a sane
-// answer already filled in, so somebody who knows can read and move on rather
-// than type. And it stops at a trial you can record against, handing over to
-// the trial page for anything more — which leaves the grower finished and the
-// researcher somewhere useful.
+// The steps and the review are the same data seen two ways, which is what lets
+// one screen serve both. A grower walks four short screens. Somebody who
+// already knows jumps to the review, which is every answer on one editable
+// page — so "skip" means skip, rather than landing somewhere read-only with a
+// list of complaints and no way to act on them.
 
 import { useState, type ReactNode } from "react";
 import { useNavigate } from "react-router-dom";
 import { publishParsedTrial } from "../services/templatePublish";
 import {
-  OBSERVATION_CHOICES,
+  QUESTION_TYPES,
+  canBeResponse,
   emptyAnswers,
+  starterQuestions,
   toParsedTrial,
   wizardProblems,
-  type Observation,
+  type Question,
   type WizardAnswers,
 } from "../services/wizard";
 import { Card, ErrorState, PageTitle } from "../components/ui";
+import type { FieldType } from "../types";
 
 const STEPS = ["What kind of trial", "What you're comparing", "Where", "What to record"] as const;
+
+const inputClass =
+  "mt-1 min-h-11 w-full rounded-lg border border-ink/20 bg-surface px-3 py-2 " +
+  "dark:border-ink-dark/20 dark:bg-surface-dark";
+
+export type Setter = <K extends keyof WizardAnswers>(key: K, value: WizardAnswers[K]) => void;
 
 export function WizardPage() {
   const navigate = useNavigate();
@@ -33,7 +41,7 @@ export function WizardPage() {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const set = <K extends keyof WizardAnswers>(key: K, value: WizardAnswers[K]) =>
+  const set: Setter = (key, value) =>
     setAnswers((current) => ({ ...current, [key]: value }));
 
   const problems = wizardProblems(answers);
@@ -57,16 +65,40 @@ export function WizardPage() {
         <PageTitle>Set up a trial</PageTitle>
         <p className="mt-1 text-ink/70 dark:text-ink-dark/70">
           {onReview
-            ? "Everything below will be created. Nothing is saved until you say so."
+            ? "Everything here can be changed. Nothing is saved until you say so."
             : `Step ${step + 1} of ${STEPS.length} — ${STEPS[step]}. Every answer can be changed afterwards.`}
         </p>
       </div>
 
-      {step === 0 ? <KindStep answers={answers} set={set} /> : null}
-      {step === 1 ? <ComparingStep answers={answers} set={set} /> : null}
-      {step === 2 ? <WhereStep answers={answers} set={set} /> : null}
-      {step === 3 ? <RecordStep answers={answers} set={set} /> : null}
-      {onReview ? <Review answers={answers} problems={problems} /> : null}
+      {onReview ? (
+        // Not a summary: the same questions, all at once and all editable, so
+        // whoever skipped the steps can answer them here instead of walking
+        // back through screens they deliberately passed.
+        <>
+          {problems.length > 0 ? (
+            <Card className="border-warning/40">
+              <h2 className="font-semibold text-warning">Still needed</h2>
+              <ul className="mt-1 list-disc space-y-1 pl-5 text-sm text-ink/70 dark:text-ink-dark/70">
+                {problems.map((problem) => (
+                  <li key={problem}>{problem}</li>
+                ))}
+              </ul>
+            </Card>
+          ) : null}
+          <KindStep answers={answers} set={set} />
+          <ComparingStep answers={answers} set={set} />
+          <WhereStep answers={answers} set={set} />
+          <RecordStep answers={answers} set={set} />
+          <Summary answers={answers} />
+        </>
+      ) : (
+        <>
+          {step === 0 ? <KindStep answers={answers} set={set} /> : null}
+          {step === 1 ? <ComparingStep answers={answers} set={set} /> : null}
+          {step === 2 ? <WhereStep answers={answers} set={set} /> : null}
+          {step === 3 ? <RecordStep answers={answers} set={set} /> : null}
+        </>
+      )}
 
       {error ? <ErrorState message={error} /> : null}
 
@@ -98,27 +130,19 @@ export function WizardPage() {
             Next →
           </button>
         )}
-        {/* Somebody who already knows every answer should not have to walk
-            through four screens to give them. */}
         {!onReview ? (
           <button
             type="button"
             onClick={() => setStep(STEPS.length)}
             className="min-h-11 px-3 py-2.5 font-medium text-primary underline dark:text-primary-soft"
           >
-            Skip to review
+            Show everything at once
           </button>
         ) : null}
       </div>
     </div>
   );
 }
-
-type Setter = <K extends keyof WizardAnswers>(key: K, value: WizardAnswers[K]) => void;
-
-const inputClass =
-  "mt-1 min-h-11 w-full rounded-lg border border-ink/20 bg-surface px-3 py-2 " +
-  "dark:border-ink-dark/20 dark:bg-surface-dark";
 
 function KindStep({ answers, set }: { answers: WizardAnswers; set: Setter }) {
   return (
@@ -207,14 +231,30 @@ function ComparingStep({ answers, set }: { answers: WizardAnswers; set: Setter }
       <fieldset className="mt-4">
         <legend className="text-sm font-medium">What are you trying instead?</legend>
         {answers.alternatives.map((entry, index) => (
-          <input
-            key={index}
-            value={entry}
-            aria-label={`${word} ${index + 1}`}
-            onChange={(event) => update(index, event.target.value)}
-            placeholder={index === 0 ? "e.g. Wide spacing" : "Another one"}
-            className={inputClass}
-          />
+          <div key={index} className="flex items-end gap-2">
+            <input
+              value={entry}
+              aria-label={`${word} ${index + 1}`}
+              onChange={(event) => update(index, event.target.value)}
+              placeholder={index === 0 ? "e.g. Wide spacing" : "Another one"}
+              className={inputClass}
+            />
+            {answers.alternatives.length > 1 ? (
+              <button
+                type="button"
+                aria-label={`Remove ${word} ${index + 1}`}
+                onClick={() =>
+                  set(
+                    "alternatives",
+                    answers.alternatives.filter((_, position) => position !== index),
+                  )
+                }
+                className="mt-1 min-h-11 min-w-11 rounded-lg border border-ink/20 dark:border-ink-dark/20"
+              >
+                ✕
+              </button>
+            ) : null}
+          </div>
         ))}
         <button
           type="button"
@@ -259,67 +299,154 @@ function WhereStep({ answers, set }: { answers: WizardAnswers; set: Setter }) {
 }
 
 function RecordStep({ answers, set }: { answers: WizardAnswers; set: Setter }) {
-  const toggle = (choice: Observation) =>
+  const update = (index: number, changes: Partial<Question>) =>
     set(
-      "observations",
-      answers.observations.includes(choice)
-        ? answers.observations.filter((entry) => entry !== choice)
-        : [...answers.observations, choice],
+      "questions",
+      answers.questions.map((question, position) =>
+        position === index ? { ...question, ...changes } : question,
+      ),
     );
+
+  const remove = (index: number) => {
+    set("questions", answers.questions.filter((_, position) => position !== index));
+    if (answers.responseIndex === index) set("responseIndex", null);
+    else if (answers.responseIndex !== null && answers.responseIndex > index) {
+      set("responseIndex", answers.responseIndex - 1);
+    }
+  };
 
   return (
     <Card>
       <h2 className="font-display text-lg font-bold">What gets recorded in the field?</h2>
       <p className="mt-1 text-sm text-ink/60 dark:text-ink-dark/60">
-        A starting point, not the final list — questions can be added, reworded or removed
-        on the trial page afterwards.
+        Rename anything, change what it asks for, or add your own. A trial measuring tuber
+        counts or a disease score says so here rather than settling for the nearest
+        offered word.
       </p>
-      <div className="mt-3 space-y-2">
-        {OBSERVATION_CHOICES.map((choice) => (
-          <label
-            key={choice.value}
-            className={`flex cursor-pointer gap-3 rounded-lg border p-3 ${
-              answers.observations.includes(choice.value)
-                ? "border-primary bg-primary/5"
-                : "border-ink/15 dark:border-ink-dark/15"
-            }`}
+
+      <ul className="mt-3 space-y-3">
+        {answers.questions.map((question, index) => {
+          const wantsUnit =
+            QUESTION_TYPES.find((entry) => entry.value === question.type)?.wantsUnit ?? false;
+          return (
+            <li
+              key={index}
+              className="rounded-lg border border-ink/15 p-3 dark:border-ink-dark/15"
+            >
+              <div className="flex items-end gap-2">
+                <label className="flex-1 text-sm font-medium">
+                  Question
+                  <input
+                    value={question.label}
+                    aria-label={`Question ${index + 1}`}
+                    onChange={(event) => update(index, { label: event.target.value })}
+                    className={inputClass}
+                  />
+                </label>
+                <button
+                  type="button"
+                  aria-label={`Remove question ${index + 1}`}
+                  onClick={() => remove(index)}
+                  className="mt-1 min-h-11 min-w-11 rounded-lg border border-ink/20 dark:border-ink-dark/20"
+                >
+                  ✕
+                </button>
+              </div>
+              <div className="mt-2 grid gap-2 sm:grid-cols-2">
+                <label className="text-sm font-medium">
+                  Answered with
+                  <select
+                    value={question.type}
+                    aria-label={`Answer type for question ${index + 1}`}
+                    onChange={(event) =>
+                      update(index, { type: event.target.value as FieldType })
+                    }
+                    className={inputClass}
+                  >
+                    {QUESTION_TYPES.map((entry) => (
+                      <option key={entry.value} value={entry.value}>
+                        {entry.label}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+                {wantsUnit ? (
+                  <label className="text-sm font-medium">
+                    Unit
+                    <input
+                      value={question.unit}
+                      aria-label={`Unit for question ${index + 1}`}
+                      onChange={(event) => update(index, { unit: event.target.value })}
+                      placeholder="kg, t, cm, count…"
+                      className={inputClass}
+                    />
+                    <span className="mt-1 block text-sm font-normal text-ink/60 dark:text-ink-dark/60">
+                      kg or t lets the app work out tonnes per hectare.
+                    </span>
+                  </label>
+                ) : null}
+              </div>
+              <label className="mt-2 flex items-center gap-2 text-sm">
+                <input
+                  type="checkbox"
+                  checked={question.required}
+                  onChange={(event) => update(index, { required: event.target.checked })}
+                  className="size-4"
+                />
+                Must be answered
+              </label>
+              {answers.kind === "experiment" && canBeResponse(question) ? (
+                <label className="mt-1 flex items-center gap-2 text-sm">
+                  <input
+                    type="radio"
+                    name="response"
+                    checked={answers.responseIndex === index}
+                    onChange={() => set("responseIndex", index)}
+                    className="size-4"
+                  />
+                  This is the number the trial is comparing
+                </label>
+              ) : null}
+            </li>
+          );
+        })}
+      </ul>
+
+      <div className="mt-3 flex flex-wrap gap-2">
+        <button
+          type="button"
+          onClick={() =>
+            set("questions", [
+              ...answers.questions,
+              { label: "", type: "number", unit: "", required: false },
+            ])
+          }
+          className="min-h-11 rounded-lg border border-ink/20 px-4 py-2.5 font-medium dark:border-ink-dark/20"
+        >
+          + Add a question
+        </button>
+        {answers.questions.length === 0 ? (
+          <button
+            type="button"
+            onClick={() => set("questions", starterQuestions())}
+            className="min-h-11 px-3 py-2.5 font-medium text-primary underline dark:text-primary-soft"
           >
-            <input
-              type="checkbox"
-              checked={answers.observations.includes(choice.value)}
-              onChange={() => toggle(choice.value)}
-              className="mt-1 size-4 shrink-0"
-            />
-            <span>
-              <span className="block font-medium">{choice.label}</span>
-              <span className="block text-sm text-ink/60 dark:text-ink-dark/60">
-                {choice.detail}
-              </span>
-            </span>
-          </label>
-        ))}
+            Start from the usual three
+          </button>
+        ) : null}
       </div>
     </Card>
   );
 }
 
-function Review({ answers, problems }: { answers: WizardAnswers; problems: string[] }) {
+/** What will be created, once there is enough to say. */
+function Summary({ answers }: { answers: WizardAnswers }) {
   const parsed = toParsedTrial(answers);
   return (
-    <Card>
-      <h2 className="font-display text-lg font-bold">{parsed.name || "Untitled trial"}</h2>
-      {parsed.objective ? (
-        <p className="mt-1 text-ink/70 dark:text-ink-dark/70">{parsed.objective}</p>
-      ) : null}
-
-      {problems.length > 0 ? (
-        <ul className="mt-3 space-y-1 rounded-lg bg-warning/15 p-3 text-sm text-warning">
-          {problems.map((problem) => (
-            <li key={problem}>{problem}</li>
-          ))}
-        </ul>
-      ) : null}
-
+    <Card className="border-accent/50">
+      <h2 className="font-display text-lg font-bold">
+        {parsed.name || "Untitled trial"}
+      </h2>
       <dl className="mt-3 space-y-3 text-sm">
         <Row label="Design">
           {parsed.design === "replicated"
@@ -327,17 +454,21 @@ function Review({ answers, problems }: { answers: WizardAnswers; problems: strin
             : "Observational comparison"}
         </Row>
         <Row label={parsed.design === "replicated" ? "Treatments" : "Practices"}>
-          {parsed.practices.map((practice) => practice.name).join(", ")}
+          {parsed.practices.map((practice) => practice.name).join(", ") || "—"}
         </Row>
         <Row label="Site">
           {parsed.sites[0]?.location || "—"}
           {parsed.sites[0]?.region ? `, ${parsed.sites[0].region}` : ""}
         </Row>
         <Row label="Asked in the field">
-          {parsed.forms[0].fields.map((entry) => entry.label).join(" · ")}
+          {parsed.forms[0].fields.map((entry) => entry.label).join(" · ") || "—"}
         </Row>
+        {parsed.design === "replicated" ? (
+          <Row label="Comparing">
+            {parsed.forms[0].fields.find((entry) => entry.isResponse)?.label ?? "—"}
+          </Row>
+        ) : null}
       </dl>
-
       <p className="mt-3 text-sm text-ink/50 dark:text-ink-dark/50">
         This gets you a trial you can record against. Plot size, extra sites, more
         questions and the economics all live on the trial page.
