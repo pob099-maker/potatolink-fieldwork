@@ -1,5 +1,5 @@
 import { useMemo, useState, type ReactNode } from "react";
-import { Link, useParams } from "react-router-dom";
+import { Link, useNavigate, useParams } from "react-router-dom";
 import { format } from "date-fns";
 import {
   useArms,
@@ -10,7 +10,7 @@ import {
   useTemplates,
   useTrials,
 } from "../hooks/useCollections";
-import { addArm, removeArm, saveArm } from "../services/store";
+import { addArm, removeArm, removeTrial, saveArm } from "../services/store";
 import { buildEntryUrl, summariseArm } from "../services/entryLinks";
 import { buildTrialCsv, csvFileName, downloadCsv } from "../services/export";
 import { describeEvent, describeEventScope, eventsForTrial } from "../services/events";
@@ -198,6 +198,7 @@ export function TrialDetailPage() {
       <SiteManager trialId={trial.trialId} sites={trialSites} />
       <ArmManager trialId={trial.trialId} arms={trialArms} />
       <TrialForms trial={trial} templates={trialTemplates} />
+      <RemoveTrial trial={trial} />
       </RoleSection>
 
       <RoleSection
@@ -379,6 +380,65 @@ export function TrialDetailPage() {
       )}
       </RoleSection>
     </div>
+  );
+}
+
+/**
+ * Removing a trial created by mistake. Deliberately plain and at the bottom of
+ * the setup section — it is a tidying-up tool, not something to meet on the way
+ * past. The store refuses outright if anything has been recorded, so the worst
+ * this can do is delete an empty shell.
+ */
+function RemoveTrial({ trial }: { trial: Trial }) {
+  const navigate = useNavigate();
+  const [confirming, setConfirming] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  async function onRemove(): Promise<void> {
+    const result = await removeTrial(trial);
+    if (result.success) navigate("/trials");
+    else setError(result.error);
+  }
+
+  return (
+    <Card>
+      <h2 className="font-display text-lg font-bold">Remove this trial</h2>
+      <p className="mt-1 text-sm text-ink/60 dark:text-ink-dark/60">
+        For a trial set up by mistake. Its sites, practices and forms go with it. A trial
+        with anything recorded against it cannot be removed — archive it instead, so the
+        data survives.
+      </p>
+      {error ? <ErrorState message={error} /> : null}
+      {confirming ? (
+        <div className="mt-3 rounded-xl border border-danger/40 bg-danger/5 p-3">
+          <p className="text-sm">Remove “{trial.name}” and everything set up for it?</p>
+          <div className="mt-2 flex flex-wrap gap-2">
+            <button
+              type="button"
+              onClick={() => setConfirming(false)}
+              className="min-h-11 flex-1 rounded-lg border border-ink/20 px-4 py-2.5 font-medium dark:border-ink-dark/20"
+            >
+              Keep it
+            </button>
+            <button
+              type="button"
+              onClick={() => void onRemove()}
+              className="min-h-11 flex-1 rounded-lg bg-danger px-4 py-2.5 font-medium text-white"
+            >
+              Remove the trial
+            </button>
+          </div>
+        </div>
+      ) : (
+        <button
+          type="button"
+          onClick={() => setConfirming(true)}
+          className="mt-3 min-h-11 rounded-lg border border-danger/40 px-4 py-2.5 font-medium text-danger"
+        >
+          Remove this trial
+        </button>
+      )}
+    </Card>
   );
 }
 
