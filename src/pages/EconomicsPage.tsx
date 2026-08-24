@@ -32,7 +32,7 @@ const inputClass =
   "w-full min-h-11 rounded-lg border border-ink/20 bg-surface px-3 py-2 " +
   "focus:border-primary focus:outline-none dark:border-ink-dark/20 dark:bg-surface-dark";
 
-export function ResultsPage() {
+export function EconomicsPage() {
   const { trialId } = useParams<{ trialId: string }>();
   const trials = useTrials();
   const arms = useArms();
@@ -151,8 +151,26 @@ export function ResultsPage() {
   return (
     <div className="space-y-4">
       <div>
-        <PageTitle>Results &amp; economics</PageTitle>
+        <PageTitle>Economics</PageTitle>
         <p className="mt-1 text-ink/60 dark:text-ink-dark/60">{trial.name}</p>
+        {/* Split out from the trial's results, and framed as a tool rather
+            than a finding. The app declines to do the statistics — the
+            response summary says outright that it is not a significance test
+            — so performing the economics as though it were settled was the
+            one place it claimed more than it knows. What the trial measured
+            is on the trial page; everything here is that plus assumptions. */}
+        <p className="mt-2 rounded-lg bg-accent/20 p-3 text-sm">
+          A what-if tool, not a result. Every figure below is what the trial measured
+          combined with the cost and price assumptions further down this page — change an
+          assumption and the answer changes. The trial's own results are on the{" "}
+          <Link
+            to={`/trials/${trial.trialId}`}
+            className="font-medium underline"
+          >
+            trial page
+          </Link>
+          , and the CSV export there is what to hand to whoever does the analysis properly.
+        </p>
       </div>
 
       {trialSites.length > 1 ? (

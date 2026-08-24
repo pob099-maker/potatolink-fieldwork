@@ -13,11 +13,20 @@ import {
 import { addArm, removeArm, removeTrial, saveArm } from "../services/store";
 import { buildEntryUrl, summariseArm } from "../services/entryLinks";
 import { buildTrialCsv, csvFileName, downloadCsv } from "../services/export";
-import { describeEvent, describeEventScope, eventsForTrial } from "../services/events";
+import { describeEvent, describeEventScope, eventsForTrial, tallySync } from "../services/events";
 import { metricDisplay } from "../services/metricValue";
 import { replicationStatus, responseSummary, type Completeness, type TreatmentStat } from "../services/replication";
 import { saveTrial } from "../services/store";
-import { Card, EmptyState, ErrorState, PageTitle, Skeleton, StatusPill, SyncBadge } from "../components/ui";
+import {
+  Card,
+  EmptyState,
+  ErrorState,
+  PageTitle,
+  Skeleton,
+  StatusPill,
+  SyncBadge,
+  SyncTallyLine,
+} from "../components/ui";
 import { SetupChecklist, SiteManager } from "../components/TrialSetup";
 import { PlotLayout } from "../components/PlotLayout";
 import { VOCABULARY_CHOICES, trialVocabulary, words, type Words } from "../services/vocabulary";
@@ -172,10 +181,10 @@ export function TrialDetailPage() {
           </Link>
         ) : null}
         <Link
-          to={`/trials/${trial.trialId}/results`}
+          to={`/trials/${trial.trialId}/economics`}
           className="min-h-11 rounded-lg border border-primary px-4 py-2.5 font-medium text-primary dark:text-primary-soft"
         >
-          Results &amp; economics
+          Economics
         </Link>
         <button
           type="button"
@@ -229,6 +238,16 @@ export function TrialDetailPage() {
         title="Managing and reviewing"
         who="For whoever runs the trial — what has come back, whether the design is filled in, and getting the data out."
       >
+      <Card>
+        <h2 className="font-display text-lg font-bold">This trial's entries</h2>
+        {/* This trial's, not the device's. What is queued on a phone is a
+            property of the phone and is shown on the dashboard; what is
+            outstanding here is what whoever runs this trial needs. */}
+        <p className="mt-1 text-sm">
+          <SyncTallyLine tally={tallySync(trialEvents)} />
+        </p>
+      </Card>
+
       {trial.design === "replicated" ? (
         <ReplicationStatusCard
           word={word}

@@ -194,6 +194,21 @@ async function clearTrouble(): Promise<void> {
   await dbDelete("meta", "syncTrouble");
 }
 
+/**
+ * How many records are waiting to leave this device: queued setup edits plus
+ * entries not yet acknowledged by the cloud.
+ *
+ * This is a property of the device, not of any one trial — the queue and the
+ * connection belong to the phone in somebody's hand. A trial's own count of
+ * outstanding entries is a different question, answered where the trial is.
+ */
+export async function waitingToSync(): Promise<number> {
+  const queued = (await readOutbox()).length;
+  const deletions = (await readDeletions()).length;
+  const events = await dbGetAll<MeasurementEvent>("measurementEvents");
+  return queued + deletions + events.filter((event) => event.syncStatus !== "synced").length;
+}
+
 /** The last unresolved push refusal, or null when everything has gone through. */
 export async function syncTrouble(): Promise<SyncTrouble | null> {
   const stored = await dbGet<{ key: string } & SyncTrouble>("meta", "syncTrouble");
