@@ -22,6 +22,10 @@ const COLUMNS = [
   "practice",
   "practice_type",
   "arm_id",
+  // The plot is what analysis keys on once a trial has a layout — it is the
+  // one column that ties a row back to a square of ground. Empty for a trial
+  // laid out on paper, or none at all.
+  "plot",
   "replicate",
   "form",
   "event_type",
@@ -78,6 +82,7 @@ export function buildTrialCsv(
       armRecord?.name ?? "",
       armRecord?.type ?? "",
       event.armId ?? "",
+      event.plot === null ? "" : String(event.plot),
       event.replicate === null ? "" : String(event.replicate),
       template?.name ?? "",
       event.eventType,

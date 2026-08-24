@@ -1,6 +1,6 @@
 import "fake-indexeddb/auto";
 import { beforeEach, describe, expect, it } from "vitest";
-import { dbGet, dbPut } from "../lib/localdb";
+import { dbDelete, dbGet, dbPut } from "../lib/localdb";
 import {
   addTrial,
   listAssumptions,
@@ -8,6 +8,7 @@ import {
   removeAssumption,
   saveAssumption,
   saveTemplate,
+  syncTrouble,
 } from "./store";
 import type { FormTemplate } from "../types";
 
@@ -116,5 +117,36 @@ describe("assumption deletes (S-4)", () => {
       "deletions",
     );
     expect(queue?.items.map((item) => item.id)).toContain("assumption-1");
+  });
+});
+
+// A queued save is retried forever. That is right for a dropped connection and
+// wrong for a permanent refusal — a missing column, a policy that says no —
+// and until this was recorded the app looked perfectly healthy while the setup
+// records sat on one device.
+describe("a queue that will never drain says so", () => {
+  beforeEach(async () => {
+    await dbPut("meta", { key: "outbox", items: [] });
+    await dbDelete("meta", "syncTrouble");
+  });
+
+  it("reports nothing when there is nothing wrong", async () => {
+    expect(await syncTrouble()).toBeNull();
+  });
+
+  it("reports the count and what the cloud actually said", async () => {
+    await dbPut("meta", {
+      key: "syncTrouble",
+      count: 3,
+      message: 'trials: column "blocking" does not exist',
+      at: "2026-08-24T00:00:00.000Z",
+    });
+    const trouble = await syncTrouble();
+    // The verbatim message matters: it is the only thing that names the cause.
+    expect(trouble).toEqual({
+      count: 3,
+      message: 'trials: column "blocking" does not exist',
+      at: "2026-08-24T00:00:00.000Z",
+    });
   });
 });

@@ -172,6 +172,35 @@ async function dequeueOutbox(collection: CollectionName, id: string): Promise<vo
   );
 }
 
+// A queued save is retried on every sync, which is right for a dropped
+// connection and wrong for a permanent refusal — a column the cloud doesn't
+// have yet, a row-level security policy that says no. Those retry forever, and
+// until now nothing said so: the app looked connected, the dashboard counted
+// entries as synced, and the setup records sat on one device. So the last
+// refusal is kept and shown.
+export interface SyncTrouble {
+  /** How many records are waiting. */
+  count: number;
+  /** What the cloud said, verbatim — it usually names the real problem. */
+  message: string;
+  at: string;
+}
+
+async function recordTrouble(count: number, message: string): Promise<void> {
+  await dbPut("meta", { key: "syncTrouble", count, message, at: nowIso() });
+}
+
+async function clearTrouble(): Promise<void> {
+  await dbDelete("meta", "syncTrouble");
+}
+
+/** The last unresolved push refusal, or null when everything has gone through. */
+export async function syncTrouble(): Promise<SyncTrouble | null> {
+  const stored = await dbGet<{ key: string } & SyncTrouble>("meta", "syncTrouble");
+  if (!stored) return null;
+  return { count: stored.count, message: stored.message, at: stored.at };
+}
+
 // Deletions need their own queue: a deleted record is gone from the local
 // store, so the save outbox — which re-reads the record before pushing — has
 // nothing left to work from. Without this a delete made offline never left
@@ -257,13 +286,17 @@ async function saveRecord<T extends object>(
   const { error } = await supabase.from(table).upsert(toRow(stamped));
   if (error) {
     await enqueueOutbox(collection, id);
+    await recordTrouble((await readOutbox()).length, `${table}: ${error.message}`);
     return {
       success: true,
       data: stamped,
       // Not surfaced as failure: the record is safe locally and queued to retry.
+      // The refusal itself is recorded, so a queue that will never drain shows
+      // up on the dashboard rather than looking like everything is fine.
     };
   }
   await dequeueOutbox(collection, id);
+  if ((await readOutbox()).length === 0) await clearTrouble();
   return { success: true, data: stamped };
 }
 
@@ -283,6 +316,7 @@ async function drainOutbox(): Promise<void> {
   const ordered = [...items].sort(
     (a, b) => OUTBOX_ORDER.indexOf(a.collection) - OUTBOX_ORDER.indexOf(b.collection),
   );
+  let lastError: string | null = null;
   for (const item of ordered) {
     const table = TABLE_NAMES[item.collection];
     if (!table) {
@@ -296,7 +330,18 @@ async function drainOutbox(): Promise<void> {
       continue;
     }
     const { error } = await supabase.from(table).upsert(toRow(record));
-    if (!error) await dequeueOutbox(item.collection, item.id);
+    if (error) {
+      lastError = `${table}: ${error.message}`;
+      continue;
+    }
+    await dequeueOutbox(item.collection, item.id);
+  }
+
+  const left = await readOutbox();
+  if (left.length === 0) {
+    await clearTrouble();
+  } else if (lastError) {
+    await recordTrouble(left.length, lastError);
   }
 }
 
@@ -363,6 +408,8 @@ export interface NewEntryInput {
   siteId: string | null;
   armId: string | null;
   replicate: number | null;
+  /** The numbered plot, when the trial has a generated layout. */
+  plot: number | null;
   eventType: string;
   enteredBy: string;
   deviceType: DataEntryLog["deviceType"];
@@ -468,6 +515,7 @@ export async function addEntry(input: NewEntryInput): Promise<Result<Measurement
     siteId: input.siteId,
     armId: input.armId,
     replicate: input.replicate,
+    plot: input.plot,
     eventDate: createdAt,
     eventType: input.eventType,
     enteredBy: input.enteredBy,
@@ -529,6 +577,8 @@ export async function addTrial(input: {
     status: "draft",
     design: "observational",
     replicates: 0,
+    blocking: "none" as const,
+    layoutSeed: null,
     responseMetric: null,
     createdAt,
     updatedAt: createdAt,

@@ -45,6 +45,7 @@ function event(overrides: Partial<MeasurementEvent>): MeasurementEvent {
     siteId: null,
     armId: null,
     replicate: null,
+    plot: null,
     eventDate: T0,
     eventType: "field_record",
     enteredBy: "",

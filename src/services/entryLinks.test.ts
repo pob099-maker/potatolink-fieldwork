@@ -13,6 +13,7 @@ function event(eventId: string, siteId: string, armId: string): MeasurementEvent
     siteId,
     armId,
     replicate: null,
+    plot: null,
     eventDate: "2026-08-18T00:00:00.000Z",
     eventType: "field_record",
     enteredBy: "grower",

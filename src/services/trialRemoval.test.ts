@@ -51,6 +51,7 @@ describe("removing a trial", () => {
       siteId: site.data.siteId,
       armId: null,
       replicate: null,
+      plot: null,
       eventType: "field_record",
       enteredBy: "",
       deviceType: "mobile",
@@ -73,7 +74,7 @@ describe("removing a trial", () => {
     });
     if (!site.success) throw new Error(site.error);
     const entry = await addEntry({
-      trialId: trial.trialId, siteId: site.data.siteId, armId: null, replicate: null,
+      trialId: trial.trialId, siteId: site.data.siteId, armId: null, replicate: null, plot: null,
       eventType: "field_record", enteredBy: "", deviceType: "mobile",
       values: [{ metricName: "notes", value: "x", unit: "", photoUrl: null }],
     });

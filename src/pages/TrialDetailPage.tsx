@@ -19,6 +19,7 @@ import { replicationStatus, responseSummary, type Completeness, type TreatmentSt
 import { saveTrial } from "../services/store";
 import { Card, EmptyState, ErrorState, PageTitle, Skeleton, StatusPill, SyncBadge } from "../components/ui";
 import { SetupChecklist, SiteManager } from "../components/TrialSetup";
+import { PlotLayout } from "../components/PlotLayout";
 import type { FormTemplate, MeasurementEvent, Metric, PracticeArm, Site, Trial } from "../types";
 
 export function TrialDetailPage() {
@@ -63,6 +64,16 @@ export function TrialDetailPage() {
     () => eventsForTrial(events.data ?? [], trialId ?? "", sites.data ?? [], arms.data ?? []),
     [events.data, trialId, sites.data, arms.data],
   );
+
+  // The layout is derived from the seed, the treatments and the replicate
+  // count — which makes it reproducible, and makes any change to those a
+  // silent re-labelling of every record already keyed to a plot. Once one such
+  // record exists, those three inputs are frozen.
+  const plotRecords = useMemo(
+    () => trialEvents.filter((event) => event.plot !== null).length,
+    [trialEvents],
+  );
+  const layoutLocked = plotRecords > 0;
 
   // null = every site combined; otherwise one site's figures only.
   const [selectedSiteId, setSelectedSiteId] = useState<string | null>(null);
@@ -194,9 +205,10 @@ export function TrialDetailPage() {
         arms={activeArms}
         templates={trialTemplates}
       />
-      <TrialDesignCard trial={trial} templates={trialTemplates} />
+      <TrialDesignCard trial={trial} templates={trialTemplates} layoutLocked={layoutLocked} />
       <SiteManager trialId={trial.trialId} sites={trialSites} />
-      <ArmManager trialId={trial.trialId} arms={trialArms} />
+      <ArmManager trialId={trial.trialId} arms={trialArms} layoutLocked={layoutLocked} />
+      <PlotLayout trial={trial} arms={activeArms} sites={trialSites} recorded={plotRecords} />
       <TrialForms trial={trial} templates={trialTemplates} />
       <RemoveTrial trial={trial} />
       </RoleSection>
@@ -562,9 +574,11 @@ function StaffRecords({
 function TrialDesignCard({
   trial,
   templates,
+  layoutLocked,
 }: {
   trial: Trial;
   templates: FormTemplate[];
+  layoutLocked: boolean;
 }) {
   const numericFields = templates
     .flatMap((template) => template.fields)
@@ -589,10 +603,21 @@ function TrialDesignCard({
           Design
           <select
             value={trial.design}
-            disabled={saving}
-            onChange={(changeEvent) =>
-              void update({ design: changeEvent.target.value as Trial["design"] })
-            }
+            disabled={saving || layoutLocked}
+            onChange={(changeEvent) => {
+              const design = changeEvent.target.value as Trial["design"];
+              // Turning a trial into an experiment is the moment to pick an
+              // arrangement, and the blocked one is what a paddock almost
+              // always wants. Left at "none" it would default to the answer
+              // that suits a glasshouse. Only for a trial not yet laid out —
+              // an existing layout keeps its own arrangement.
+              const starting = design === "replicated" && trial.layoutSeed === null;
+              void update({
+                design,
+                ...(starting ? { blocking: "blocks" as const } : {}),
+                ...(starting && trial.replicates < 2 ? { replicates: 3 } : {}),
+              });
+            }}
             className="mt-1 min-h-11 w-full rounded-lg border border-ink/20 bg-surface px-3 dark:border-ink-dark/20 dark:bg-surface-dark"
           >
             <option value="observational">Observational</option>
@@ -602,12 +627,15 @@ function TrialDesignCard({
         {trial.design === "replicated" ? (
           <>
             <label className="block text-sm font-medium">
-              Replicates per treatment
+              {/* Under blocking these are blocks, and each block holds one plot
+                  of every treatment — same number, but calling it "replicates"
+                  invites somebody to enter the plot count instead. */}
+              {trial.blocking === "blocks" ? "Blocks" : "Replicates per treatment"}
               <input
                 type="number"
                 min={1}
                 value={trial.replicates}
-                disabled={saving}
+                disabled={saving || layoutLocked}
                 onChange={(changeEvent) =>
                   void update({ replicates: Math.max(0, Number(changeEvent.target.value) || 0) })
                 }
@@ -744,7 +772,15 @@ function ResponseSummaryCard({
  * Removing a practice with data archives it (kept but hidden from new entry
  * and the live comparison); one with no data yet is deleted outright.
  */
-function ArmManager({ trialId, arms }: { trialId: string; arms: PracticeArm[] }) {
+function ArmManager({
+  trialId,
+  arms,
+  layoutLocked,
+}: {
+  trialId: string;
+  arms: PracticeArm[];
+  layoutLocked: boolean;
+}) {
   const [newName, setNewName] = useState("");
   const [newType, setNewType] = useState<PracticeArm["type"]>("alternative");
   const [message, setMessage] = useState<string | null>(null);
@@ -795,6 +831,13 @@ function ArmManager({ trialId, arms }: { trialId: string; arms: PracticeArm[] })
         The practices this trial compares. Every trial keeps one control; the rest are
         the alternatives being tested against it.
       </p>
+      {layoutLocked ? (
+        <p className="mt-2 rounded-lg bg-accent/20 p-3 text-sm">
+          Records have been taken against the plot layout, so the set of practices is
+          fixed. Adding or removing one now would change which treatment each plot holds,
+          and re-label every record already taken. Renaming is still fine.
+        </p>
+      ) : null}
 
       <ul className="mt-3 divide-y divide-ink/10 dark:divide-ink-dark/10">
         {active.map((arm, index) => (
@@ -812,7 +855,7 @@ function ArmManager({ trialId, arms }: { trialId: string; arms: PracticeArm[] })
             <button
               type="button"
               aria-label={`Move ${arm.name} up`}
-              disabled={index === 0}
+              disabled={index === 0 || layoutLocked}
               onClick={() => void reorder(index, -1)}
               className="min-h-11 min-w-11 rounded-lg border border-ink/15 disabled:opacity-30 dark:border-ink-dark/15"
             >
@@ -821,20 +864,22 @@ function ArmManager({ trialId, arms }: { trialId: string; arms: PracticeArm[] })
             <button
               type="button"
               aria-label={`Move ${arm.name} down`}
-              disabled={index === active.length - 1}
+              disabled={index === active.length - 1 || layoutLocked}
               onClick={() => void reorder(index, 1)}
               className="min-h-11 min-w-11 rounded-lg border border-ink/15 disabled:opacity-30 dark:border-ink-dark/15"
             >
               ↓
             </button>
-            <button
-              type="button"
-              aria-label={`Remove ${arm.name}`}
-              onClick={() => void onRemove(arm)}
-              className="min-h-11 rounded-lg border border-danger/40 px-3 font-medium text-danger"
-            >
-              Remove
-            </button>
+            {layoutLocked ? null : (
+              <button
+                type="button"
+                aria-label={`Remove ${arm.name}`}
+                onClick={() => void onRemove(arm)}
+                className="min-h-11 rounded-lg border border-danger/40 px-3 font-medium text-danger"
+              >
+                Remove
+              </button>
+            )}
           </li>
         ))}
       </ul>
@@ -860,7 +905,7 @@ function ArmManager({ trialId, arms }: { trialId: string; arms: PracticeArm[] })
       ) : null}
 
       <form
-        className="mt-3 flex flex-wrap gap-2"
+        className={`mt-3 flex-wrap gap-2 ${layoutLocked ? "hidden" : "flex"}`}
         onSubmit={(submitEvent) => {
           submitEvent.preventDefault();
           void onAdd();
@@ -985,6 +1030,10 @@ function EntryLinks({
   const [open, setOpen] = useState(false);
 
   const shown = selectedSiteId ? sites.filter((site) => site.siteId === selectedSiteId) : sites;
+  // With a layout the plot decides the practice, so a per-practice link would
+  // be a choice the grower no longer has to make — and one more link to get
+  // wrong.
+  const laidOut = trial.design === "replicated" && trial.layoutSeed !== null;
 
   if (!open) {
     return (
@@ -1011,25 +1060,26 @@ function EntryLinks({
         </button>
       </div>
       <p className="mt-1 text-sm text-ink/60 dark:text-ink-dark/60">
-        Send the link that matches where the grower is and which practice they are using.
-        Each link fills in the site and practice automatically.
+        {laidOut
+          ? "One link per site. The form asks which plot, and works out the practice from the layout — so there is nothing to match up and nothing to send twice."
+          : "Send the link that matches where the grower is and which practice they are using. Each link fills in the site and practice automatically."}
       </p>
       {shown.map((site) => (
         <div key={site.siteId} className="mt-3">
           <h3 className="font-semibold">📍 {site.location}</h3>
           <ul className="mt-1 divide-y divide-ink/10 text-sm dark:divide-ink-dark/10">
-            {arms.map((arm) => {
+            {(laidOut ? [null] : arms).map((arm) => {
               const url = buildEntryUrl(
                 window.location.origin,
                 import.meta.env.BASE_URL,
                 trial.trialId,
                 site.siteId,
-                arm.armId,
+                arm?.armId ?? null,
               );
-              const key = `${site.siteId}-${arm.armId}`;
+              const key = `${site.siteId}-${arm?.armId ?? "all"}`;
               return (
                 <li key={key} className="flex flex-wrap items-center gap-2 py-2">
-                  <span className="flex-1">{arm.name}</span>
+                  <span className="flex-1">{arm ? arm.name : "Any plot at this site"}</span>
                   <button
                     type="button"
                     onClick={() => {

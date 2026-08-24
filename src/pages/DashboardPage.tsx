@@ -5,6 +5,7 @@ import {
   useArms,
   useEvents,
   useSites,
+  useSyncTrouble,
   useTemplates,
   useTrials,
 } from "../hooks/useCollections";
@@ -79,6 +80,7 @@ export function DashboardPage() {
   const loading = trials.isPending || sites.isPending || events.isPending || arms.isPending;
   const failed = trials.isError || sites.isError || events.isError;
 
+  const trouble = useSyncTrouble();
   const syncSummary = useMemo(() => {
     const summary = { pending: 0, synced: 0, error: 0 };
     for (const event of events.data ?? []) summary[event.syncStatus] += 1;
@@ -133,6 +135,20 @@ export function DashboardPage() {
             </span>
           </div>
         )}
+        {trouble.data ? (
+          <div className="mt-3 rounded-lg bg-warning/15 p-3 text-sm">
+            <p className="font-medium text-warning">
+              {trouble.data.count} setup{" "}
+              {trouble.data.count === 1 ? "record is" : "records are"} waiting to reach the
+              cloud, and the last attempt was refused.
+            </p>
+            <p className="mt-1 text-ink/70 dark:text-ink-dark/70">
+              Nothing has been lost — it is all saved on this device and will go up once
+              the cause is fixed. The cloud said:{" "}
+              <span className="font-mono">{trouble.data.message}</span>
+            </p>
+          </div>
+        ) : null}
       </Card>
 
       <Card>

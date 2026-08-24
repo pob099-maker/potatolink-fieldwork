@@ -7,6 +7,7 @@ import { buildEntryFormSchema } from "../schemas";
 import { addEntry, removeEntry, updateEntry } from "../services/store";
 import { metricFormValue } from "../services/metricValue";
 import { templateForEvent } from "../services/events";
+import { generateLayout, layoutProblem, plotContext } from "../services/layout";
 import { isBackendConfigured } from "../lib/supabase";
 import {
   useArms,
@@ -21,6 +22,7 @@ import { Card, EmptyState, ErrorState, PageTitle, Skeleton, SyncBadge } from "..
 import { EntryField } from "../components/fields";
 import { RecentEntries, SyncReassurance } from "../components/EntryStatus";
 import { useAccess } from "../contexts/AccessContext";
+import type { PlotAssignment } from "../services/layout";
 import type {
   DeviceType,
   FormField,
@@ -100,6 +102,23 @@ export function EntryPage() {
   const [pickedSiteId, setPickedSiteId] = useState<string | null>(null);
   const [pickedArmId, setPickedArmId] = useState<string | null>(null);
   const [pickedReplicate, setPickedReplicate] = useState<number | null>(null);
+  const [pickedPlot, setPickedPlot] = useState<number | null>(null);
+
+  // A trial with a generated layout already knows which treatment is in which
+  // plot. So the field question becomes the one the paddock can answer — the
+  // number on the peg — and the practice and replicate are looked up. Asking
+  // somebody standing in plot 7 which treatment they are looking at is both a
+  // question they may not know the answer to and an invitation to guess.
+  const plots = useMemo(() => {
+    if (!trial || trial.design !== "replicated" || !trial.layoutSeed) return [];
+    const request = {
+      design: trial.blocking === "blocks" ? ("rcb" as const) : ("crd" as const),
+      arms: trialArms,
+      replicates: trial.replicates,
+      seed: trial.layoutSeed,
+    };
+    return layoutProblem(request) ? [] : generateLayout(request);
+  }, [trial, trialArms]);
 
   const onlySite = trialSites.length === 1 ? trialSites[0] : undefined;
   const onlyArm = trialArms.length === 1 ? trialArms[0] : undefined;
@@ -109,11 +128,22 @@ export function EntryPage() {
     : (trialSites.find((candidate) => candidate.siteId === searchParams.get("site")) ??
       trialSites.find((candidate) => candidate.siteId === pickedSiteId) ??
       onlySite);
+  const linkPlot = Number(searchParams.get("plot"));
+  const plotNumber = editing
+    ? editing.plot
+    : Number.isInteger(linkPlot) && linkPlot > 0
+      ? linkPlot
+      : pickedPlot;
+  const assignment = plots.length > 0 && plotNumber ? plotContext(plots, plotNumber) : null;
+
   const arm = editing
     ? trialArms.find((candidate) => candidate.armId === editing.armId)
-    : (trialArms.find((candidate) => candidate.armId === searchParams.get("arm")) ??
+    : (assignment
+        ? trialArms.find((candidate) => candidate.armId === assignment.armId)
+        : undefined) ??
+      trialArms.find((candidate) => candidate.armId === searchParams.get("arm")) ??
       trialArms.find((candidate) => candidate.armId === pickedArmId) ??
-      onlyArm);
+      onlyArm;
   const grower = contacts.data?.find((contact) => contact.role === "grower");
 
   // Staff previewing what a grower sees. The real form renders, but saving is
@@ -122,9 +152,8 @@ export function EntryPage() {
   const linkRep = Number(searchParams.get("rep"));
   const replicate = editing
     ? editing.replicate
-    : Number.isInteger(linkRep) && linkRep > 0
-      ? linkRep
-      : pickedReplicate;
+    : (assignment?.replicate ??
+      (Number.isInteger(linkRep) && linkRep > 0 ? linkRep : pickedReplicate));
 
   if (loading) {
     return (
@@ -179,15 +208,21 @@ export function EntryPage() {
   // Only ask for the context this form actually needs: a cost log belongs to
   // the trial, weather to a site, a harvest run to a site and a practice — and
   // a plot in a replicated trial also belongs to a replicate.
+  // With a layout, the plot replaces both the practice and the replicate
+  // question — one thing to answer instead of two, and neither can be got
+  // wrong. Without one, the old pair stands.
+  const laidOut = plots.length > 0 && template.requiresArm;
   const needsSite = !editing && template.requiresSite && !site;
-  const needsArm = !editing && template.requiresArm && !arm;
+  const needsPlot = !editing && laidOut && plotNumber == null;
+  const needsArm = !editing && !laidOut && template.requiresArm && !arm;
   const needsReplicate =
     !editing &&
+    !laidOut &&
     trial.design === "replicated" &&
     trial.replicates > 0 &&
     template.requiresArm &&
     replicate == null;
-  if (needsSite || needsArm || needsReplicate) {
+  if (needsSite || needsPlot || needsArm || needsReplicate) {
     return (
       <ContextChooser
         preview={preview}
@@ -197,9 +232,11 @@ export function EntryPage() {
         site={needsSite ? undefined : site}
         arm={needsArm ? undefined : arm}
         replicates={needsSite || needsArm ? 0 : trial.replicates}
+        plots={needsSite ? [] : needsPlot ? plots : []}
         onPickSite={setPickedSiteId}
         onPickArm={setPickedArmId}
         onPickReplicate={setPickedReplicate}
+        onPickPlot={setPickedPlot}
       />
     );
   }
@@ -224,7 +261,16 @@ export function EntryPage() {
       metrics={metrics.data ?? []}
       arms={trialArms}
       replicate={trial.design === "replicated" ? replicate : null}
-      replicateLabel={trial.design === "replicated" && replicate ? `Rep ${replicate}` : null}
+      plot={plotNumber}
+      replicateLabel={
+        // With a layout the plot number is what is painted on the peg, so it
+        // is what the person recording recognises; the replicate is bookkeeping.
+        plotNumber
+          ? `Plot ${plotNumber}`
+          : trial.design === "replicated" && replicate
+            ? `Rep ${replicate}`
+            : null
+      }
       enteredBy={grower?.contactId ?? ""}
       fields={[...template.fields].sort((a, b) => a.displayOrder - b.displayOrder)}
     />
@@ -244,9 +290,11 @@ function ContextChooser({
   site,
   arm,
   replicates,
+  plots,
   onPickSite,
   onPickArm,
   onPickReplicate,
+  onPickPlot,
 }: {
   /** Staff looking at what a grower sees. Said on every screen, not just the
       form — somebody who works through two choosers before being told they are
@@ -258,13 +306,21 @@ function ContextChooser({
   site: Site | undefined;
   arm: PracticeArm | undefined;
   replicates: number;
+  plots: PlotAssignment[];
   onPickSite: (siteId: string) => void;
   onPickArm: (armId: string) => void;
   onPickReplicate: (replicate: number) => void;
+  onPickPlot: (plot: number) => void;
 }) {
-  const step = !site ? "site" : !arm ? "arm" : "replicate";
+  const step = !site ? "site" : plots.length > 0 ? "plot" : !arm ? "arm" : "replicate";
   const optionCount =
-    step === "site" ? sites.length : step === "arm" ? arms.length : Math.max(0, replicates);
+    step === "site"
+      ? sites.length
+      : step === "plot"
+        ? plots.length
+        : step === "arm"
+          ? arms.length
+          : Math.max(0, replicates);
 
   // Nothing to choose from means the trial is not set up yet. Say so, rather
   // than showing a question with no answers.
@@ -283,13 +339,21 @@ function ContextChooser({
     );
   }
   const title =
-    step === "site" ? "Where are you today?" : step === "arm" ? "Which practice?" : "Which replicate?";
+    step === "site"
+      ? "Where are you today?"
+      : step === "plot"
+        ? "Which plot?"
+        : step === "arm"
+          ? "Which practice?"
+          : "Which replicate?";
   const help =
     step === "site"
       ? "Choose the site you're recording at so this run is filed correctly."
-      : step === "arm"
-        ? "Choose the practice this run used."
-        : "Choose the replicate (plot) this record is for.";
+      : step === "plot"
+        ? "Tap the number on the peg. The app already knows what is planted there."
+        : step === "arm"
+          ? "Choose the practice this run used."
+          : "Choose the replicate (plot) this record is for.";
   return (
     <Card className="mx-auto max-w-md">
       {preview ? <PreviewBanner /> : null}
@@ -297,8 +361,10 @@ function ContextChooser({
       <p className="mt-1 text-ink/60 dark:text-ink-dark/60">
         {trialName}. {help}
       </p>
-      <div className="mt-4 space-y-2">
-        {step === "site"
+      <div className={step === "plot" ? "mt-4" : "mt-4 space-y-2"}>
+        {step === "plot" ? (
+          <PlotPicker plots={plots} arms={arms} onPick={onPickPlot} />
+        ) : step === "site"
           ? sites.map((candidate) => (
               <button
                 key={candidate.siteId}
@@ -343,6 +409,59 @@ function ContextChooser({
         </p>
       ) : null}
     </Card>
+  );
+}
+
+/**
+ * The plot numbers, grouped the way the field is. Big targets, because this is
+ * tapped with one thumb in a paddock, and grouped by block because that is how
+ * somebody walks it — find the block, then the peg.
+ */
+function PlotPicker({
+  plots,
+  arms,
+  onPick,
+}: {
+  plots: PlotAssignment[];
+  arms: PracticeArm[];
+  onPick: (plot: number) => void;
+}) {
+  const blocks = [...new Set(plots.map((plot) => plot.block))];
+  const armName = (armId: string) => arms.find((arm) => arm.armId === armId)?.name ?? "";
+  const blocked = blocks.length > 1;
+
+  return (
+    <div className="space-y-3">
+      {blocks.map((block) => (
+        <div key={block}>
+          {blocked ? (
+            <h2 className="text-sm font-semibold uppercase tracking-wide text-ink/50 dark:text-ink-dark/50">
+              Block {block}
+            </h2>
+          ) : null}
+          <ul className="mt-1 grid grid-cols-3 gap-2">
+            {plots
+              .filter((plot) => plot.block === block)
+              .map((plot) => (
+                <li key={plot.plotNumber}>
+                  <button
+                    type="button"
+                    onClick={() => onPick(plot.plotNumber)}
+                    className="min-h-16 w-full rounded-lg border border-ink/20 px-2 py-2 hover:border-primary dark:border-ink-dark/20"
+                  >
+                    <span className="block font-display text-xl font-bold">
+                      {plot.plotNumber}
+                    </span>
+                    <span className="block truncate text-xs text-ink/50 dark:text-ink-dark/50">
+                      {armName(plot.armId)}
+                    </span>
+                  </button>
+                </li>
+              ))}
+          </ul>
+        </div>
+      ))}
+    </div>
   );
 }
 
@@ -433,6 +552,7 @@ function EntryForm({
   siteLabel,
   armLabel,
   replicateLabel,
+  plot,
   frequency,
   eventType,
   siteId,
@@ -452,6 +572,7 @@ function EntryForm({
   siteLabel: string | null;
   armLabel: string | null;
   replicateLabel: string | null;
+  plot: number | null;
   frequency: string;
   eventType: string;
   siteId: string | null;
@@ -555,6 +676,7 @@ function EntryForm({
           siteId,
           armId,
           replicate,
+          plot,
           eventType,
           enteredBy,
           deviceType: detectDevice(),

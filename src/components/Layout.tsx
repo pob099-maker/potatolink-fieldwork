@@ -20,23 +20,27 @@ const NAV_ITEMS = [
  * because it is the brand colour; the brown follows currentColor, since a
  * dark background would otherwise swallow it.
  */
+/**
+ * The AgAims mark: a green field over brown soil, split by a white furrow, with
+ * a seedling breaking the line between them. Drawn rather than linked so it
+ * survives offline and needs no asset pipeline — the colours are the brand's
+ * own, fixed in both themes the way a logo should be.
+ */
 function AgAimsMark() {
   return (
-    <svg
-      viewBox="0 0 48 48"
-      role="img"
-      aria-label="AgAims"
-      className="h-9 w-9 shrink-0 text-primary dark:text-primary-soft"
-    >
+    <svg viewBox="0 0 48 48" role="img" aria-label="AgAims" className="h-9 w-9 shrink-0">
+      <rect width="48" height="48" fill="#ffffff" />
       {/* The field */}
-      <rect x="2" y="3" width="44" height="21" fill="#6ba80f" />
-      {/* The soil, a bowl narrowing to a point */}
-      <path d="M2 24 C2 38 11 46 24 46 C37 46 46 38 46 24 Z" fill="currentColor" />
-      {/* The seedling, breaking the line between them */}
+      <rect width="48" height="19" fill="#5f9c0a" />
+      {/* The soil, with a furrow cut out of it: widest under the field and
+          closing to a point before the bottom edge, so the soil stays whole */}
+      <rect y="19" width="48" height="29" fill="#6b3f12" />
+      <path d="M17 19c0 10 3 17 7 22 4-5 7-12 7-22Z" fill="#ffffff" />
+      {/* The seedling, breaking the line between field and soil */}
       <g fill="#ffffff">
-        <rect x="22.8" y="12" width="2.4" height="24" rx="1.2" />
-        <path d="M24 20C24 12.5 28.6 7 35 6.4 35 13.9 30.4 19.4 24 20Z" />
-        <path d="M24 24C24 17.6 20.1 13 14.6 12.5 14.6 18.9 18.5 23.5 24 24Z" />
+        <path d="M22.4 11h3.2v30h-3.2Z" />
+        <path d="M24 20c0-6.6 4.2-11.5 10-12.1C34 14.5 29.8 19.4 24 20Z" />
+        <path d="M24 23c0-5.5-3.4-9.6-8.2-10.1C15.8 18.4 19.2 22.5 24 23Z" />
       </g>
     </svg>
   );

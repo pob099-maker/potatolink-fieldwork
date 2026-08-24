@@ -8,6 +8,7 @@ const BASE = {
   siteId: null,
   armId: null,
   replicate: null,
+  plot: null,
   eventType: "field_record",
   enteredBy: "",
   deviceType: "mobile" as const,
