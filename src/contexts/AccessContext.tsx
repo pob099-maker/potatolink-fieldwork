@@ -16,7 +16,12 @@ interface AccessContextValue {
   lock: () => void;
 }
 
-const ACCESS_CODE = (import.meta.env.VITE_ACCESS_CODE as string | undefined) ?? "spud26";
+// Falls back to something obviously unset rather than a working-looking code.
+// A real value here would be a code committed to a public repository, and a
+// deployment that forgot to set the variable would quietly accept it instead
+// of being visibly unconfigured.
+const ACCESS_CODE =
+  (import.meta.env.VITE_ACCESS_CODE as string | undefined) || "not-configured";
 const ACCESS_KEY = "access";
 
 const AccessContext = createContext<AccessContextValue | null>(null);

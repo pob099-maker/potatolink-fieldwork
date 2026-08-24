@@ -22,10 +22,15 @@ only works if somebody wrote down what *it* is, in order. This is that list.
 
 Two things are worth being precise about.
 
-**The access code is not security.** `VITE_ACCESS_CODE` (currently `spud26`)
-gates the entry form, but like every `VITE_` value it is compiled into the
-bundle and can be read out of it. It stops a passer-by filling in a form by
-accident. It stops nothing else, and it is not part of the lock-down.
+**The access code is not security.** `VITE_ACCESS_CODE` gates the entry form,
+but like every `VITE_` value it is compiled into the bundle and can be read out
+of it by anyone who opens the page source. It stops a passer-by filling in a
+form by accident. It stops nothing else, and it is not part of the lock-down.
+
+The current value lives in the repository variable of that name, and in
+`.env.local` for local work. It is deliberately not written down here: this file
+is in a public repository, and a value pasted into documentation goes stale the
+moment step 5 changes it while still advertising what it used to be.
 
 **Reads stay open even after lock-down.** The entry form has to load its trial,
 site, practice and questions before anyone has signed in to anything. Closing
@@ -84,9 +89,9 @@ deliberately leaves alone.
 
 ### 5. Change the access code
 
-Set `VITE_ACCESS_CODE` to something that is not `spud26` and rebuild. Changing
-it re-locks every device that had the old one, so re-send it with the entry
-links.
+Set the `VITE_ACCESS_CODE` repository variable to a new value and redeploy.
+Changing it re-locks every device that had the old one, so re-send it with the
+entry links. Do not commit the new value anywhere — the repository is public.
 
 ### 6. Check it actually took
 
