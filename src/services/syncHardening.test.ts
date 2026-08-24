@@ -9,6 +9,10 @@ import {
   saveAssumption,
   saveTemplate,
   syncTrouble,
+  addEntry,
+  listEvents,
+  listTrials,
+  reconcileForTest,
 } from "./store";
 import type { FormTemplate } from "../types";
 
@@ -148,5 +152,68 @@ describe("a queue that will never drain says so", () => {
       message: 'trials: column "blocking" does not exist',
       at: "2026-08-24T00:00:00.000Z",
     });
+  });
+});
+
+// A pull only ever wrote, so a trial deleted on one device stayed on every
+// other one forever — with nothing queued, so the app reported that everything
+// had reached the cloud. Editing one of those ghosts pushed it back.
+describe("records deleted elsewhere", () => {
+  beforeEach(async () => {
+    await dbPut("meta", { key: "outbox", items: [] });
+    await dbPut("meta", { key: "deletions", items: [] });
+  });
+
+  it("drops a synced local record the cloud no longer has", async () => {
+    const trial = await addTrial({ projectId: "p1", name: "Deleted elsewhere", objective: "" });
+    expect(trial.success).toBe(true);
+    if (!trial.success) return;
+
+    const removed = await reconcileForTest("trials", []);
+    expect(removed).toBeGreaterThan(0);
+    const left = await listTrials();
+    expect(left.some((t) => t.trialId === trial.data.trialId)).toBe(false);
+  });
+
+  it("keeps a record that is still queued to be sent", async () => {
+    const trial = await addTrial({ projectId: "p1", name: "Not sent yet", objective: "" });
+    if (!trial.success) return;
+    await dbPut("meta", {
+      key: "outbox",
+      items: [{ collection: "trials", id: trial.data.trialId }],
+    });
+
+    await reconcileForTest("trials", []);
+    const left = await listTrials();
+    // Queued means the cloud has not seen it, not that it was deleted.
+    expect(left.some((t) => t.trialId === trial.data.trialId)).toBe(true);
+  });
+
+  it("keeps a record the cloud still has", async () => {
+    const trial = await addTrial({ projectId: "p1", name: "Still there", objective: "" });
+    if (!trial.success) return;
+    const all = await listTrials();
+    const mine = all.find((t) => t.trialId === trial.data.trialId);
+
+    await reconcileForTest("trials", [mine as unknown as Record<string, unknown>]);
+    const left = await listTrials();
+    expect(left.some((t) => t.trialId === trial.data.trialId)).toBe(true);
+  });
+
+  it("never drops an entry the grower has not managed to send", async () => {
+    // The one thing worse than a stale trial is losing paddock data that only
+    // exists on the phone it was recorded on.
+    const trial = await addTrial({ projectId: "p1", name: "Has entries", objective: "" });
+    if (!trial.success) return;
+    const entry = await addEntry({
+      trialId: trial.data.trialId, siteId: null, armId: null, replicate: null, plot: null,
+      eventType: "field_record", enteredBy: "", deviceType: "mobile",
+      values: [{ metricName: "notes", value: "unsent", unit: "", photoUrl: null }],
+    });
+    expect(entry.success).toBe(true);
+
+    await reconcileForTest("measurementEvents", []);
+    const events = await listEvents();
+    expect(events.some((e) => e.trialId === trial.data.trialId)).toBe(true);
   });
 });

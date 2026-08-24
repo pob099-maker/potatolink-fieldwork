@@ -680,11 +680,14 @@ export async function addSite(input: {
   region?: string;
   soilType?: string;
 }): Promise<Result<Site>> {
+  // Postgres requires a host on every site, but "whoever exists first" is the
+  // wrong answer: a brand-new trial's paddocks were being recorded as hosted by
+  // an unrelated trial's grower, silently and wrongly. Only reuse a contact
+  // already attached to this trial; otherwise start a clearly unfinished one.
   const contacts = await listContacts();
-  let contact =
-    contacts.find((candidate) => candidate.role === "cooperator") ??
-    contacts.find((candidate) => candidate.role === "grower") ??
-    contacts[0];
+  const trialSites = (await listSites()).filter((site) => site.trialId === input.trialId);
+  const trialContactIds = new Set(trialSites.map((site) => site.contactId));
+  let contact = contacts.find((candidate) => trialContactIds.has(candidate.contactId));
 
   if (!contact) {
     contact = {
@@ -1079,12 +1082,66 @@ export async function pullFromCloud(): Promise<Result<string>> {
   });
 }
 
+/**
+ * Drop local records the cloud no longer has.
+ *
+ * A pull only ever wrote, so a trial deleted on one device stayed on every
+ * other one forever — and because nothing was queued, the app cheerfully
+ * reported that everything had reached the cloud. Worse, editing one of those
+ * ghosts pushed it straight back, resurrecting a deleted trial.
+ *
+ * Three things are deliberately kept, because "not in the cloud" does not
+ * always mean "deleted":
+ *   - anything queued in the outbox, which has not been sent yet;
+ *   - anything queued for deletion, which is on its way out anyway;
+ *   - any record still marked pending, which is a local entry the cloud has
+ *     not seen. That is the grower's unsent paddock data, and losing it would
+ *     be far worse than showing a stale trial.
+ */
+async function reconcileDeleted(
+  collection: CollectionName,
+  cloudRows: Record<string, unknown>[],
+  outbox: OutboxItem[],
+  deletions: DeletionItem[],
+): Promise<number> {
+  const cloudIds = new Set(cloudRows.map((row) => recordId(collection, row)));
+  const queued = new Set(
+    outbox.filter((item) => item.collection === collection).map((item) => item.id),
+  );
+  for (const item of deletions) {
+    if (item.collection === collection) queued.add(item.id);
+  }
+
+  const local = await dbGetAll<Record<string, unknown>>(collection);
+  const gone = local.filter((row) => {
+    const id = recordId(collection, row);
+    if (cloudIds.has(id) || queued.has(id)) return false;
+    return row.syncStatus === undefined || row.syncStatus === "synced";
+  });
+
+  for (const row of gone) await dbDelete(collection, recordId(collection, row));
+  return gone.length;
+}
+
+/**
+ * Test seam for reconcileDeleted. The real call sits inside a pull, which
+ * needs a live Supabase; the rule about what survives is the part worth
+ * pinning down, and it is pure enough to exercise on its own.
+ */
+export async function reconcileForTest(
+  collection: CollectionName,
+  cloudRows: Record<string, unknown>[],
+): Promise<number> {
+  return reconcileDeleted(collection, cloudRows, await readOutbox(), await readDeletions());
+}
+
 async function pullTables(): Promise<Result<string>> {
   if (!supabase) return { success: false, error: "No Supabase project configured." };
   {
     const outbox = await readOutbox();
     const deletions = await readDeletions();
     let pulled = 0;
+    let removed = 0;
     let unreadable = 0;
     for (const spec of PULL_SPECS) {
       const { data, error } = await supabase.from(spec.table).select("*");
@@ -1135,15 +1192,25 @@ async function pullTables(): Promise<Result<string>> {
 
       await dbPutMany(toWrite.map((value) => ({ collection: spec.collection, value })));
       pulled += toWrite.length;
+      removed += await reconcileDeleted(spec.collection, valid, outbox, deletions);
     }
-    if (pulled > 0) notify();
+    if (pulled > 0 || removed > 0) notify();
+    const goneNote =
+      removed > 0
+        ? ` ${removed} record${removed === 1 ? "" : "s"} deleted elsewhere ${
+            removed === 1 ? "was" : "were"
+          } removed from this device.`
+        : "";
     const warning =
       unreadable > 0
         ? ` ${unreadable} row${unreadable === 1 ? "" : "s"} could not be read and ${
             unreadable === 1 ? "was" : "were"
           } skipped — check the browser console.`
         : "";
-    return { success: true, data: `Refreshed ${pulled} records from the cloud.${warning}` };
+    return {
+      success: true,
+      data: `Refreshed ${pulled} records from the cloud.${goneNote}${warning}`,
+    };
   }
 }
 

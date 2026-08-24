@@ -3,7 +3,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import type { Control, FieldValues, Path, UseFormRegister } from "react-hook-form";
-import { Controller } from "react-hook-form";
+import { Controller, useWatch } from "react-hook-form";
 import { getMedia, isMediaPointer, mediaIdFromPointer, saveMedia } from "../services/media";
 import type { FormField, MediaKind } from "../types";
 
@@ -266,6 +266,8 @@ function MediaInput<T extends FieldValues>({
   fieldId: string;
   kind: MediaKind;
 }) {
+  const watched = useWatch({ control, name });
+  const pointer = typeof watched === "string" ? watched : null;
   const fileRef = useRef<HTMLInputElement>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [captureError, setCaptureError] = useState<string | null>(null);
@@ -275,6 +277,20 @@ function MediaInput<T extends FieldValues>({
       if (previewUrl) URL.revokeObjectURL(previewUrl);
     };
   }, [previewUrl]);
+
+  // Restoring a saved photo used to happen in the middle of render, which set
+  // state during a render pass and minted a fresh object URL on every one of
+  // them until it settled. An effect keyed on the pointer runs once.
+  useEffect(() => {
+    if (!pointer || !isMediaPointer(pointer)) return;
+    let live = true;
+    void getMedia(mediaIdFromPointer(pointer)).then((item) => {
+      if (live && item) setPreviewUrl(URL.createObjectURL(item.blob));
+    });
+    return () => {
+      live = false;
+    };
+  }, [pointer]);
 
   return (
     <Controller
@@ -293,14 +309,8 @@ function MediaInput<T extends FieldValues>({
           setPreviewUrl(URL.createObjectURL(file));
         }
 
-        async function restorePreview(pointer: string): Promise<void> {
-          const item = await getMedia(mediaIdFromPointer(pointer));
-          if (item) setPreviewUrl(URL.createObjectURL(item.blob));
-        }
-
         const hasMedia =
           typeof controller.value === "string" && isMediaPointer(controller.value);
-        if (hasMedia && !previewUrl) void restorePreview(controller.value as string);
 
         return (
           <div>

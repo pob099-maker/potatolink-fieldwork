@@ -80,6 +80,14 @@ export function RecentEntries({
           const arm = arms.find((candidate) => candidate.armId === event.armId);
           return (
             <li key={event.eventId} className="flex flex-wrap items-baseline gap-2 py-2">
+              {/* Plot first, because "have I already done plot 7?" is the
+                  question somebody walking a trial is actually asking, and the
+                  list could not answer it. */}
+              {event.plot !== null ? (
+                <span className="rounded-full bg-primary/10 px-2 py-0.5 font-semibold text-primary dark:bg-primary-soft/20 dark:text-primary-soft">
+                  Plot {event.plot}
+                </span>
+              ) : null}
               <span className="font-medium">
                 {format(new Date(event.eventDate), "d MMM, h:mm a")}
               </span>

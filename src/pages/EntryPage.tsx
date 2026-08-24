@@ -114,21 +114,45 @@ export function EntryPage() {
   const [pickedReplicate, setPickedReplicate] = useState<number | null>(null);
   const [pickedPlot, setPickedPlot] = useState<number | null>(null);
 
+  // After saving, the next record is almost always a different plot — the
+  // recorder has walked to it. Keeping the last choice meant tapping "Add
+  // another entry" silently filed the next observation against the plot you
+  // just left. Only what was picked here is cleared; a site or practice named
+  // by the link still holds, because that is the link's job.
+  function clearPickedContext(): void {
+    setPickedPlot(null);
+    setPickedArmId(null);
+    setPickedReplicate(null);
+  }
+
   // A trial with a generated layout already knows which treatment is in which
   // plot. So the field question becomes the one the paddock can answer — the
   // number on the peg — and the practice and replicate are looked up. Asking
   // somebody standing in plot 7 which treatment they are looking at is both a
   // question they may not know the answer to and an invitation to guess.
+  //
+  // Site-specific: each site is arranged independently, so the plots offered
+  // have to be the ones at the site this entry belongs to. Before this the
+  // same nine numbers were offered everywhere, and the second site's records
+  // were filed against the first site's arrangement.
+  const contextSiteId =
+    (editing ? editing.siteId : null) ??
+    searchParams.get("site") ??
+    pickedSiteId ??
+    (trialSites.length === 1 ? trialSites[0].siteId : null);
+
   const plots = useMemo(() => {
     if (!trial || trial.design !== "replicated" || !trial.layoutSeed) return [];
+    if (!contextSiteId) return [];
     const request = {
       design: trial.blocking === "blocks" ? ("rcb" as const) : ("crd" as const),
       arms: trialArms,
       replicates: trial.replicates,
       seed: trial.layoutSeed,
+      siteId: contextSiteId,
     };
     return layoutProblem(request) ? [] : generateLayout(request);
-  }, [trial, trialArms]);
+  }, [trial, trialArms, contextSiteId]);
 
   const onlySite = trialSites.length === 1 ? trialSites[0] : undefined;
   const onlyArm = trialArms.length === 1 ? trialArms[0] : undefined;
@@ -236,6 +260,7 @@ export function EntryPage() {
     return (
       <ContextChooser
         preview={preview}
+        trialId={trial.trialId}
         trialName={trial.name}
         sites={trialSites}
         arms={trialArms}
@@ -258,6 +283,7 @@ export function EntryPage() {
       // never leaves the previous record's answers behind.
       key={editing?.eventId ?? "new"}
       editing={editing}
+      onAddAnother={clearPickedContext}
       formName={template.name}
       trialId={trial.trialId}
       trialName={trial.name}
@@ -295,6 +321,7 @@ export function EntryPage() {
  */
 function ContextChooser({
   preview,
+  trialId,
   trialName,
   sites,
   arms,
@@ -312,6 +339,7 @@ function ContextChooser({
       form — somebody who works through two choosers before being told they are
       in a preview has been misled by omission. */
   preview: boolean;
+  trialId: string;
   trialName: string;
   sites: Site[];
   arms: PracticeArm[];
@@ -348,6 +376,14 @@ function ContextChooser({
           {trialName} still needs {missing} before anything can be recorded. A staff member
           can add it on the trial page.
         </p>
+        {/* Staff reach this by tapping "Fill in" from the trial page, and the
+            screen used to leave them with nowhere to go but the back button. */}
+        <Link
+          to={`/trials/${trialId}`}
+          className="mt-4 inline-block min-h-11 rounded-lg border border-primary px-4 py-2.5 font-medium text-primary dark:text-primary-soft"
+        >
+          Go to the trial page
+        </Link>
       </Card>
     );
   }
@@ -566,6 +602,7 @@ function EntryForm({
   armLabel,
   replicateLabel,
   plot,
+  onAddAnother,
   frequency,
   eventType,
   siteId,
@@ -586,6 +623,8 @@ function EntryForm({
   armLabel: string | null;
   replicateLabel: string | null;
   plot: number | null;
+  /** Clears the plot/practice chosen on this device, ready for the next one. */
+  onAddAnother: () => void;
   frequency: string;
   eventType: string;
   siteId: string | null;
@@ -738,6 +777,7 @@ function EntryForm({
                   reset();
                   setScreenIndex(0);
                   setSaved(null);
+                  onAddAnother();
                 }
           }
           className="mt-4 min-h-11 w-full rounded-lg bg-primary px-4 py-2.5 font-medium text-white"

@@ -10,6 +10,12 @@ export interface PlotCell {
   armId: string;
   replicate: number;
   recorded: boolean;
+  /**
+   * The plot number this cell stands for, once the trial has a layout. R2 is
+   * bookkeeping; the peg in the paddock says 7, and that is what somebody
+   * chasing a missing record has to tell the person walking the trial.
+   */
+  plotNumber: number | null;
 }
 
 export interface SiteCompleteness {
@@ -36,6 +42,8 @@ export function replicationStatus(
   arms: PracticeArm[],
   sites: Site[],
   events: MeasurementEvent[],
+  /** Plot numbers per site, from the layout, keyed `siteId:armId:replicate`. */
+  plotNumbers: Map<string, number> = new Map(),
 ): Completeness {
   const active = arms.filter((arm) => !arm.archived).sort((a, b) => a.sortOrder - b.sortOrder);
   const reps = Math.max(0, trial.replicates);
@@ -51,7 +59,12 @@ export function replicationStatus(
             event.replicate === rep,
         );
         if (has) recorded += 1;
-        cells.push({ armId: arm.armId, replicate: rep, recorded: has });
+        cells.push({
+          armId: arm.armId,
+          replicate: rep,
+          recorded: has,
+          plotNumber: plotNumbers.get(`${site.siteId}:${arm.armId}:${rep}`) ?? null,
+        });
       }
     }
     return {

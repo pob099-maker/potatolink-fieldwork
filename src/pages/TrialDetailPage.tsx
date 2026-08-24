@@ -31,6 +31,7 @@ import {
 } from "../components/ui";
 import { SetupChecklist, SiteManager } from "../components/TrialSetup";
 import { PlotLayout } from "../components/PlotLayout";
+import { generateLayout, layoutProblem } from "../services/layout";
 import { useAccess } from "../contexts/AccessContext";
 import { VOCABULARY_CHOICES, trialVocabulary, words, type Words } from "../services/vocabulary";
 import type { FormTemplate, MeasurementEvent, Metric, PracticeArm, Site, Trial } from "../types";
@@ -88,6 +89,26 @@ export function TrialDetailPage() {
     [trialEvents],
   );
   const layoutLocked = plotRecords > 0;
+  // The same per-site layouts the plot map draws, indexed so the replication
+  // grid can name the plot rather than the replicate.
+  const plotNumbers = useMemo(() => {
+    const index = new Map<string, number>();
+    if (!trial || trial.design !== "replicated" || !trial.layoutSeed) return index;
+    for (const site of trialSites) {
+      const request = {
+        design: trial.blocking === "blocks" ? ("rcb" as const) : ("crd" as const),
+        arms: activeArms,
+        replicates: trial.replicates,
+        seed: trial.layoutSeed,
+        siteId: site.siteId,
+      };
+      if (layoutProblem(request)) continue;
+      for (const plot of generateLayout(request)) {
+        index.set(`${site.siteId}:${plot.armId}:${plot.replicate}`, plot.plotNumber);
+      }
+    }
+    return index;
+  }, [trial, trialSites, activeArms]);
   // What this trial calls the things it compares. One word, used everywhere on
   // the page, so a researcher and a grower each read their own vocabulary
   // rather than both meeting a compromise neither uses.
@@ -200,6 +221,12 @@ export function TrialDetailPage() {
         </Link>
         <button
           type="button"
+          disabled={trialEvents.length === 0}
+          title={
+            trialEvents.length === 0
+              ? "Nothing recorded yet — the file would hold only column headings."
+              : undefined
+          }
           onClick={() =>
             downloadCsv(
               csvFileName(trial),
@@ -214,7 +241,7 @@ export function TrialDetailPage() {
               ),
             )
           }
-          className="min-h-11 rounded-lg border border-ink/20 px-4 py-2.5 font-medium dark:border-ink-dark/20"
+          className="min-h-11 rounded-lg border border-ink/20 px-4 py-2.5 font-medium disabled:opacity-40 dark:border-ink-dark/20"
         >
           Export data (CSV)
         </button>
@@ -262,8 +289,7 @@ export function TrialDetailPage() {
 
       {trial.design === "replicated" ? (
         <ReplicationStatusCard
-          word={word}
-          status={replicationStatus(trial, activeArms, trialSites, trialEvents)}
+          status={replicationStatus(trial, activeArms, trialSites, trialEvents, plotNumbers)}
           arms={activeArms}
         />
       ) : null}
@@ -746,11 +772,9 @@ function TrialDesignCard({
 function ReplicationStatusCard({
   status,
   arms,
-  word,
 }: {
   status: Completeness;
   arms: PracticeArm[];
-  word: Words;
 }) {
   const complete = status.recorded === status.expected && status.expected > 0;
   return (
@@ -766,7 +790,8 @@ function ReplicationStatusCard({
         </span>
       </div>
       <p className="mt-1 text-sm text-ink/60 dark:text-ink-dark/60">
-        Each cell is a plot ({word.one} × replicate). Amber cells are outstanding.
+        One cell per plot. Amber cells are outstanding — the number is the plot to
+        walk to.
       </p>
       {status.sites.map((site) => (
         <div key={site.siteId} className="mt-3 overflow-x-auto">
@@ -788,9 +813,17 @@ function ReplicationStatusCard({
                             ? "bg-success/20 text-success"
                             : "bg-warning/15 text-warning"
                         }`}
-                        title={`Replicate ${cell.replicate}`}
+                        title={
+                          cell.plotNumber === null
+                            ? `Replicate ${cell.replicate}`
+                            : `Plot ${cell.plotNumber} · replicate ${cell.replicate}`
+                        }
                       >
-                        {cell.recorded ? "✓" : `R${cell.replicate}`}
+                        {cell.recorded
+                          ? "✓"
+                          : cell.plotNumber === null
+                            ? `R${cell.replicate}`
+                            : cell.plotNumber}
                       </td>
                     ))}
                 </tr>
