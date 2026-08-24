@@ -14,6 +14,8 @@ const trial: Trial = {
   replicates: 3,
   blocking: "none" as const,
   vocabulary: null,
+  plotLengthM: null,
+  plotWidthM: null,
   layoutSeed: null,
   responseMetric: "yield",
   createdAt: T0,
@@ -84,5 +86,107 @@ describe("responseSummary", () => {
   it("returns null mean for a treatment with no response data", () => {
     const stats = responseSummary(trial, arms, [], []);
     expect(stats.every((s) => s.mean === null && s.n === 0)).toBe(true);
+  });
+});
+
+// Strip trials are sampled at several points along each strip, and the same
+// plot often gets assessed more than once. Counting each reading as an
+// independent observation inflates n and shrinks the standard error by roughly
+// the square root of the number of samples — the app would be displaying a
+// confidence nobody earned.
+describe("sub-samples within a plot", () => {
+  const trialWithResponse: Trial = { ...trial, design: "replicated", responseMetric: "yield" };
+
+  function plotEvent(id: string, armId: string, plot: number): MeasurementEvent {
+    return {
+      eventId: id, trialId: "trial-1", siteId: "s1", armId, replicate: plot, plot,
+      eventDate: T0, eventType: "field_record", enteredBy: "", syncStatus: "synced", createdAt: T0,
+    };
+  }
+
+  it("averages several readings in one plot into one observation", () => {
+    // Three readings down one strip, one down another. Two plots, not four.
+    const events = [
+      plotEvent("a1", "std", 1), plotEvent("a2", "std", 1), plotEvent("a3", "std", 1),
+      plotEvent("b1", "std", 2),
+    ];
+    const metrics = [
+      yieldMetric("a1", 10), yieldMetric("a2", 20), yieldMetric("a3", 30),
+      yieldMetric("b1", 40),
+    ];
+    const [std] = responseSummary(trialWithResponse, [arm("std", 0)], events, metrics);
+    expect(std.n).toBe(2);
+    expect(std.records).toBe(4);
+    // Plot 1 averages to 20, plot 2 is 40, so the mean of plots is 30 — not
+    // the 25 you get by averaging all four readings equally.
+    expect(std.mean).toBe(30);
+  });
+
+  it("reports a standard error across plots, not across readings", () => {
+    const events = [
+      plotEvent("a1", "std", 1), plotEvent("a2", "std", 1),
+      plotEvent("b1", "std", 2), plotEvent("b2", "std", 2),
+    ];
+    // Wildly different within each plot, identical between them: the plots
+    // agree perfectly, so the error between plots is zero however noisy the
+    // sampling was.
+    const metrics = [
+      yieldMetric("a1", 0), yieldMetric("a2", 100),
+      yieldMetric("b1", 0), yieldMetric("b2", 100),
+    ];
+    const [std] = responseSummary(trialWithResponse, [arm("std", 0)], events, metrics);
+    expect(std.n).toBe(2);
+    expect(std.mean).toBe(50);
+    expect(std.se).toBe(0);
+  });
+
+  it("keeps plots at different sites apart", () => {
+    // Plot 1 at two sites is two pieces of ground, not one sampled twice.
+    const atOtherSite = { ...plotEvent("c1", "std", 1), siteId: "s2" };
+    const events = [plotEvent("a1", "std", 1), atOtherSite];
+    const metrics = [yieldMetric("a1", 10), yieldMetric("c1", 30)];
+    const [std] = responseSummary(trialWithResponse, [arm("std", 0)], events, metrics);
+    expect(std.n).toBe(2);
+    expect(std.mean).toBe(20);
+  });
+
+  it("leaves records alone when there is no plot or replicate to collapse to", () => {
+    // An observational comparison: five harvest runs really are five
+    // observations, and averaging them away would throw the trial out.
+    const runs = [1, 2, 3].map((i) => ({
+      ...plotEvent(`r${i}`, "std", 0), plot: null, replicate: null,
+    }));
+    const metrics = runs.map((run, i) => yieldMetric(run.eventId, (i + 1) * 10));
+    const [std] = responseSummary(
+      { ...trial, responseMetric: "yield" },
+      [arm("std", 0)], runs, metrics,
+    );
+    expect(std.n).toBe(3);
+    expect(std.records).toBe(3);
+  });
+});
+
+// A trial can gain a layout part-way through. Records taken before it carry a
+// replicate and no plot; records after carry both. They are the same ground,
+// and keying the unit on the plot number would split one plot's readings into
+// two separate "observations".
+describe("records from before and after a layout", () => {
+  it("treats them as the same plot", () => {
+    const base = {
+      trialId: "trial-1", siteId: "s1", armId: "std", eventDate: T0,
+      eventType: "field_record", enteredBy: "", syncStatus: "synced" as const, createdAt: T0,
+    };
+    const events: MeasurementEvent[] = [
+      { ...base, eventId: "before", replicate: 2, plot: null },
+      { ...base, eventId: "after", replicate: 2, plot: 5 },
+    ];
+    const metrics = [yieldMetric("before", 40), yieldMetric("after", 60)];
+    const [std] = responseSummary(
+      { ...trial, design: "replicated", responseMetric: "yield" },
+      [arm("std", 0)], events, metrics,
+    );
+    expect(std.n).toBe(1);
+    expect(std.records).toBe(2);
+    expect(std.mean).toBe(50);
   });
 });

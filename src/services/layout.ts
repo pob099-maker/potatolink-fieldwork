@@ -56,6 +56,16 @@ export interface LayoutRequest {
   /** Blocks for RCB; replicates for CRD. */
   replicates: number;
   seed: string;
+  /**
+   * The site being laid out. A trial at two sites is two separate pieces of
+   * ground, and giving them one arrangement is worse than it sounds: the same
+   * treatment lands in the same relative position at both, so a gradient the
+   * two share is confounded identically at each — exactly what blocking is for.
+   *
+   * Mixing the site into the seed gives every site its own independent
+   * randomisation while one written-down seed still reproduces all of them.
+   */
+  siteId?: string;
 }
 
 export interface LayoutProblem {
@@ -125,7 +135,10 @@ export function layoutProblem(request: LayoutRequest): LayoutProblem | null {
 export function generateLayout(request: LayoutRequest): PlotAssignment[] {
   if (layoutProblem(request)) return [];
 
-  const random = makeRandom(request.seed);
+  // Per site, so two sites are randomised independently from one stored seed.
+  const random = makeRandom(
+    request.siteId ? `${request.seed}::${request.siteId}` : request.seed,
+  );
   const armIds = [...request.arms]
     .sort((a, b) => a.sortOrder - b.sortOrder)
     .map((arm) => arm.armId);
@@ -180,8 +193,8 @@ export function isBalanced(plots: PlotAssignment[]): boolean {
  */
 export function buildFieldbookCsv(
   trialName: string,
-  siteName: string,
-  plots: PlotAssignment[],
+  /** One entry per site, in the order they should be walked. */
+  sections: Array<{ siteName: string; plots: PlotAssignment[] }>,
   arms: PracticeArm[],
   seed: string,
 ): string {
@@ -190,15 +203,20 @@ export function buildFieldbookCsv(
     /[",\n\r]/.test(value) ? `"${value.replace(/"/g, '""')}"` : value;
 
   const header = ["trial", "site", "plot", "block", "position_in_block", "treatment", "seed"];
-  const rows = plots.map((plot) => [
-    trialName,
-    siteName,
-    String(plot.plotNumber),
-    String(plot.block),
-    String(plot.positionInBlock),
-    armName(plot.armId),
-    seed,
-  ]);
+  // Every row carries its site. It used to be blanked whenever a trial had
+  // more than one, which produced a printed fieldbook that did not say which
+  // paddock it described.
+  const rows = sections.flatMap((section) =>
+    section.plots.map((plot) => [
+      trialName,
+      section.siteName,
+      String(plot.plotNumber),
+      String(plot.block),
+      String(plot.positionInBlock),
+      armName(plot.armId),
+      seed,
+    ]),
+  );
   return [header, ...rows].map((row) => row.map(cell).join(",")).join("\r\n");
 }
 

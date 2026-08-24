@@ -61,6 +61,8 @@ const trial: Trial = {
   replicates: 0,
   blocking: "none" as const,
   vocabulary: null,
+  plotLengthM: null,
+  plotWidthM: null,
   layoutSeed: null,
   responseMetric: null,
   createdAt: T0,
@@ -295,6 +297,8 @@ const heTrial: Trial = {
   replicates: 0,
   blocking: "none" as const,
   vocabulary: null,
+  plotLengthM: null,
+  plotWidthM: null,
   layoutSeed: null,
   responseMetric: null,
   createdAt: T0,
@@ -772,6 +776,8 @@ const ntTrial: Trial = {
   replicates: 3,
   blocking: "none" as const,
   vocabulary: null,
+  plotLengthM: null,
+  plotWidthM: null,
   layoutSeed: null,
   responseMetric: "yield",
   createdAt: T0,
@@ -897,7 +903,11 @@ const ntEvents: MeasurementEvent[] = ntPlots.map(([armId, rep], index) => ({
   eventDate: T0,
   eventType: "field_record",
   enteredBy: NT.contact,
-  syncStatus: "synced",
+  // "pending", not "synced": these have never been near the cloud. Claiming
+  // otherwise made the dashboard report demo entries as safely uploaded when
+  // no copy existed anywhere but this browser — and once a pull learned to
+  // remove records the cloud no longer has, that lie deleted them.
+  syncStatus: "pending",
   createdAt: T0,
 }));
 
@@ -949,7 +959,9 @@ export function seedPresence(trialIds: string[]): SeedPresence {
   return seeded === trialIds.length ? "all" : "some";
 }
 
-const SEED_FLAG = { key: "seeded", version: 11 };
+// Bumped so devices that already ran v11 re-seed, restoring the demonstration
+// entries the sync-status lie caused to be removed.
+const SEED_FLAG = { key: "seeded", version: 12 };
 
 export async function seedIfNeeded(): Promise<void> {
   const existing = await dbGet<{ key: string; version: number }>("meta", "seeded");

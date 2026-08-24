@@ -14,6 +14,7 @@ import {
   listTemplates,
   listTrials,
   subscribeStore,
+  deviceRole,
   syncTrouble,
   waitingToSync,
 } from "../services/store";
@@ -51,3 +52,5 @@ export const useSyncTrouble = () =>
   useQuery({ queryKey: ["syncTrouble"], queryFn: syncTrouble });
 export const useWaitingToSync = () =>
   useQuery({ queryKey: ["waitingToSync"], queryFn: waitingToSync });
+export const useDeviceRole = () =>
+  useQuery({ queryKey: ["deviceRole"], queryFn: deviceRole });

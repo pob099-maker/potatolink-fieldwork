@@ -12,8 +12,16 @@ export function buildEntryPath(
   trialId: string,
   siteId: string,
   armId: string | null,
+  /**
+   * The shared entry code. Carried in the link so the person who was sent it
+   * taps once and starts recording — a link and a separate code are two things
+   * to get right in a paddock, and the code is the one that goes missing.
+   * Nothing is given away: it is a VITE_ value, already in the bundle.
+   */
+  code?: string,
 ): string {
   const query = new URLSearchParams(armId ? { site: siteId, arm: armId } : { site: siteId });
+  if (code) query.set("code", code);
   return `/trials/${trialId}/entry?${query.toString()}`;
 }
 
@@ -30,8 +38,9 @@ export function buildEntryUrl(
   trialId: string,
   siteId: string,
   armId: string | null,
+  code?: string,
 ): string {
-  const path = buildEntryPath(trialId, siteId, armId);
+  const path = buildEntryPath(trialId, siteId, armId, code);
   const prefix = base.endsWith("/") ? base : `${base}/`;
   return `${origin}${prefix}#${path}`;
 }

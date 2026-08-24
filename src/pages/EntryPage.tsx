@@ -1,7 +1,7 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { format } from "date-fns";
 import { Link, useNavigate, useParams, useSearchParams } from "react-router-dom";
-import { useForm } from "react-hook-form";
+import { useForm, useWatch } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { buildEntryFormSchema } from "../schemas";
 import { addEntry, removeEntry, updateEntry } from "../services/store";
@@ -9,6 +9,7 @@ import { metricFormValue } from "../services/metricValue";
 import { templateForEvent } from "../services/events";
 import { generateLayout, layoutProblem, plotContext } from "../services/layout";
 import { words } from "../services/vocabulary";
+import { areaAsM2, areaUnit, plotAreaM2 as plotArea } from "../services/plotArea";
 import { isBackendConfigured } from "../lib/supabase";
 import {
   useArms,
@@ -48,6 +49,14 @@ export function EntryPage() {
   const { trialId } = useParams<{ trialId: string }>();
   const [searchParams] = useSearchParams();
   const { unlocked, tryUnlock } = useAccess();
+
+  // A link that carries the code opens straight onto the form. The gate still
+  // stands for anyone arriving without one; this only saves the person who was
+  // sent a link from typing something they were also sent.
+  const linkCode = searchParams.get("code");
+  useEffect(() => {
+    if (linkCode && !unlocked) tryUnlock(linkCode);
+  }, [linkCode, unlocked, tryUnlock]);
 
   const trials = useTrials();
   const sites = useSites();
@@ -106,21 +115,45 @@ export function EntryPage() {
   const [pickedReplicate, setPickedReplicate] = useState<number | null>(null);
   const [pickedPlot, setPickedPlot] = useState<number | null>(null);
 
+  // After saving, the next record is almost always a different plot — the
+  // recorder has walked to it. Keeping the last choice meant tapping "Add
+  // another entry" silently filed the next observation against the plot you
+  // just left. Only what was picked here is cleared; a site or practice named
+  // by the link still holds, because that is the link's job.
+  function clearPickedContext(): void {
+    setPickedPlot(null);
+    setPickedArmId(null);
+    setPickedReplicate(null);
+  }
+
   // A trial with a generated layout already knows which treatment is in which
   // plot. So the field question becomes the one the paddock can answer — the
   // number on the peg — and the practice and replicate are looked up. Asking
   // somebody standing in plot 7 which treatment they are looking at is both a
   // question they may not know the answer to and an invitation to guess.
+  //
+  // Site-specific: each site is arranged independently, so the plots offered
+  // have to be the ones at the site this entry belongs to. Before this the
+  // same nine numbers were offered everywhere, and the second site's records
+  // were filed against the first site's arrangement.
+  const contextSiteId =
+    (editing ? editing.siteId : null) ??
+    searchParams.get("site") ??
+    pickedSiteId ??
+    (trialSites.length === 1 ? trialSites[0].siteId : null);
+
   const plots = useMemo(() => {
     if (!trial || trial.design !== "replicated" || !trial.layoutSeed) return [];
+    if (!contextSiteId) return [];
     const request = {
       design: trial.blocking === "blocks" ? ("rcb" as const) : ("crd" as const),
       arms: trialArms,
       replicates: trial.replicates,
       seed: trial.layoutSeed,
+      siteId: contextSiteId,
     };
     return layoutProblem(request) ? [] : generateLayout(request);
-  }, [trial, trialArms]);
+  }, [trial, trialArms, contextSiteId]);
 
   const onlySite = trialSites.length === 1 ? trialSites[0] : undefined;
   const onlyArm = trialArms.length === 1 ? trialArms[0] : undefined;
@@ -228,6 +261,7 @@ export function EntryPage() {
     return (
       <ContextChooser
         preview={preview}
+        trialId={trial.trialId}
         trialName={trial.name}
         sites={trialSites}
         arms={trialArms}
@@ -250,6 +284,8 @@ export function EntryPage() {
       // never leaves the previous record's answers behind.
       key={editing?.eventId ?? "new"}
       editing={editing}
+      onAddAnother={clearPickedContext}
+      onChangePlot={laidOut && pickedPlot !== null ? () => setPickedPlot(null) : null}
       formName={template.name}
       trialId={trial.trialId}
       trialName={trial.name}
@@ -265,6 +301,8 @@ export function EntryPage() {
       arms={trialArms}
       replicate={trial.design === "replicated" ? replicate : null}
       plot={plotNumber}
+      plotAreaM2={plotArea(trial)}
+      plotWidthM={trial.plotWidthM}
       replicateLabel={
         // With a layout the plot number is what is painted on the peg, so it
         // is what the person recording recognises; the replicate is bookkeeping.
@@ -287,6 +325,7 @@ export function EntryPage() {
  */
 function ContextChooser({
   preview,
+  trialId,
   trialName,
   sites,
   arms,
@@ -304,6 +343,7 @@ function ContextChooser({
       form — somebody who works through two choosers before being told they are
       in a preview has been misled by omission. */
   preview: boolean;
+  trialId: string;
   trialName: string;
   sites: Site[];
   arms: PracticeArm[];
@@ -340,6 +380,14 @@ function ContextChooser({
           {trialName} still needs {missing} before anything can be recorded. A staff member
           can add it on the trial page.
         </p>
+        {/* Staff reach this by tapping "Fill in" from the trial page, and the
+            screen used to leave them with nowhere to go but the back button. */}
+        <Link
+          to={`/trials/${trialId}`}
+          className="mt-4 inline-block min-h-11 rounded-lg border border-primary px-4 py-2.5 font-medium text-primary dark:text-primary-soft"
+        >
+          Go to the trial page
+        </Link>
       </Card>
     );
   }
@@ -413,6 +461,14 @@ function ContextChooser({
           Recording at {site.location}.
         </p>
       ) : null}
+      {/* A tap on the wrong site or plot used to be unrecoverable without a
+          reload — the only way on was forward. */}
+      <Link
+        to="/record"
+        className="mt-3 inline-block min-h-11 py-2.5 font-medium text-primary underline dark:text-primary-soft"
+      >
+        ← Somewhere else
+      </Link>
     </Card>
   );
 }
@@ -558,6 +614,10 @@ function EntryForm({
   armLabel,
   replicateLabel,
   plot,
+  plotAreaM2,
+  plotWidthM,
+  onAddAnother,
+  onChangePlot,
   frequency,
   eventType,
   siteId,
@@ -578,6 +638,14 @@ function EntryForm({
   armLabel: string | null;
   replicateLabel: string | null;
   plot: number | null;
+  /** The plot's area, so a weight can be shown as a yield while it is typed. */
+  plotAreaM2: number | null;
+  /** The working width, so a strip's area can be measured by walking it. */
+  plotWidthM: number | null;
+  /** Clears the plot/practice chosen on this device, ready for the next one. */
+  onAddAnother: () => void;
+  /** Back to the plot picker, when a plot was chosen here rather than by link. */
+  onChangePlot: (() => void) | null;
   frequency: string;
   eventType: string;
   siteId: string | null;
@@ -628,12 +696,29 @@ function EntryForm({
     handleSubmit,
     trigger,
     reset,
+    setValue,
     formState: { errors, isSubmitting },
   } = useForm<Record<string, unknown>>({
     resolver: zodResolver(schema),
     mode: "onTouched",
     defaultValues,
   });
+
+  // The area a weight should be divided by: whatever this record measured,
+  // falling back to the trial's plot size. Without this the live conversion
+  // stayed blank on exactly the trials that need it — a strip carries its own
+  // area because strips differ in length, so the trial has no single one.
+  const areaFieldNames = fields
+    .filter((candidate) => candidate.type === "number" && areaUnit(candidate.unit))
+    .map((candidate) => candidate.fieldName);
+  const areaValues = useWatch({ control, name: areaFieldNames });
+  const measuredArea = areaFieldNames.reduce<number | null>((found, name, index) => {
+    if (found !== null) return found;
+    const unit = areaUnit(fields.find((f) => f.fieldName === name)?.unit ?? null);
+    const raw = Number((areaValues as unknown[])[index]);
+    return unit && Number.isFinite(raw) && raw > 0 ? areaAsM2(raw, unit) : null;
+  }, null);
+  const effectiveArea = measuredArea ?? plotAreaM2;
 
   const currentScreen = screens[screenIndex];
   const isLastScreen = screenIndex === screens.length - 1;
@@ -730,6 +815,7 @@ function EntryForm({
                   reset();
                   setScreenIndex(0);
                   setSaved(null);
+                  onAddAnother();
                 }
           }
           className="mt-4 min-h-11 w-full rounded-lg bg-primary px-4 py-2.5 font-medium text-white"
@@ -782,6 +868,18 @@ function EntryForm({
               {replicateLabel}
             </span>
           ) : null}
+          {/* Tapping the wrong plot happens, and every way out of this screen
+              used to be forwards. Only offered when the plot was chosen here —
+              a link that named it is the link's answer, not a mistake. */}
+          {onChangePlot ? (
+            <button
+              type="button"
+              onClick={onChangePlot}
+              className="min-h-11 py-2.5 font-medium text-primary underline dark:text-primary-soft"
+            >
+              Change plot
+            </button>
+          ) : null}
         </p>
       </div>
 
@@ -803,6 +901,9 @@ function EntryForm({
             register={register}
             control={control}
             error={errors[field.fieldName]?.message as string | undefined}
+            plotAreaM2={effectiveArea}
+            plotWidthM={plotWidthM}
+            setValue={setValue}
           />
         ))}
       </Card>

@@ -6,6 +6,11 @@
 // off a list, with nothing saying which treatment belonged where — so nothing
 // stopped a slope or a drainage line lining up with a treatment and being read
 // as its effect.
+//
+// One arrangement per site. A trial at two sites is two separate pieces of
+// ground; giving them a single layout meant the same treatment landed in the
+// same relative position at both, so anything the two paddocks share was
+// confounded identically at each.
 
 import { useMemo, useState } from "react";
 import { saveTrial } from "../services/store";
@@ -16,6 +21,7 @@ import {
   layoutProblem,
   newSeed,
   type LayoutDesign,
+  type PlotAssignment,
 } from "../services/layout";
 import { downloadCsv } from "../services/export";
 import { words } from "../services/vocabulary";
@@ -57,12 +63,28 @@ export function PlotLayout({
   const [busy, setBusy] = useState(false);
   const word = words(trial);
 
+  const design: LayoutDesign = trial.blocking === "blocks" ? "rcb" : "crd";
+  const seed = trial.layoutSeed ?? "";
+  const problem = layoutProblem({ design, arms, replicates: trial.replicates, seed });
+
+  // One arrangement per site, each independently randomised from the one seed.
+  const sections = useMemo(
+    () =>
+      sites.map((site) => ({
+        site,
+        plots: generateLayout({
+          design,
+          arms,
+          replicates: trial.replicates,
+          seed,
+          siteId: site.siteId,
+        }),
+      })),
+    [sites, design, arms, trial.replicates, seed],
+  );
+
   // Only a replicated trial has plots to arrange.
   if (trial.design !== "replicated") return null;
-
-  const design: LayoutDesign = trial.blocking === "blocks" ? "rcb" : "crd";
-  const request = { design, arms, replicates: trial.replicates, seed: trial.layoutSeed ?? "" };
-  const problem = layoutProblem(request);
 
   async function setBlocking(next: "none" | "blocks"): Promise<void> {
     setBusy(true);
@@ -81,6 +103,8 @@ export function PlotLayout({
     setBusy(false);
     if (!result.success) setError(result.error);
   }
+
+  const totalPlots = sections.reduce((sum, section) => sum + section.plots.length, 0);
 
   return (
     <Card>
@@ -112,13 +136,83 @@ export function PlotLayout({
 
       {error ? <ErrorState message={error} /> : null}
 
-      {problem ? (
+      {sites.length === 0 ? (
+        <p className="mt-3 rounded-lg bg-warning/15 p-3 text-sm text-warning">
+          Add a site first. Plots belong to a piece of ground, and each site is arranged
+          separately.
+        </p>
+      ) : problem ? (
         <p className="mt-3 rounded-lg bg-warning/15 p-3 text-sm text-warning">
           {problem.message}
         </p>
       ) : trial.layoutSeed ? (
-        <LayoutMap trial={trial} arms={arms} sites={sites} design={design} busy={busy}
-          recorded={recorded} word={word} onRegenerate={() => void generate()} />
+        <div className="mt-3 space-y-4">
+          <p className="text-sm text-ink/60 dark:text-ink-dark/60">
+            {totalPlots} plots across {sites.length}{" "}
+            {sites.length === 1 ? "site" : "sites"} · seed{" "}
+            <span className="font-mono font-medium">{seed}</span>
+          </p>
+
+          {sections.map((section) => (
+            <SiteLayout
+              key={section.site.siteId}
+              siteName={section.site.location}
+              showSiteName={sites.length > 1}
+              plots={section.plots}
+              arms={arms}
+              design={design}
+              word={word}
+            />
+          ))}
+
+          <div className="flex flex-wrap gap-2">
+            <button
+              type="button"
+              onClick={() =>
+                downloadCsv(
+                  `fieldbook-${seed}.csv`,
+                  buildFieldbookCsv(
+                    trial.name,
+                    sections.map((section) => ({
+                      siteName: section.site.location,
+                      plots: section.plots,
+                    })),
+                    arms,
+                    seed,
+                  ),
+                )
+              }
+              className="min-h-11 rounded-lg border border-primary px-4 py-2.5 font-medium text-primary dark:text-primary-soft"
+            >
+              Download the fieldbook (CSV)
+            </button>
+            {recorded === 0 ? (
+              <button
+                type="button"
+                onClick={() => void generate()}
+                disabled={busy}
+                className="min-h-11 rounded-lg border border-ink/20 px-4 py-2.5 font-medium disabled:opacity-60 dark:border-ink-dark/20"
+              >
+                Randomise again
+              </button>
+            ) : null}
+          </div>
+
+          {recorded > 0 ? (
+            <p className="rounded-lg bg-accent/20 p-3 text-sm">
+              This layout is locked. {recorded}{" "}
+              {recorded === 1 ? "record has" : "records have"} been taken against it, and
+              re-randomising now would quietly re-label every one of them.
+            </p>
+          ) : null}
+
+          <p className="text-sm text-ink/50 dark:text-ink-dark/50">
+            Keep the seed with the trial records. It regenerates every site's arrangement
+            exactly, which is how anyone else can check it. Randomising again, or changing
+            the {word.many}, produces a different one — so do it before the trial goes in,
+            not after.
+          </p>
+        </div>
       ) : (
         <div className="mt-3">
           <button
@@ -170,55 +264,43 @@ function DesignChoice({
   );
 }
 
-function LayoutMap({
-  trial,
+function SiteLayout({
+  siteName,
+  showSiteName,
+  plots,
   arms,
-  sites,
   design,
-  busy,
-  recorded,
   word,
-  onRegenerate,
 }: {
-  trial: Trial;
+  siteName: string;
+  showSiteName: boolean;
+  plots: PlotAssignment[];
   arms: PracticeArm[];
-  sites: Site[];
   design: LayoutDesign;
-  busy: boolean;
   word: Words;
-  recorded: number;
-  onRegenerate: () => void;
 }) {
-  const seed = trial.layoutSeed ?? "";
-  const plots = useMemo(
-    () => generateLayout({ design, arms, replicates: trial.replicates, seed }),
-    [design, arms, trial.replicates, seed],
-  );
-
-  const tint = (armId: string) => {
-    const index = [...arms].sort((a, b) => a.sortOrder - b.sortOrder)
-      .findIndex((arm) => arm.armId === armId);
-    return TREATMENT_TINTS[index % TREATMENT_TINTS.length];
-  };
+  const sorted = [...arms].sort((a, b) => a.sortOrder - b.sortOrder);
+  const tint = (armId: string) =>
+    TREATMENT_TINTS[
+      Math.max(0, sorted.findIndex((arm) => arm.armId === armId)) % TREATMENT_TINTS.length
+    ];
   const armName = (armId: string) => arms.find((arm) => arm.armId === armId)?.name ?? armId;
   const blocks = [...new Set(plots.map((plot) => plot.block))];
 
   return (
-    <div className="mt-3 space-y-3">
-      <p className="text-sm text-ink/60 dark:text-ink-dark/60">
-        {plots.length} plots · {design === "rcb" ? `${blocks.length} blocks` : "one pool"} ·
-        seed <span className="font-mono font-medium">{seed}</span>
-        {isBalanced(plots) ? null : (
-          <span className="text-warning"> · {word.many} are not evenly replicated</span>
-        )}
-      </p>
-
+    <div>
+      {showSiteName ? (
+        <h3 className="font-semibold">📍 {siteName}</h3>
+      ) : null}
+      {isBalanced(plots) ? null : (
+        <p className="text-sm text-warning">{word.many} are not evenly replicated here.</p>
+      )}
       {blocks.map((block) => (
-        <div key={block}>
+        <div key={block} className="mt-1">
           {design === "rcb" ? (
-            <h3 className="text-sm font-semibold uppercase tracking-wide text-ink/50 dark:text-ink-dark/50">
+            <h4 className="text-sm font-semibold uppercase tracking-wide text-ink/50 dark:text-ink-dark/50">
               Block {block}
-            </h3>
+            </h4>
           ) : null}
           <ol className="mt-1 flex flex-wrap gap-2">
             {plots
@@ -235,51 +317,6 @@ function LayoutMap({
           </ol>
         </div>
       ))}
-
-      <div className="flex flex-wrap gap-2">
-        <button
-          type="button"
-          onClick={() =>
-            downloadCsv(
-              `fieldbook-${seed}.csv`,
-              buildFieldbookCsv(
-                trial.name,
-                sites.length === 1 ? sites[0].location : "",
-                plots,
-                arms,
-                seed,
-              ),
-            )
-          }
-          className="min-h-11 rounded-lg border border-primary px-4 py-2.5 font-medium text-primary dark:text-primary-soft"
-        >
-          Download the fieldbook (CSV)
-        </button>
-        {recorded === 0 ? (
-          <button
-            type="button"
-            onClick={onRegenerate}
-            disabled={busy}
-            className="min-h-11 rounded-lg border border-ink/20 px-4 py-2.5 font-medium disabled:opacity-60 dark:border-ink-dark/20"
-          >
-            Randomise again
-          </button>
-        ) : null}
-      </div>
-
-      {recorded > 0 ? (
-        <p className="rounded-lg bg-accent/20 p-3 text-sm">
-          This layout is locked. {recorded}{" "}
-          {recorded === 1 ? "record has" : "records have"} been taken against it, and
-          re-randomising now would quietly re-label every one of them.
-        </p>
-      ) : null}
-
-      <p className="text-sm text-ink/50 dark:text-ink-dark/50">
-        Keep the seed with the trial records. It regenerates this exact layout, which is
-        how anyone else can check it. Randomising again, or changing the {word.many},
-        produces a different arrangement — so do it before the trial goes in, not after.
-      </p>
     </div>
   );
 }

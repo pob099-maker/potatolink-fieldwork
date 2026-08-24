@@ -91,7 +91,7 @@ export function EconomicsPage() {
   if (!control || trialArms.length < 2) {
     return (
       <EmptyState
-        message="Economics needs a control arm and at least one alternative configured."
+        message="Economics needs a control and at least one alternative to compare it against."
         action={{ label: "Back to trial", to: `/trials/${trial.trialId}` }}
       />
     );

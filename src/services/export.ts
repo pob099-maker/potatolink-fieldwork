@@ -12,7 +12,8 @@ import type {
   Trial,
 } from "../types";
 import { eventsForTrial, templateForEvent } from "./events";
-import { metricExportValues } from "./metricValue";
+import { metricExportValues, metricNumber } from "./metricValue";
+import { areaAsM2, areaUnit, plotAreaM2, weightUnit, yieldPerHectare } from "./plotArea";
 
 const COLUMNS = [
   "trial",
@@ -39,6 +40,12 @@ const COLUMNS = [
   "metric_name",
   "value",
   "unit",
+  // Derived, not recorded: a weight becomes a yield once the plot's area is
+  // known. Written into the file so whoever analyses it does not repeat the
+  // conversion — and so a wrong plot size shows up as a wrong column rather
+  // than as arithmetic somebody did once in a paddock and nobody can check.
+  "yield_t_ha",
+  "plot_area_m2",
   "media_url",
 ] as const;
 
@@ -95,20 +102,37 @@ export function buildTrialCsv(
       event.syncStatus,
     ];
     const eventMetrics = metrics.filter((metric) => metric.eventId === event.eventId);
+    // A record can carry its own area — strips across an irregular field or a
+    // pivot circle are different lengths — and that beats the trial's default.
+    const recordArea = eventMetrics.reduce<number | null>((found, metric) => {
+      if (found !== null) return found;
+      const unit = areaUnit(metric.unit);
+      const value = metricNumber(metric.value);
+      return unit && value !== null ? areaAsM2(value, unit) : null;
+    }, null);
+    const area = recordArea ?? plotAreaM2(trial);
+
     if (eventMetrics.length === 0) {
-      rows.push([...base, "", "", "", ""]);
+      rows.push([...base, "", "", "", "", "", ""]);
       continue;
     }
     for (const metric of eventMetrics) {
       const isUrl = typeof metric.photoUrl === "string" && metric.photoUrl.startsWith("http");
       // A multi-choice answer yields one row per selection, so the export
       // stays long-format rather than hiding several observations in one cell.
+      const asWeight = weightUnit(metric.unit);
+      const numeric = metricNumber(metric.value);
+      const perHectare =
+        asWeight && numeric !== null ? yieldPerHectare(numeric, asWeight, area) : null;
+
       for (const value of metricExportValues(metric.value)) {
         rows.push([
           ...base,
           metric.metricName,
           value,
           metric.unit,
+          perHectare === null ? "" : perHectare.toFixed(3),
+          area === null ? "" : String(area),
           isUrl ? (metric.photoUrl as string) : "",
         ]);
       }

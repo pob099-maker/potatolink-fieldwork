@@ -131,7 +131,12 @@ describe("refusing to lay out what cannot be laid out", () => {
 describe("the fieldbook", () => {
   it("writes one row per plot with the treatment named, not its id", () => {
     const plots = layout("rcb", 3, 2);
-    const csv = buildFieldbookCsv("N Rate Trial", "Walkers Flat", plots, arms(3), "SEED1");
+    const csv = buildFieldbookCsv(
+      "N Rate Trial",
+      [{ siteName: "Walkers Flat", plots }],
+      arms(3),
+      "SEED1",
+    );
     const lines = csv.split("\r\n");
     expect(lines[0]).toBe("trial,site,plot,block,position_in_block,treatment,seed");
     expect(lines).toHaveLength(7);
@@ -141,13 +146,18 @@ describe("the fieldbook", () => {
 
   it("carries the seed on every row, so a printed sheet can be traced back", () => {
     const plots = layout("crd", 2, 2);
-    const csv = buildFieldbookCsv("T", "S", plots, arms(2), "TRACEME");
+    const csv = buildFieldbookCsv("T", [{ siteName: "S", plots }], arms(2), "TRACEME");
     const rows = csv.split("\r\n").slice(1);
     expect(rows.every((row) => row.endsWith("TRACEME"))).toBe(true);
   });
 
   it("quotes a trial name containing a comma", () => {
-    const csv = buildFieldbookCsv("Spacing, wide", "S", layout("crd", 2, 2), arms(2), "S1");
+    const csv = buildFieldbookCsv(
+      "Spacing, wide",
+      [{ siteName: "S", plots: layout("crd", 2, 2) }],
+      arms(2),
+      "S1",
+    );
     expect(csv).toContain('"Spacing, wide"');
   });
 });
@@ -185,5 +195,48 @@ describe("what a plot number means", () => {
     // A stale link, or a peg from last season. Better nothing than the wrong
     // treatment.
     expect(plotContext(layout("rcb", 3, 3), 99)).toBeNull();
+  });
+});
+
+// Two sites are two pieces of ground. One arrangement across both means the
+// same treatment lands in the same relative position at each, so anything the
+// paddocks share is confounded identically — the opposite of what blocking is
+// for.
+describe("a site of its own", () => {
+  it("arranges two sites differently from the same seed", () => {
+    const a = generateLayout({ design: "rcb", arms: arms(4), replicates: 3, seed: "S", siteId: "site-a" });
+    const b = generateLayout({ design: "rcb", arms: arms(4), replicates: 3, seed: "S", siteId: "site-b" });
+    expect(b).not.toEqual(a);
+  });
+
+  it("still reproduces one site exactly from the stored seed", () => {
+    const first = generateLayout({ design: "rcb", arms: arms(4), replicates: 3, seed: "S", siteId: "site-a" });
+    const again = generateLayout({ design: "rcb", arms: arms(4), replicates: 3, seed: "S", siteId: "site-a" });
+    expect(again).toEqual(first);
+  });
+
+  it("numbers plots from one at every site", () => {
+    // The number is what is painted on a peg in that paddock. Continuing the
+    // count across sites would put plot 14 in a field whose first peg says 10.
+    const b = generateLayout({ design: "rcb", arms: arms(3), replicates: 2, seed: "S", siteId: "site-b" });
+    expect(b.map((plot) => plot.plotNumber)).toEqual([1, 2, 3, 4, 5, 6]);
+  });
+
+  it("writes every site into the fieldbook, named", () => {
+    // It used to blank the site whenever there was more than one, which is a
+    // printed sheet that does not say which paddock it describes.
+    const csv = buildFieldbookCsv(
+      "Two Site Trial",
+      [
+        { siteName: "Paddock A", plots: layout("rcb", 2, 2) },
+        { siteName: "Paddock B", plots: layout("rcb", 2, 2) },
+      ],
+      arms(2),
+      "SEED1",
+    );
+    const rows = csv.split(String.fromCharCode(13, 10)).slice(1);
+    expect(rows).toHaveLength(8);
+    expect(rows.filter((row) => row.includes("Paddock A"))).toHaveLength(4);
+    expect(rows.filter((row) => row.includes("Paddock B"))).toHaveLength(4);
   });
 });

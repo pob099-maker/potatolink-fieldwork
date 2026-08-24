@@ -31,11 +31,15 @@ import {
 } from "../components/ui";
 import { SetupChecklist, SiteManager } from "../components/TrialSetup";
 import { PlotLayout } from "../components/PlotLayout";
+import { generateLayout, layoutProblem } from "../services/layout";
+import { describePlot } from "../services/plotArea";
+import { useAccess } from "../contexts/AccessContext";
 import { VOCABULARY_CHOICES, trialVocabulary, words, type Words } from "../services/vocabulary";
 import type { FormTemplate, MeasurementEvent, Metric, PracticeArm, Site, Trial } from "../types";
 
 export function TrialDetailPage() {
   const { trialId } = useParams<{ trialId: string }>();
+  const { accessCode } = useAccess();
   const trials = useTrials();
   const sites = useSites();
   const arms = useArms();
@@ -86,6 +90,26 @@ export function TrialDetailPage() {
     [trialEvents],
   );
   const layoutLocked = plotRecords > 0;
+  // The same per-site layouts the plot map draws, indexed so the replication
+  // grid can name the plot rather than the replicate.
+  const plotNumbers = useMemo(() => {
+    const index = new Map<string, number>();
+    if (!trial || trial.design !== "replicated" || !trial.layoutSeed) return index;
+    for (const site of trialSites) {
+      const request = {
+        design: trial.blocking === "blocks" ? ("rcb" as const) : ("crd" as const),
+        arms: activeArms,
+        replicates: trial.replicates,
+        seed: trial.layoutSeed,
+        siteId: site.siteId,
+      };
+      if (layoutProblem(request)) continue;
+      for (const plot of generateLayout(request)) {
+        index.set(`${site.siteId}:${plot.armId}:${plot.replicate}`, plot.plotNumber);
+      }
+    }
+    return index;
+  }, [trial, trialSites, activeArms]);
   // What this trial calls the things it compares. One word, used everywhere on
   // the page, so a researcher and a grower each read their own vocabulary
   // rather than both meeting a compromise neither uses.
@@ -176,7 +200,7 @@ export function TrialDetailPage() {
           <Link
             to={`/trials/${trial.trialId}/entry?form=${growerForm.templateId}${
               selectedSiteId ? `&site=${selectedSiteId}` : ""
-            }`}
+            }&code=${encodeURIComponent(accessCode)}`}
             className="min-h-11 rounded-lg bg-primary px-4 py-2.5 font-medium text-white"
           >
             + Add an entry
@@ -198,6 +222,12 @@ export function TrialDetailPage() {
         </Link>
         <button
           type="button"
+          disabled={trialEvents.length === 0}
+          title={
+            trialEvents.length === 0
+              ? "Nothing recorded yet — the file would hold only column headings."
+              : undefined
+          }
           onClick={() =>
             downloadCsv(
               csvFileName(trial),
@@ -212,7 +242,7 @@ export function TrialDetailPage() {
               ),
             )
           }
-          className="min-h-11 rounded-lg border border-ink/20 px-4 py-2.5 font-medium dark:border-ink-dark/20"
+          className="min-h-11 rounded-lg border border-ink/20 px-4 py-2.5 font-medium disabled:opacity-40 dark:border-ink-dark/20"
         >
           Export data (CSV)
         </button>
@@ -260,13 +290,25 @@ export function TrialDetailPage() {
 
       {trial.design === "replicated" ? (
         <ReplicationStatusCard
-          word={word}
-          status={replicationStatus(trial, activeArms, trialSites, trialEvents)}
+          status={replicationStatus(trial, activeArms, trialSites, trialEvents, plotNumbers)}
           arms={activeArms}
         />
       ) : null}
 
-      {trial.design === "replicated" ? (
+      {/* Without a response variable there is nothing to summarise, and the
+          card rendered a column of dashes under the heading "— response",
+          which reads as a broken app rather than an unfinished setup. */}
+      {trial.design === "replicated" && trial.responseMetric === null ? (
+        <Card>
+          <h2 className="font-display text-lg font-bold">Response summary</h2>
+          <p className="mt-1 text-sm text-ink/60 dark:text-ink-dark/60">
+            Choose the response variable under Trial design — the one number this trial
+            exists to compare, usually yield. Until then there is nothing to summarise.
+          </p>
+        </Card>
+      ) : null}
+
+      {trial.design === "replicated" && trial.responseMetric !== null ? (
         <ResponseSummaryCard
           word={word}
           stats={responseSummary(
@@ -703,6 +745,50 @@ function TrialDesignCard({
       </div>
 
       <fieldset className="mt-4">
+        <legend className="text-sm font-medium">Plot size</legend>
+        <p className="mt-1 text-sm text-ink/60 dark:text-ink-dark/60">
+          Optional, and worth it: with a size recorded, a form can ask for the weight off
+          the plot and the app works out the yield per hectare. Otherwise somebody is
+          doing that conversion in a paddock, and a misplaced decimal never shows up
+          again. Strips that differ in length can carry their own area on the form
+          instead — a field measured in ha or m² overrides this.
+        </p>
+        <div className="mt-2 grid gap-3 sm:grid-cols-3">
+          <label className="block text-sm font-medium">
+            Width (m)
+            <input
+              type="number"
+              min={0}
+              step="any"
+              value={trial.plotWidthM ?? ""}
+              disabled={saving}
+              onChange={(changeEvent) =>
+                void update({ plotWidthM: Number(changeEvent.target.value) || null })
+              }
+              className="mt-1 min-h-11 w-full rounded-lg border border-ink/20 bg-surface px-3 dark:border-ink-dark/20 dark:bg-surface-dark"
+            />
+          </label>
+          <label className="block text-sm font-medium">
+            Length (m)
+            <input
+              type="number"
+              min={0}
+              step="any"
+              value={trial.plotLengthM ?? ""}
+              disabled={saving}
+              onChange={(changeEvent) =>
+                void update({ plotLengthM: Number(changeEvent.target.value) || null })
+              }
+              className="mt-1 min-h-11 w-full rounded-lg border border-ink/20 bg-surface px-3 dark:border-ink-dark/20 dark:bg-surface-dark"
+            />
+          </label>
+          <p className="self-end text-sm text-ink/60 dark:text-ink-dark/60">
+            {describePlot(trial) ?? "Both sides needed before an area."}
+          </p>
+        </div>
+      </fieldset>
+
+      <fieldset className="mt-4">
         <legend className="text-sm font-medium">What this trial calls them</legend>
         <p className="mt-1 text-sm text-ink/60 dark:text-ink-dark/60">
           Only the wording changes, and only on this trial. The exported data uses one
@@ -744,11 +830,9 @@ function TrialDesignCard({
 function ReplicationStatusCard({
   status,
   arms,
-  word,
 }: {
   status: Completeness;
   arms: PracticeArm[];
-  word: Words;
 }) {
   const complete = status.recorded === status.expected && status.expected > 0;
   return (
@@ -764,7 +848,8 @@ function ReplicationStatusCard({
         </span>
       </div>
       <p className="mt-1 text-sm text-ink/60 dark:text-ink-dark/60">
-        Each cell is a plot ({word.one} × replicate). Amber cells are outstanding.
+        One cell per plot. Amber cells are outstanding — the number is the plot to
+        walk to.
       </p>
       {status.sites.map((site) => (
         <div key={site.siteId} className="mt-3 overflow-x-auto">
@@ -786,9 +871,17 @@ function ReplicationStatusCard({
                             ? "bg-success/20 text-success"
                             : "bg-warning/15 text-warning"
                         }`}
-                        title={`Replicate ${cell.replicate}`}
+                        title={
+                          cell.plotNumber === null
+                            ? `Replicate ${cell.replicate}`
+                            : `Plot ${cell.plotNumber} · replicate ${cell.replicate}`
+                        }
                       >
-                        {cell.recorded ? "✓" : `R${cell.replicate}`}
+                        {cell.recorded
+                          ? "✓"
+                          : cell.plotNumber === null
+                            ? `R${cell.replicate}`
+                            : cell.plotNumber}
                       </td>
                     ))}
                 </tr>
@@ -812,6 +905,7 @@ function ResponseSummaryCard({
   responseUnit: string;
   word: Words;
 }) {
+  const subSampled = stats.some((stat) => stat.records > stat.n);
   return (
     <Card>
       <h2 className="font-display text-lg font-bold">Response summary — {responseLabel}</h2>
@@ -819,12 +913,26 @@ function ResponseSummaryCard({
         Descriptive means ± standard error per {word.one}. This is not a significance test —
         export the tidy data for statistical analysis.
       </p>
+      {/* Say it, rather than quietly producing a smaller number than the
+          reader expects. Somebody who took six readings down a strip and sees
+          n=3 needs to know why, and somebody who did not needs to know the app
+          would have handled it. */}
+      {subSampled ? (
+        <p className="mt-2 rounded-lg bg-accent/20 p-3 text-sm">
+          Several readings were taken in the same plot. They are averaged within the plot
+          before the {word.many} are compared, because randomisation was applied to plots
+          — counting each reading separately would understate the error by roughly the
+          square root of the number of samples. <strong>n</strong> below is plots.
+        </p>
+      ) : null}
       <div className="mt-3 overflow-x-auto">
         <table className="w-full text-sm">
           <thead>
             <tr className="text-left text-ink/60 dark:text-ink-dark/60">
               <th className="py-1">{word.One}</th>
-              <th className="py-1">n</th>
+              <th className="py-1" title="Independent plots, not records">
+                n
+              </th>
               <th className="py-1">Mean{responseUnit ? ` (${responseUnit})` : ""}</th>
               <th className="py-1">± SE</th>
             </tr>
@@ -833,7 +941,15 @@ function ResponseSummaryCard({
             {stats.map((stat) => (
               <tr key={stat.armId} className="border-t border-ink/10 dark:border-ink-dark/10">
                 <td className="py-1 font-medium">{stat.armName}</td>
-                <td className="py-1">{stat.n}</td>
+                <td className="py-1">
+                  {stat.n}
+                  {stat.records > stat.n ? (
+                    <span className="text-ink/50 dark:text-ink-dark/50">
+                      {" "}
+                      ({stat.records} readings)
+                    </span>
+                  ) : null}
+                </td>
                 <td className="py-1">{stat.mean === null ? "–" : stat.mean.toFixed(2)}</td>
                 <td className="py-1">{stat.se === null ? "–" : stat.se.toFixed(2)}</td>
               </tr>
@@ -1118,6 +1234,7 @@ function EntryLinks({
 }) {
   const [copied, setCopied] = useState<string | null>(null);
   const [open, setOpen] = useState(false);
+  const { accessCode } = useAccess();
 
   const shown = selectedSiteId ? sites.filter((site) => site.siteId === selectedSiteId) : sites;
   // With a layout the plot decides the practice, so a per-practice link would
@@ -1154,6 +1271,10 @@ function EntryLinks({
           ? `One link per site. The form asks which plot, and works out the ${word.one} from the layout — so there is nothing to match up and nothing to send twice.`
           : `Send the link that matches where the grower is and which ${word.one} they are using. Each link fills in the site and ${word.one} automatically.`}
       </p>
+      <p className="mt-1 text-sm text-ink/50 dark:text-ink-dark/50">
+        These links carry the entry code, so whoever you send one to taps it and starts
+        recording. Treat a link like the code itself — anyone who has it can add entries.
+      </p>
       {shown.map((site) => (
         <div key={site.siteId} className="mt-3">
           <h3 className="font-semibold">📍 {site.location}</h3>
@@ -1165,6 +1286,7 @@ function EntryLinks({
                 trial.trialId,
                 site.siteId,
                 arm?.armId ?? null,
+                accessCode,
               );
               const key = `${site.siteId}-${arm?.armId ?? "all"}`;
               return (
