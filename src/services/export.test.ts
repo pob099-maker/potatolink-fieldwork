@@ -22,6 +22,8 @@ const trial: Trial = {
   replicates: 0,
   blocking: "none" as const,
   vocabulary: null,
+  plotLengthM: null,
+  plotWidthM: null,
   layoutSeed: null,
   responseMetric: null,
   createdAt: T0,
@@ -195,5 +197,59 @@ describe("who recorded it", () => {
     const metrics = [metric("m1", "e1", "tonnesHandled", 40)];
     const csv = buildTrialCsv(trial, sites, arms, templates, events, metrics, contacts);
     expect(csv.split("\r\n")[1]).toContain("missing-id");
+  });
+});
+
+// A weight is what somebody can measure; a yield is what gets compared. The
+// conversion belongs in the file rather than in a paddock calculation nobody
+// can check afterwards.
+describe("derived yield", () => {
+  it("converts a weight using the trial's plot size", () => {
+    const sized = { ...trial, plotWidthM: 2, plotLengthM: 10 };
+    const csv = buildTrialCsv(
+      sized, sites, arms, templates,
+      [event("e1")],
+      [{
+        metricId: "m1", eventId: "e1", metricName: "harvest", value: 40,
+        unit: "kg", photoUrl: null, createdAt: T0,
+      }],
+    );
+    const row = csv.split("\r\n")[1].split(",");
+    const head = csv.split("\r\n")[0].split(",");
+    // 40 kg off 20 m² is 20 t/ha.
+    expect(row[head.indexOf("yield_t_ha")]).toBe("20.000");
+    expect(row[head.indexOf("plot_area_m2")]).toBe("20");
+  });
+
+  it("lets a record carry its own area, for strips of unequal length", () => {
+    const sized = { ...trial, plotWidthM: 2, plotLengthM: 10 };
+    const csv = buildTrialCsv(
+      sized, sites, arms, templates,
+      [event("e1")],
+      [
+        { metricId: "m1", eventId: "e1", metricName: "harvest", value: 1200,
+          unit: "kg", photoUrl: null, createdAt: T0 },
+        { metricId: "m2", eventId: "e1", metricName: "area", value: 0.96,
+          unit: "ha", photoUrl: null, createdAt: T0 },
+      ],
+    );
+    const head = csv.split("\r\n")[0].split(",");
+    const harvest = csv.split("\r\n").find((line) => line.includes("harvest"))!.split(",");
+    // 1.2 t over 0.96 ha — the record's own area, not the trial's 20 m².
+    expect(harvest[head.indexOf("plot_area_m2")]).toBe("9600");
+    expect(harvest[head.indexOf("yield_t_ha")]).toBe("1.250");
+  });
+
+  it("leaves the column empty rather than guessing without an area", () => {
+    const csv = buildTrialCsv(
+      trial, sites, arms, templates,
+      [event("e1")],
+      [{
+        metricId: "m1", eventId: "e1", metricName: "harvest", value: 40,
+        unit: "kg", photoUrl: null, createdAt: T0,
+      }],
+    );
+    const head = csv.split("\r\n")[0].split(",");
+    expect(csv.split("\r\n")[1].split(",")[head.indexOf("yield_t_ha")]).toBe("");
   });
 });

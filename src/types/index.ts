@@ -85,6 +85,17 @@ export interface Trial {
    */
   vocabulary: "treatment" | "practice" | null;
   /**
+   * Plot size in metres. Two typed numbers rather than anything satellite-
+   * derived: a trial plot is a few tens of square metres, and a phone fixes a
+   * corner to within several metres, so a walked boundary would carry an error
+   * larger than the plot. Typed once, it is exact.
+   *
+   * What it buys is arithmetic nobody should be doing in a paddock — weigh the
+   * plot, and the yield per hectare follows.
+   */
+  plotLengthM: number | null;
+  plotWidthM: number | null;
+  /**
    * The seed the plot layout was generated from, or null before one exists.
    * Stored so the same layout can be reproduced and checked; a layout nobody
    * can regenerate is a layout nobody can verify.

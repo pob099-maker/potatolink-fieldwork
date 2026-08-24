@@ -9,6 +9,7 @@ import { metricFormValue } from "../services/metricValue";
 import { templateForEvent } from "../services/events";
 import { generateLayout, layoutProblem, plotContext } from "../services/layout";
 import { words } from "../services/vocabulary";
+import { plotAreaM2 as plotArea } from "../services/plotArea";
 import { isBackendConfigured } from "../lib/supabase";
 import {
   useArms,
@@ -300,6 +301,7 @@ export function EntryPage() {
       arms={trialArms}
       replicate={trial.design === "replicated" ? replicate : null}
       plot={plotNumber}
+      plotAreaM2={plotArea(trial)}
       replicateLabel={
         // With a layout the plot number is what is painted on the peg, so it
         // is what the person recording recognises; the replicate is bookkeeping.
@@ -611,6 +613,7 @@ function EntryForm({
   armLabel,
   replicateLabel,
   plot,
+  plotAreaM2,
   onAddAnother,
   onChangePlot,
   frequency,
@@ -633,6 +636,8 @@ function EntryForm({
   armLabel: string | null;
   replicateLabel: string | null;
   plot: number | null;
+  /** The plot's area, so a weight can be shown as a yield while it is typed. */
+  plotAreaM2: number | null;
   /** Clears the plot/practice chosen on this device, ready for the next one. */
   onAddAnother: () => void;
   /** Back to the plot picker, when a plot was chosen here rather than by link. */
@@ -875,6 +880,7 @@ function EntryForm({
             register={register}
             control={control}
             error={errors[field.fieldName]?.message as string | undefined}
+            plotAreaM2={plotAreaM2}
           />
         ))}
       </Card>

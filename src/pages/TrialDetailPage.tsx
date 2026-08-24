@@ -32,6 +32,7 @@ import {
 import { SetupChecklist, SiteManager } from "../components/TrialSetup";
 import { PlotLayout } from "../components/PlotLayout";
 import { generateLayout, layoutProblem } from "../services/layout";
+import { describePlot } from "../services/plotArea";
 import { useAccess } from "../contexts/AccessContext";
 import { VOCABULARY_CHOICES, trialVocabulary, words, type Words } from "../services/vocabulary";
 import type { FormTemplate, MeasurementEvent, Metric, PracticeArm, Site, Trial } from "../types";
@@ -742,6 +743,50 @@ function TrialDesignCard({
           </>
         ) : null}
       </div>
+
+      <fieldset className="mt-4">
+        <legend className="text-sm font-medium">Plot size</legend>
+        <p className="mt-1 text-sm text-ink/60 dark:text-ink-dark/60">
+          Optional, and worth it: with a size recorded, a form can ask for the weight off
+          the plot and the app works out the yield per hectare. Otherwise somebody is
+          doing that conversion in a paddock, and a misplaced decimal never shows up
+          again. Strips that differ in length can carry their own area on the form
+          instead — a field measured in ha or m² overrides this.
+        </p>
+        <div className="mt-2 grid gap-3 sm:grid-cols-3">
+          <label className="block text-sm font-medium">
+            Width (m)
+            <input
+              type="number"
+              min={0}
+              step="any"
+              value={trial.plotWidthM ?? ""}
+              disabled={saving}
+              onChange={(changeEvent) =>
+                void update({ plotWidthM: Number(changeEvent.target.value) || null })
+              }
+              className="mt-1 min-h-11 w-full rounded-lg border border-ink/20 bg-surface px-3 dark:border-ink-dark/20 dark:bg-surface-dark"
+            />
+          </label>
+          <label className="block text-sm font-medium">
+            Length (m)
+            <input
+              type="number"
+              min={0}
+              step="any"
+              value={trial.plotLengthM ?? ""}
+              disabled={saving}
+              onChange={(changeEvent) =>
+                void update({ plotLengthM: Number(changeEvent.target.value) || null })
+              }
+              className="mt-1 min-h-11 w-full rounded-lg border border-ink/20 bg-surface px-3 dark:border-ink-dark/20 dark:bg-surface-dark"
+            />
+          </label>
+          <p className="self-end text-sm text-ink/60 dark:text-ink-dark/60">
+            {describePlot(trial) ?? "Both sides needed before an area."}
+          </p>
+        </div>
+      </fieldset>
 
       <fieldset className="mt-4">
         <legend className="text-sm font-medium">What this trial calls them</legend>

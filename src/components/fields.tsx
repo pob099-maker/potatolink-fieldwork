@@ -5,6 +5,7 @@ import { useEffect, useRef, useState } from "react";
 import type { Control, FieldValues, Path, UseFormRegister } from "react-hook-form";
 import { Controller, useWatch } from "react-hook-form";
 import { getMedia, isMediaPointer, mediaIdFromPointer, saveMedia } from "../services/media";
+import { weightUnit, yieldPerHectare } from "../services/plotArea";
 import type { FormField, MediaKind } from "../types";
 
 const inputClass =
@@ -16,9 +17,17 @@ interface FieldProps<T extends FieldValues> {
   register: UseFormRegister<T>;
   control: Control<T>;
   error: string | undefined;
+  /** The plot's area in square metres, when the trial records one. */
+  plotAreaM2?: number | null;
 }
 
-export function EntryField<T extends FieldValues>({ field, register, control, error }: FieldProps<T>) {
+export function EntryField<T extends FieldValues>({
+  field,
+  register,
+  control,
+  error,
+  plotAreaM2 = null,
+}: FieldProps<T>) {
   const labelId = `label-${field.fieldName}`;
 
   return (
@@ -29,12 +38,45 @@ export function EntryField<T extends FieldValues>({ field, register, control, er
         {field.required ? <span aria-hidden className="text-danger"> *</span> : null}
       </label>
       <FieldInput field={field} register={register} control={control} labelId={labelId} />
+      <YieldHint field={field} control={control} plotAreaM2={plotAreaM2} />
       {error ? (
         <p role="alert" className="mt-1 text-sm text-danger">
           {error}
         </p>
       ) : null}
     </div>
+  );
+}
+
+/**
+ * Shows what a weight works out to per hectare, live, while it is being typed.
+ *
+ * The point is not convenience. A form that asks for tonnes per hectare asks
+ * somebody in a paddock to convert kilograms off a plot, and a misplaced
+ * decimal in that sum is invisible for the rest of the trial. Showing the
+ * result as they type turns a silent arithmetic error into an obviously wrong
+ * number on screen.
+ */
+function YieldHint<T extends FieldValues>({
+  field,
+  control,
+  plotAreaM2,
+}: {
+  field: FormField;
+  control: Control<T>;
+  plotAreaM2: number | null;
+}) {
+  const unit = weightUnit(field.unit);
+  const value = useWatch({ control, name: field.fieldName as Path<T> });
+  if (!unit || plotAreaM2 === null) return null;
+  const weight = typeof value === "number" ? value : Number(value);
+  if (!Number.isFinite(weight) || weight <= 0) return null;
+  const perHectare = yieldPerHectare(weight, unit, plotAreaM2);
+  if (perHectare === null) return null;
+  return (
+    <p className="mt-1 text-sm text-ink/60 dark:text-ink-dark/60">
+      ≈ <span className="font-medium">{perHectare.toFixed(1)} t/ha</span> at this plot size
+    </p>
   );
 }
 

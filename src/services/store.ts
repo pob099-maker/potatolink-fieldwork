@@ -624,6 +624,8 @@ export async function addTrial(input: {
     replicates: 0,
     blocking: "none" as const,
     vocabulary: null,
+    plotLengthM: null,
+    plotWidthM: null,
     layoutSeed: null,
     responseMetric: null,
     createdAt,

@@ -14,6 +14,8 @@ const trial: Trial = {
   replicates: 3,
   blocking: "none" as const,
   vocabulary: null,
+  plotLengthM: null,
+  plotWidthM: null,
   layoutSeed: null,
   responseMetric: "yield",
   createdAt: T0,
