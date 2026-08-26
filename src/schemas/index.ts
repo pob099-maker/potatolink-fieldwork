@@ -200,22 +200,25 @@ export const adoptionFollowupSchema = z.object({
   createdAt: isoDate,
 });
 
+/** The one list of field types. A second copy is a list that can drift. */
+export const fieldTypeSchema = z.enum([
+  "number",
+  "text",
+  "select",
+  "multiselect",
+  "slider",
+  "photo",
+  "video",
+  "file",
+  "gps",
+  "date",
+  "boolean",
+]);
+
 export const formFieldSchema = z.object({
   fieldName: z.string().min(1),
   label: z.string().min(1),
-  type: z.enum([
-    "number",
-    "text",
-    "select",
-    "multiselect",
-    "slider",
-    "photo",
-    "video",
-    "file",
-    "gps",
-    "date",
-    "boolean",
-  ]),
+  type: fieldTypeSchema,
   required: z.boolean(),
   options: z.array(z.string()).nullable(),
   min: z.number().nullable(),
@@ -385,3 +388,19 @@ export const soilResultSchema = z
     message: "A result needs a number or words.",
     path: ["value"],
   });
+
+/** Only what somebody added is stored; the shipped list lives in code. */
+export const libraryEntrySchema = z.object({
+  entryId: id,
+  code: z.string().min(1),
+  label: z.string().min(1),
+  type: fieldTypeSchema,
+  unit: z.string().default(""),
+  minValue: z.number().nullable().default(null),
+  maxValue: z.number().nullable().default(null),
+  options: z.array(z.string()).nullable().default(null),
+  guidance: z.string().default(""),
+  source: z.enum(["builtin", "added"]).default("added"),
+  usageCount: z.number().int().min(0).default(1),
+  createdAt: isoDate,
+});

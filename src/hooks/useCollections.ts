@@ -12,6 +12,7 @@ import {
   listWeather,
   listSoilSamples,
   listSoilResults,
+  listLibrary,
   listScenarios,
   listSites,
   listTemplates,
@@ -56,6 +57,7 @@ export const useSoilSamples = () =>
   useQuery({ queryKey: ["soilSamples"], queryFn: listSoilSamples });
 export const useSoilResults = () =>
   useQuery({ queryKey: ["soilResults"], queryFn: listSoilResults });
+export const useLibrary = () => useQuery({ queryKey: ["library"], queryFn: listLibrary });
 export const useSyncTrouble = () =>
   useQuery({ queryKey: ["syncTrouble"], queryFn: syncTrouble });
 export const useWaitingToSync = () =>

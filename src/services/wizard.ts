@@ -26,11 +26,20 @@ import type { ParsedField, ParsedForm, ParsedTrial } from "./templateImport";
 /** What the trial is for, which decides most of what follows. */
 export type TrialKind = "comparison" | "experiment";
 
-/** The field types worth offering here. The rest are rare enough to add later. */
-export const QUESTION_TYPES: Array<{ value: FieldType; label: string; wantsUnit: boolean }> = [
+/**
+ * What the wizard offers. The rest — a date, a GPS fix, a file, a list to pick
+ * from — are rarer and live in the form editor.
+ *
+ * Video is here because the app treats photo and video as first-class inputs
+ * rather than afterthoughts, and offering one without the other quietly made
+ * that untrue: somebody building a trial in the wizard could not ask for a
+ * video at all, even though the app captures and uploads them.
+ */
+export const RECORD_TYPES: Array<{ value: FieldType; label: string; wantsUnit: boolean }> = [
   { value: "number", label: "A number", wantsUnit: true },
   { value: "slider", label: "A rating out of five", wantsUnit: false },
   { value: "photo", label: "A photo", wantsUnit: false },
+  { value: "video", label: "A video", wantsUnit: false },
   { value: "boolean", label: "Yes or no", wantsUnit: false },
   { value: "text", label: "Written notes", wantsUnit: false },
 ];
@@ -114,7 +123,7 @@ export function wizardProblems(answers: WizardAnswers): string[] {
     problems.push("A replicated trial needs at least two blocks.");
   }
   if (answers.questions.filter((question) => question.label.trim()).length === 0) {
-    problems.push("Ask at least one question in the field.");
+    problems.push("Record at least one thing in the field.");
   }
   if (answers.kind === "experiment" && responseQuestion(answers) === null) {
     problems.push("Choose which number the trial is comparing.");

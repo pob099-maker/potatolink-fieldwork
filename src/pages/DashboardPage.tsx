@@ -42,7 +42,7 @@ function StartHere({ presence }: { presence: SeedPresence }) {
       to: "/trials/new",
       role: "Designing a trial",
       // App-wide, so no one trial's vocabulary applies — kept neutral.
-      what: "Import a written protocol as a spreadsheet, or build one here: sites, what is being compared, and the questions asked in the field.",
+      what: "Import a written protocol as a spreadsheet, or build one here: sites, what is being compared, and what gets recorded in the field.",
     },
     {
       to: "/trials",
@@ -52,7 +52,7 @@ function StartHere({ presence }: { presence: SeedPresence }) {
     {
       to: "/record",
       role: "Recording observations",
-      what: "Pick where you are and start. Four questions a screen, photos and video, and it keeps working with no signal. A device used for this opens straight here next time.",
+      what: "Pick where you are and start. Four things a screen, photos and video, and it keeps working with no signal. A device used for this opens straight here next time.",
     },
   ];
 

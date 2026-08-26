@@ -11,10 +11,11 @@
 // list of complaints and no way to act on them.
 
 import { useState, type ReactNode } from "react";
+import { MeasurementPicker } from "../components/MeasurementPicker";
 import { useNavigate } from "react-router-dom";
 import { publishParsedTrial } from "../services/templatePublish";
 import {
-  QUESTION_TYPES,
+  RECORD_TYPES,
   canBeResponse,
   emptyAnswers,
   starterQuestions,
@@ -154,8 +155,8 @@ function KindStep({ answers, set }: { answers: WizardAnswers; set: Setter }) {
         <Choice
           checked={answers.kind === "comparison"}
           onChoose={() => set("kind", "comparison")}
-          title="Comparing two ways of doing something"
-          detail="A demonstration or on-farm comparison. Record what happens under each, and show a neighbour the difference. No replication, no statistics."
+          title="Comparing ways of doing something"
+          detail="A demonstration or on-farm comparison — two ways of doing something, or several. Record what happens under each, and show a neighbour the difference. No replication, no statistics."
         />
         <Choice
           checked={answers.kind === "experiment"}
@@ -298,6 +299,7 @@ function WhereStep({ answers, set }: { answers: WizardAnswers; set: Setter }) {
 }
 
 function RecordStep({ answers, set }: { answers: WizardAnswers; set: Setter }) {
+  const [picking, setPicking] = useState(false);
   const update = (index: number, changes: Partial<Question>) =>
     set(
       "questions",
@@ -323,10 +325,39 @@ function RecordStep({ answers, set }: { answers: WizardAnswers; set: Setter }) {
         offered word.
       </p>
 
+      {picking ? (
+        <div className="mt-3">
+          <MeasurementPicker
+            onCancel={() => setPicking(false)}
+            onFreeText={() => {
+              setPicking(false);
+              set("questions", [
+                ...answers.questions,
+                { label: "", type: "number", unit: "", required: false },
+              ]);
+            }}
+            onPick={(entry) => {
+              setPicking(false);
+              // Everything the entry knows comes across, so nobody decides
+              // again whether yield is kilograms or tonnes per hectare.
+              set("questions", [
+                ...answers.questions,
+                {
+                  label: entry.label,
+                  type: entry.type,
+                  unit: entry.unit,
+                  required: false,
+                },
+              ]);
+            }}
+          />
+        </div>
+      ) : null}
+
       <ul className="mt-3 space-y-3">
         {answers.questions.map((question, index) => {
           const wantsUnit =
-            QUESTION_TYPES.find((entry) => entry.value === question.type)?.wantsUnit ?? false;
+            RECORD_TYPES.find((entry) => entry.value === question.type)?.wantsUnit ?? false;
           return (
             <li
               key={index}
@@ -334,17 +365,17 @@ function RecordStep({ answers, set }: { answers: WizardAnswers; set: Setter }) {
             >
               <div className="flex items-end gap-2">
                 <label className="flex-1 text-sm font-medium">
-                  Question
+                  What are you recording?
                   <input
                     value={question.label}
-                    aria-label={`Question ${index + 1}`}
+                    aria-label={`What are you recording, ${index + 1}`}
                     onChange={(event) => update(index, { label: event.target.value })}
                     className={inputClass}
                   />
                 </label>
                 <button
                   type="button"
-                  aria-label={`Remove question ${index + 1}`}
+                  aria-label={`Remove item ${index + 1}`}
                   onClick={() => remove(index)}
                   className="mt-1 min-h-11 min-w-11 rounded-lg border border-line-strong"
                 >
@@ -353,16 +384,16 @@ function RecordStep({ answers, set }: { answers: WizardAnswers; set: Setter }) {
               </div>
               <div className="mt-2 grid gap-2 sm:grid-cols-2">
                 <label className="text-sm font-medium">
-                  Answered with
+                  Recorded as
                   <select
                     value={question.type}
-                    aria-label={`Answer type for question ${index + 1}`}
+                    aria-label={`Recorded as, item ${index + 1}`}
                     onChange={(event) =>
                       update(index, { type: event.target.value as FieldType })
                     }
                     className={inputClass}
                   >
-                    {QUESTION_TYPES.map((entry) => (
+                    {RECORD_TYPES.map((entry) => (
                       <option key={entry.value} value={entry.value}>
                         {entry.label}
                       </option>
@@ -374,7 +405,7 @@ function RecordStep({ answers, set }: { answers: WizardAnswers; set: Setter }) {
                     Unit
                     <input
                       value={question.unit}
-                      aria-label={`Unit for question ${index + 1}`}
+                      aria-label={`Unit for item ${index + 1}`}
                       onChange={(event) => update(index, { unit: event.target.value })}
                       placeholder="kg, t, cm, count…"
                       className={inputClass}
@@ -414,15 +445,10 @@ function RecordStep({ answers, set }: { answers: WizardAnswers; set: Setter }) {
       <div className="mt-3 flex flex-wrap gap-2">
         <button
           type="button"
-          onClick={() =>
-            set("questions", [
-              ...answers.questions,
-              { label: "", type: "number", unit: "", required: false },
-            ])
-          }
+          onClick={() => setPicking(true)}
           className="min-h-11 rounded-lg border border-line-strong px-4 py-2.5 font-medium"
         >
-          + Add a question
+          + Add something to record
         </button>
         {answers.questions.length === 0 ? (
           <button

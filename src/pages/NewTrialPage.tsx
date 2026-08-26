@@ -25,7 +25,7 @@ export function NewTrialPage() {
       <Card className="border-accent/50">
         <CardTitle>Answer a few questions</CardTitle>
         <p className="mt-1 text-sm text-ink-soft">
-          Suits both ends. A grower comparing two practices is finished in four short
+          Suits both ends. A grower comparing a couple of practices is finished in four short
           screens; anybody who already has the brief can show every question at once and
           fill them in one pass. You end up with a trial you can record against — the
           site, what is being compared, and the questions asked in the field.

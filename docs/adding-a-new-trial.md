@@ -18,7 +18,7 @@ app asks what it asks, so this explains the decisions rather than the clicks.
 
 The first question decides everything after it, so it is worth getting right.
 
-**"Comparing two ways of doing something"** — a demonstration or on-farm
+**"Comparing ways of doing something"** — a demonstration or on-farm
 comparison. Record what happens under each, show a neighbour the difference.
 No replication, no statistics, and the app will call them *practices*.
 
@@ -259,7 +259,7 @@ The trial starts with one form. Most protocols need more than one, because an
 emergence count, a mid-season disease score and a harvest weight are three
 different visits asking three different things. Cramming them into one form
 means whoever is standing in the crop at emergence scrolls past harvest
-questions to reach the two that apply.
+ones to reach the two that apply.
 
 Name the form after the *visit*, not the trial — it is what somebody picks from
 a list in a paddock. Each form gets its own timing, so "at emergence" and "at
@@ -301,9 +301,9 @@ Nothing is ever deleted by either.
 
 ## The other way in: a spreadsheet
 
-If the protocol already lives in a spreadsheet, or the trial has more questions
+If the protocol already lives in a spreadsheet, or the trial records more
 than you would want to type one at a time, **New trial → Import a template**
-takes the whole trial in one file: sites, practices and one row per question.
+takes the whole trial in one file: sites, practices and one row per thing recorded.
 It is checked and previewed before anything is created.
 
 The field types available are the same either way:
@@ -322,14 +322,14 @@ The field types available are the same either way:
 | `gps` | Where an observation happened | One tap |
 | `text` | Only when nothing above fits | Keep to one notes field, last |
 
-## Rules for grower-facing questions
+## Rules for what a grower records
 
 - Plain language, no jargon — "How long did the run take?" not "Duration (h)".
 - Prefer select, slider and boolean over free text. Every typed field costs
   completion.
 - Mark a field required only if the entry is useless without it.
-- At most four questions a screen; about twelve is a comfortable ceiling.
+- At most four things a screen; about twelve is a comfortable ceiling.
 - Never make somebody choose the site or the practice — the link and the layout
   already know.
-- Keep the catch-all notes field last. A free-text box above a specific question
+- Keep the catch-all notes field last. A free-text box above a specific one
   gets used instead of it.

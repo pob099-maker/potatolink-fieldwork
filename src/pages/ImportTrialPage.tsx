@@ -124,7 +124,7 @@ export function ImportTrialPage() {
                 <li key={form.name} className="py-2">
                   <span className="font-medium">{form.name}</span>
                   <span className="block text-meta text-ink-soft">
-                    {form.fields.length} {form.fields.length === 1 ? "question" : "questions"} ·
+                    {form.fields.length} {form.fields.length === 1 ? "thing recorded" : "things recorded"} ·
                     filled in by {form.audience}
                     {form.frequency ? ` · ${form.frequency}` : ""}
                     {form.requiresSite ? " · per site" : " · whole trial"}

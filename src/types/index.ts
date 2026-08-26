@@ -465,3 +465,5 @@ export interface SoilResult {
   methodRef: string;
   createdAt: string;
 }
+
+export type { LibraryEntry } from "../services/measurementLibrary";
