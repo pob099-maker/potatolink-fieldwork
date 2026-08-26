@@ -89,6 +89,14 @@ real one. The dashboard shows what is due or late, and the schedule exports as
 a calendar file so the phone's own calendar does the reminding — Fieldwork has
 no server and cannot send anything, which is stated rather than worked around.
 
+**Weather and soil as data, not notes.** Weather observations are typed columns
+keyed to a BOM station — shared by every trial near it, so the same rainfall is
+stored once and the source can change later. Soil is a profile: one sample per
+point, date and depth interval, one row per measured attribute with its unit
+and the method that produced it. A soil label like "red sandy loam" is kept as
+somebody's judgement rather than standing in for a measurement. A BOM
+observation feed and a laboratory CSV both read straight in.
+
 **Provenance.** A trial records where its data comes from — a sensor datastream,
 a machinery export, a protocol — scoped to a plot, a treatment, a site or the
 trial, and every exported row names the sources covering it.

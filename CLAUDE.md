@@ -97,7 +97,18 @@ src/
     rows into a live Supabase project on every run. `vite.config.ts` blanks the
     credentials for tests and `src/lib/testIsolation.test.ts` fails if that stops
     being true. Never work around it by re-supplying them.
-23. MUST NOT add a `dark:` class for anything the tokens already flip. The palette
+23. MUST store weather and soil as typed columns, never as free text or a link alone.
+    A link says a number is traceable; it cannot answer "rainfall between emergence and
+    tuber initiation" or "pH at 0–10 cm across every trial on this soil". The data-source
+    links stay as the relationship layer; `weather_observations`, `soil_samples` and
+    `soil_results` are the data layer.
+24. MUST keep a soil result's depth, unit and method with it. pH in water and pH in CaCl₂
+    differ by roughly half a unit on the same sample, and a pH with no depth cannot be
+    compared with anything. Separate the measured value from the interpreted label.
+25. MUST NOT sum `rainfall_since_9am_mm`. BOM's rain trace is cumulative since 9am local,
+    so adding the readings multiplies a day's rain by the number of observations in it.
+    Take each rain day's maximum — `summariseWindow` in services/weatherImport does.
+26. MUST NOT add a `dark:` class for anything the tokens already flip. The palette
     swaps under `html.dark` in one block; a per-element override is how one colour
     gets left behind on the wrong ground.
 

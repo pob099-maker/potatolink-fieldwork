@@ -319,3 +319,69 @@ export function buildEntryFormSchema(
   }
   return z.object(shape);
 }
+
+
+/* --- Weather and soil ---------------------------------------------------- */
+
+const coordinate = {
+  lat: z.number().min(-90).max(90).nullable().default(null),
+  lon: z.number().min(-180).max(180).nullable().default(null),
+};
+
+export const weatherObservationSchema = z.object({
+  observationId: id,
+  sourceSystem: z.enum(["bom", "silo", "logger", "manual"]).default("bom"),
+  stationId: z.string().min(1),
+  stationName: z.string().default(""),
+  ...coordinate,
+  // Full ISO with an offset. A bare local time would be ambiguous twice a
+  // year in every state that moves its clocks.
+  observationTime: isoDate,
+  airTempC: z.number().nullable().default(null),
+  rainfallSince9amMm: z.number().min(0).nullable().default(null),
+  relativeHumidityPct: z.number().min(0).max(100).nullable().default(null),
+  windSpeedKmh: z.number().min(0).nullable().default(null),
+  windDir: z.string().nullable().default(null),
+  dewPointC: z.number().nullable().default(null),
+  pressureMslHpa: z.number().nullable().default(null),
+  rawPayload: z.record(z.string(), z.unknown()).nullable().default(null),
+  createdAt: isoDate,
+});
+
+export const soilSampleSchema = z
+  .object({
+    sampleId: id,
+    siteId: id,
+    soilSource: z.enum(["ansis", "lab", "field", "grower"]).default("lab"),
+    soilClassification: z.string().default(""),
+    classificationSystem: z.string().default("unspecified"),
+    sampleDate: plainDate,
+    samplePointId: z.string().default(""),
+    ...coordinate,
+    depthFromCm: z.number().min(0),
+    depthToCm: z.number().min(0),
+    note: z.string().default(""),
+    createdAt: isoDate,
+  })
+  .refine((value) => value.depthToCm > value.depthFromCm, {
+    message: "The bottom of the interval has to be below the top.",
+    path: ["depthToCm"],
+  });
+
+export const soilResultSchema = z
+  .object({
+    resultId: id,
+    sampleId: id,
+    attributeCode: z.string().min(1),
+    attributeName: z.string().default(""),
+    value: z.number().nullable().default(null),
+    textValue: z.string().default(""),
+    unit: z.string().default(""),
+    methodCode: z.string().default("unspecified"),
+    methodRef: z.string().default(""),
+    createdAt: isoDate,
+  })
+  .refine((entry) => entry.value !== null || entry.textValue !== "", {
+    message: "A result needs a number or words.",
+    path: ["value"],
+  });

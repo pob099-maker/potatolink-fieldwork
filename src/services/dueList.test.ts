@@ -33,6 +33,7 @@ const site = (overrides: Partial<Site> = {}): Site => ({
   region: "",
   soilType: "",
   coordinates: null,
+  bomStationId: null,
   plantingDate: "2026-09-01",
   stageDates: {},
   createdAt: T0,

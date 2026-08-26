@@ -7,10 +7,13 @@ import {
   useEvents,
   useMetrics,
   useSites,
+  useSoilResults,
+  useSoilSamples,
   useTemplates,
   useTrials,
+  useWeather
 } from "../hooks/useCollections";
-import { addArm, addTemplate, removeArm, removeTrial, saveArm } from "../services/store";
+import { addArm, addTemplate, removeArm, removeTrial, saveArm, saveSite } from "../services/store";
 import { buildEntryUrl, summariseArm } from "../services/entryLinks";
 import { buildTrialCsv, csvFileName, downloadCsv } from "../services/export";
 import { describeEvent, describeEventScope, eventsForTrial, tallySync } from "../services/events";
@@ -36,6 +39,7 @@ import { SetupChecklist, SiteManager } from "../components/TrialSetup";
 import { PlotLayout } from "../components/PlotLayout";
 import { DataSources } from "../components/DataSources";
 import { DueNowBanner, PlantingCard, TimingEditor, TrialSchedule } from "../components/ObservationTiming";
+import { SoilCard, WeatherCard } from "../components/WeatherAndSoil";
 import { buildDueList, todayIso } from "../services/dueList";
 import { generateLayout, layoutProblem } from "../services/layout";
 import { describePlot } from "../services/plotArea";
@@ -58,6 +62,9 @@ export function TrialDetailPage() {
   const sites = useSites();
   const arms = useArms();
   const contacts = useContacts();
+  const weather = useWeather();
+  const soilSamples = useSoilSamples();
+  const soilResults = useSoilResults();
   const events = useEvents();
   const metrics = useMetrics();
   const templates = useTemplates();
@@ -302,6 +309,17 @@ export function TrialDetailPage() {
       <TrialDesignCard trial={trial} templates={trialTemplates} layoutLocked={layoutLocked} />
       <SiteManager trialId={trial.trialId} sites={trialSites} />
       <ArmManager trialId={trial.trialId} arms={trialArms} layoutLocked={layoutLocked} word={word} />
+      <WeatherCard
+        sites={trialSites}
+        observations={weather.data ?? []}
+        onSiteChange={(next) => void saveSite(next)}
+      />
+      <SoilCard
+        trial={trial}
+        sites={trialSites}
+        samples={soilSamples.data ?? []}
+        results={soilResults.data ?? []}
+      />
       <PlotLayout trial={trial} arms={activeArms} sites={trialSites} recorded={plotRecords} />
       <TrialForms trial={trial} templates={trialTemplates} word={word} />
       <RemoveTrial trial={trial} />

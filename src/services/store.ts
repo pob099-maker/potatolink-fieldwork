@@ -16,6 +16,9 @@ import {
   resultSetSchema,
   siteSchema,
   trialSchema,
+  weatherObservationSchema,
+  soilSampleSchema,
+  soilResultSchema,
 } from "../schemas";
 import type {
   FormAudience,
@@ -35,6 +38,9 @@ import type {
   Site,
   SyncStatus,
   Trial,
+  WeatherObservation,
+  SoilSample,
+  SoilResult,
 } from "../types";
 import { newId, nowIso } from "../lib/id";
 import { dbDelete, dbGet, dbGetAll, dbPut, dbPutMany, type CollectionName } from "../lib/localdb";
@@ -55,6 +61,9 @@ const TABLE_NAMES: Partial<Record<CollectionName, string>> = {
   contacts: "contacts",
   formTemplates: "form_templates",
   dataEntryLogs: "data_entry_logs",
+  weatherObservations: "weather_observations",
+  soilSamples: "soil_samples",
+  soilResults: "soil_results",
 };
 
 type Listener = () => void;
@@ -86,6 +95,10 @@ export const listAssumptions = (): Promise<ArmAssumption[]> =>
 export const listScenarios = (): Promise<EconomicScenario[]> =>
   dbGetAll<EconomicScenario>("economicScenarios");
 export const listResults = (): Promise<ResultSet[]> => dbGetAll<ResultSet>("resultSets");
+export const listWeather = (): Promise<WeatherObservation[]> =>
+  dbGetAll<WeatherObservation>("weatherObservations");
+export const listSoilSamples = (): Promise<SoilSample[]> => dbGetAll<SoilSample>("soilSamples");
+export const listSoilResults = (): Promise<SoilResult[]> => dbGetAll<SoilResult>("soilResults");
 
 /**
  * Save locally, then mirror to Supabase. The cloud write is awaited rather
@@ -134,6 +147,9 @@ const PRIMARY_KEY: Record<CollectionName, string> = {
   resultSets: "resultId",
   dataEntryLogs: "entryId",
   adoptionFollowups: "followupId",
+  weatherObservations: "observationId",
+  soilSamples: "sampleId",
+  soilResults: "resultId",
   media: "mediaId",
   meta: "key",
 };
@@ -773,6 +789,93 @@ export async function addTemplate(input: {
   return { success: true, data: template };
 }
 
+
+/**
+ * Store a parsed weather feed.
+ *
+ * Keyed on station and instant rather than on a generated id, so re-importing
+ * a feed after a refresh updates the overlapping hours instead of stacking a
+ * second copy of them. BOM's product carries 72 hours and is meant to be
+ * fetched repeatedly; without this, a fortnight of daily imports would leave
+ * fourteen copies of most observations and a rainfall total to match.
+ */
+export async function saveWeatherObservations(
+  incoming: WeatherObservation[],
+): Promise<Result<number>> {
+  if (incoming.length === 0) return { success: false, error: "Nothing to save." };
+
+  const existing = await dbGetAll<WeatherObservation>("weatherObservations");
+  const byKey = new Map(
+    existing.map((row) => [`${row.stationId}:${row.observationTime}`, row]),
+  );
+
+  const toWrite: WeatherObservation[] = [];
+  for (const row of incoming) {
+    const check = weatherObservationSchema.safeParse(row);
+    if (!check.success) continue;
+    const parsed = check.data as WeatherObservation;
+    const already = byKey.get(`${parsed.stationId}:${parsed.observationTime}`);
+    // Keep the original id so the cloud row is updated, not duplicated.
+    toWrite.push(already ? { ...parsed, observationId: already.observationId } : parsed);
+  }
+  if (toWrite.length === 0) return { success: false, error: "None of those observations could be read." };
+
+  try {
+    await dbPutMany(
+      toWrite.map((value) => ({ collection: "weatherObservations" as const, value })),
+    );
+  } catch {
+    return { success: false, error: "Could not save the weather on this device." };
+  }
+  if (supabase) {
+    void supabase
+      .from("weather_observations")
+      .upsert(toWrite.map((row) => toRow(row)), { onConflict: "station_id,observation_time" })
+      .then();
+  }
+  notify();
+  return { success: true, data: toWrite.length };
+}
+
+/** Store a parsed soil report: the samples and their results together. */
+export async function saveSoil(
+  samples: SoilSample[],
+  results: SoilResult[],
+): Promise<Result<number>> {
+  if (samples.length === 0) return { success: false, error: "Nothing to save." };
+  for (const sample of samples) {
+    if (!soilSampleSchema.safeParse(sample).success) {
+      return { success: false, error: "A soil sample failed validation — check the depths." };
+    }
+  }
+  for (const result of results) {
+    if (!soilResultSchema.safeParse(result).success) {
+      return { success: false, error: "A soil result failed validation — check its value and unit." };
+    }
+  }
+
+  try {
+    await dbPutMany([
+      ...samples.map((value) => ({ collection: "soilSamples" as const, value })),
+      ...results.map((value) => ({ collection: "soilResults" as const, value })),
+    ]);
+  } catch {
+    return { success: false, error: "Could not save the soil data on this device." };
+  }
+  if (supabase) {
+    // Samples first: a result references its sample, and a foreign key does
+    // not wait politely for the other request to land.
+    void supabase
+      .from("soil_samples")
+      .upsert(samples.map((row) => toRow(row)))
+      .then(({ error }) => {
+        if (!error) void supabase?.from("soil_results").upsert(results.map((row) => toRow(row))).then();
+      });
+  }
+  notify();
+  return { success: true, data: results.length };
+}
+
 /** Persist trial changes, including its design mode. */
 export async function saveTrial(trial: Trial): Promise<Result<Trial>> {
   const next = { ...trial, updatedAt: nowIso() };
@@ -827,6 +930,7 @@ export async function addSite(input: {
     region: input.region ?? "",
     soilType: input.soilType ?? "",
     coordinates: null,
+    bomStationId: null,
     plantingDate: null,
     stageDates: {},
     createdAt: nowIso(),
@@ -1182,6 +1286,9 @@ const PULL_SPECS: Array<{ collection: CollectionName; table: string; schema: Zod
   { collection: "economicScenarios", table: "economic_scenarios", schema: economicScenarioSchema },
   { collection: "resultSets", table: "result_sets", schema: resultSetSchema },
   { collection: "dataEntryLogs", table: "data_entry_logs", schema: dataEntryLogSchema },
+  { collection: "weatherObservations", table: "weather_observations", schema: weatherObservationSchema },
+  { collection: "soilSamples", table: "soil_samples", schema: soilSampleSchema },
+  { collection: "soilResults", table: "soil_results", schema: soilResultSchema },
 ];
 
 /** Fetch every synced table from Supabase into the local store. */

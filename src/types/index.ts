@@ -131,6 +131,15 @@ export interface Site {
    * apart are two schedules — the same reason each site gets its own
    * randomised layout.
    */
+  /**
+   * The BOM station whose observations describe this site's weather.
+   *
+   * A link, not a copy. Weather rows belong to the station that recorded them
+   * and are shared by every site near it — the alternative, weather columns on
+   * the trial, means the same rainfall stored once per trial and no way to
+   * swap the source later for SILO or an on-farm logger.
+   */
+  bomStationId: string | null;
   plantingDate: string | null;
   /**
    * Growth stage id → the date it was confirmed to have arrived here.
@@ -354,5 +363,105 @@ export interface DataEntryLog {
   entryDate: string;
   deviceType: DeviceType;
   syncStatus: SyncStatus;
+  createdAt: string;
+}
+
+
+/* ---------------------------------------------------------------------------
+   Weather and soil
+   ---------------------------------------------------------------------------
+   Two datasets rather than trial notes, and two shapes rather than one.
+
+   Weather is a time series belonging to a station; soil is a layered profile
+   belonging to a point in the ground. Forcing both into one generic
+   "variable" table would make every query about either of them a special
+   case — a rainfall window and a pH at 0–10 cm have nothing structurally in
+   common. The existing data-source links stay as the relationship layer:
+   they say where a number came from, these say what it is.
+   --------------------------------------------------------------------------- */
+
+/** Where a weather record came from. Swappable by design. */
+export type WeatherSource = "bom" | "silo" | "logger" | "manual";
+
+/**
+ * One observation at one station at one moment.
+ *
+ * Station name and position are carried on the row rather than normalised
+ * into a station table, because they are what the source said at that time —
+ * a station that moves or is renamed should not silently rewrite history.
+ */
+export interface WeatherObservation {
+  observationId: string;
+  sourceSystem: WeatherSource;
+  stationId: string;
+  stationName: string;
+  lat: number | null;
+  lon: number | null;
+  /** Full ISO 8601 with offset. BOM publishes UTC; it is stored as UTC. */
+  observationTime: string;
+  airTempC: number | null;
+  /**
+   * Rain since 9am local, in mm — which is what BOM's `rain_trace` actually
+   * is, and the reason this field is not called rainfall_mm. Summing a column
+   * of per-observation rainfall is normal; summing this one would multiply a
+   * day's rain by the number of observations in it.
+   */
+  rainfallSince9amMm: number | null;
+  relativeHumidityPct: number | null;
+  windSpeedKmh: number | null;
+  /** Compass point as published — "SSE", "NW". Not degrees; BOM gives letters. */
+  windDir: string | null;
+  dewPointC: number | null;
+  pressureMslHpa: number | null;
+  /** The source record verbatim, for auditability. */
+  rawPayload: Record<string, unknown> | null;
+  createdAt: string;
+}
+
+/** Where soil information came from. */
+export type SoilSource = "ansis" | "lab" | "field" | "grower";
+
+/**
+ * One sampling event: a place, a date, and a depth interval.
+ *
+ * Depth is on the sample rather than the result because a sample is taken
+ * from an interval — national soil datasets are depth-based, and a pH with no
+ * depth attached is not comparable with anything.
+ */
+export interface SoilSample {
+  sampleId: string;
+  siteId: string;
+  soilSource: SoilSource;
+  /** Somebody's label for the soil — interpreted, not measured. */
+  soilClassification: string;
+  /** Which system that label belongs to, so two labels can be told apart. */
+  classificationSystem: string;
+  /** Plain date; a sampling day, not an instant. */
+  sampleDate: string;
+  /** The sampler's own point identifier, if they had one. */
+  samplePointId: string;
+  lat: number | null;
+  lon: number | null;
+  depthFromCm: number;
+  depthToCm: number;
+  note: string;
+  createdAt: string;
+}
+
+/** One measured attribute of one sample. */
+export interface SoilResult {
+  resultId: string;
+  sampleId: string;
+  /** Controlled code — see services/soilAttributes. */
+  attributeCode: string;
+  attributeName: string;
+  value: number | null;
+  /** Some results are words: a texture grade, a colour. */
+  textValue: string;
+  /** Always explicit, never implied by the attribute. */
+  unit: string;
+  /** The method the number was produced by, which changes what it means. */
+  methodCode: string;
+  methodRef: string;
   createdAt: string;
 }
