@@ -108,7 +108,15 @@ src/
 25. MUST NOT sum `rainfall_since_9am_mm`. BOM's rain trace is cumulative since 9am local,
     so adding the readings multiplies a day's rain by the number of observations in it.
     Take each rain day's maximum — `summariseWindow` in services/weatherImport does.
-26. MUST NOT add a `dark:` class for anything the tokens already flip. The palette
+26. MUST let a new service worker activate itself. It used to wait to be asked, and
+    the control that asks lives inside the app — so a release that stopped the app
+    rendering could never be superseded, and recovering meant sending SKIP_WAITING
+    by hand from a console. Waiting guards something recoverable; not waiting guards
+    something that is not.
+27. MUST NOT gate rendering on IndexedDB. `main.tsx` mounts whether or not seeding
+    worked, and a database that will not open shows a plain-DOM message with a retry.
+    An unsettled promise in that chain is a blank page with nothing in the console.
+28. MUST NOT add a `dark:` class for anything the tokens already flip. The palette
     swaps under `html.dark` in one block; a per-element override is how one colour
     gets left behind on the wrong ground.
 
