@@ -40,6 +40,7 @@ const sites: Site[] = [
     region: "SA",
     soilType: "",
     coordinates: null,
+    bomStationId: null,
     plantingDate: null,
     stageDates: {},
     createdAt: T0,

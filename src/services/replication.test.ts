@@ -24,7 +24,7 @@ const trial: Trial = {
 };
 
 const sites: Site[] = [
-  { siteId: "s1", trialId: "trial-1", contactId: "c1", location: "Block", region: "", soilType: "", coordinates: null, plantingDate: null, stageDates: {}, createdAt: T0 },
+  { siteId: "s1", trialId: "trial-1", contactId: "c1", location: "Block", region: "", soilType: "", coordinates: null, bomStationId: null, plantingDate: null, stageDates: {}, createdAt: T0 },
 ];
 
 function arm(armId: string, sortOrder: number, archived = false): PracticeArm {
