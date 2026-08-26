@@ -788,6 +788,8 @@ const NT = {
   armHigh: "5f0a6c1e-0004-4000-8000-000000000008",
   armSplit: "5f0a6c1e-0004-4000-8000-000000000009",
   template: "5f0a6c1e-0006-4000-8000-000000000020",
+  emergenceForm: "5f0a6c1e-0006-4000-8000-000000000021",
+  midSeasonForm: "5f0a6c1e-0006-4000-8000-000000000022",
 } as const;
 
 const ntTrial: Trial = {
@@ -876,7 +878,7 @@ const ntTemplate: FormTemplate = {
   eventType: "field_record",
   audience: "grower",
   frequency: "Once per plot at harvest",
-  timing: { stage: "tuberInitiation", dapFrom: null, dapTo: null },
+  timing: { stage: "harvest", dapFrom: 0, dapTo: 14 },
   requiresSite: true,
   requiresArm: true,
   // No "plot number" question here: the trial has a layout, so the form asks
@@ -990,7 +992,146 @@ export function seedPresence(trialIds: string[]): SeedPresence {
 
 // Bumped so devices that already ran v11 re-seed, restoring the demonstration
 // entries the sync-status lie caused to be removed.
-const SEED_FLAG = { key: "seeded", version: 14 };
+
+/**
+ * The rest of the season.
+ *
+ * One form per visit, which is what the add-a-form button is for and what
+ * almost every real protocol needs: an emergence count while the crop is
+ * coming up, a canopy and disease check mid-season, the weights at harvest.
+ * Each carries its own timing, so the trial has three schedules rather than
+ * one — and between them the three land on the three states the due list can
+ * show, which is the point of seeding them at all.
+ */
+const ntEmergenceForm: FormTemplate = {
+  templateId: NT.emergenceForm,
+  trialId: NT.trial,
+  armId: null,
+  name: "Emergence count",
+  // Its own event type, because records carry the type rather than the form
+  // id — two forms sharing one look like a single visit to everything
+  // downstream.
+  eventType: "emergenceCount",
+  audience: "grower",
+  frequency: "Once per plot, as the crop comes up",
+  timing: { stage: "emergence", dapFrom: 0, dapTo: 7 },
+  requiresSite: true,
+  requiresArm: true,
+  fields: [
+    {
+      fieldName: "plantsEmerged",
+      label: "Plants up in the counted rows",
+      type: "number",
+      required: true,
+      options: null,
+      min: 0,
+      max: null,
+      unit: "count",
+      displayOrder: 0,
+    },
+    {
+      fieldName: "gaps",
+      label: "Any obvious gaps?",
+      type: "boolean",
+      required: false,
+      options: null,
+      min: null,
+      max: null,
+      unit: null,
+      displayOrder: 1,
+    },
+    {
+      fieldName: "notes",
+      label: "Anything worth noting?",
+      type: "text",
+      required: false,
+      options: null,
+      min: null,
+      max: null,
+      unit: null,
+      displayOrder: 2,
+    },
+  ],
+  createdAt: T0,
+};
+
+const ntMidSeasonForm: FormTemplate = {
+  templateId: NT.midSeasonForm,
+  trialId: NT.trial,
+  armId: null,
+  name: "Canopy and disease check",
+  eventType: "midSeasonCheck",
+  audience: "grower",
+  frequency: "Once per plot, around tuber initiation",
+  timing: { stage: "tuberInitiation", dapFrom: null, dapTo: null },
+  requiresSite: true,
+  requiresArm: true,
+  fields: [
+    {
+      fieldName: "canopyVigour",
+      label: "Canopy vigour",
+      type: "slider",
+      required: true,
+      options: null,
+      min: 1,
+      max: 5,
+      unit: null,
+      displayOrder: 0,
+    },
+    {
+      fieldName: "diseaseSeen",
+      label: "Any disease showing?",
+      type: "select",
+      required: false,
+      options: ["none", "early blight", "target spot", "something else"],
+      min: null,
+      max: null,
+      unit: null,
+      displayOrder: 1,
+    },
+    {
+      fieldName: "photo",
+      label: "Photo of the canopy",
+      type: "photo",
+      required: false,
+      options: null,
+      min: null,
+      max: null,
+      unit: null,
+      displayOrder: 2,
+    },
+  ],
+  createdAt: T0,
+};
+
+// Emergence counts, already taken — so the demo shows a visit that is done
+// alongside one that is due and one still coming.
+const ntEmergenceDate = `${daysBeforeToday(18)}T00:00:00.000Z`;
+const ntEmergenceEvents: MeasurementEvent[] = ntPlots.map(([armId, rep], index) => ({
+  eventId: `5f0a6c1e-00e3-4000-8000-0000000000${(index + 10).toString().padStart(2, "0")}`,
+  trialId: NT.trial,
+  siteId: NT.site,
+  armId,
+  replicate: rep,
+  plot: null,
+  eventDate: ntEmergenceDate,
+  eventType: "emergenceCount",
+  enteredBy: NT.contact,
+  syncStatus: "pending",
+  createdAt: ntEmergenceDate,
+}));
+
+const ntEmergenceMetrics: Metric[] = ntEmergenceEvents.map((event, index) => ({
+  metricId: `5f0a6c1e-00e4-4000-8000-0000000000${(index + 10).toString().padStart(2, "0")}`,
+  eventId: event.eventId,
+  metricName: "plantsEmerged",
+  value: 92 + ((index * 3) % 9),
+  unit: "count",
+  photoUrl: null,
+  createdAt: ntEmergenceDate,
+}));
+
+const SEED_FLAG = { key: "seeded", version: 15 };
 
 export async function seedIfNeeded(): Promise<void> {
   const existing = await dbGet<{ key: string; version: number }>("meta", "seeded");
@@ -1014,7 +1155,11 @@ export async function seedIfNeeded(): Promise<void> {
     { collection: "sites", value: ntSite },
     ...ntArms.map((arm) => ({ collection: "practiceArms" as const, value: arm })),
     { collection: "formTemplates", value: ntTemplate },
+    { collection: "formTemplates", value: ntEmergenceForm },
+    { collection: "formTemplates", value: ntMidSeasonForm },
     ...ntEvents.map((event) => ({ collection: "measurementEvents" as const, value: event })),
+    ...ntEmergenceEvents.map((event) => ({ collection: "measurementEvents" as const, value: event })),
+    ...ntEmergenceMetrics.map((metric) => ({ collection: "metrics" as const, value: metric })),
     ...ntMetrics.map((metric) => ({ collection: "metrics" as const, value: metric })),
     ...seedAssumptions.map((assumption) => ({
       collection: "armAssumptions" as const,
