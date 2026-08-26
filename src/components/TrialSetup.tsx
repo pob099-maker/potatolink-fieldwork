@@ -7,7 +7,7 @@ import { useState } from "react";
 import { Link } from "react-router-dom";
 import { addSite, removeSite, saveSite } from "../services/store";
 import { words } from "../services/vocabulary";
-import { Card } from "./ui";
+import { Card, CardTitle } from "./ui";
 import type { FormTemplate, PracticeArm, Site, Trial } from "../types";
 
 export function SetupChecklist({
@@ -78,14 +78,14 @@ export function SetupChecklist({
   if (outstanding.length === 0) return null;
 
   return (
-    <Card>
+    <Card tone="feature">
       <div className="flex flex-wrap items-center justify-between gap-2">
-        <h2 className="font-display text-lg font-bold">Finish setting up this trial</h2>
+        <CardTitle>Finish setting up this trial</CardTitle>
         <span className="rounded-full bg-warning/15 px-2.5 py-0.5 text-sm font-medium text-warning">
           {outstanding.length} still needed
         </span>
       </div>
-      <p className="mt-1 text-sm text-ink/60 dark:text-ink-dark/60">
+      <p className="mt-1 text-sm text-ink-soft">
         Entries cannot be recorded until these are in place.
       </p>
       <ul className="mt-2 space-y-1.5 text-sm">
@@ -94,11 +94,11 @@ export function SetupChecklist({
             <span className={step.done ? "text-success" : "text-warning"}>
               {step.done ? "✓" : "○"}
             </span>
-            <span className={step.done ? "text-ink/60 dark:text-ink-dark/60" : "font-medium"}>
+            <span className={step.done ? "text-ink-soft" : "font-medium"}>
               {step.label}
             </span>
             {!step.done ? (
-              <span className="text-ink/60 dark:text-ink-dark/60">— {step.hint}</span>
+              <span className="text-ink-soft">— {step.hint}</span>
             ) : null}
           </li>
         ))}
@@ -124,7 +124,7 @@ export function SiteManager({ trialId, sites }: { trialId: string; sites: Site[]
   const [message, setMessage] = useState<string | null>(null);
 
   const inputClass =
-    "min-h-11 rounded-lg border border-ink/20 bg-surface px-3 dark:border-ink-dark/20 dark:bg-surface-dark";
+    "min-h-11 rounded-lg border border-line-strong bg-surface px-3";
 
   async function onAdd(): Promise<void> {
     setError(null);
@@ -155,8 +155,8 @@ export function SiteManager({ trialId, sites }: { trialId: string; sites: Site[]
 
   return (
     <Card>
-      <h2 className="font-display text-lg font-bold">Sites</h2>
-      <p className="mt-1 text-sm text-ink/60 dark:text-ink-dark/60">
+      <CardTitle>Sites</CardTitle>
+      <p className="mt-1 text-sm text-ink-soft">
         Where this trial runs. Every entry is filed against a site, so a trial needs at
         least one before data can be recorded.
       </p>
@@ -164,7 +164,7 @@ export function SiteManager({ trialId, sites }: { trialId: string; sites: Site[]
       {sites.length === 0 ? (
         <p className="mt-2 text-sm text-warning">No sites yet — add the first one below.</p>
       ) : (
-        <ul className="mt-2 divide-y divide-ink/10 dark:divide-ink-dark/10">
+        <ul className="mt-2 divide-y divide-line">
           {sites.map((site) => (
             <li key={site.siteId} className="flex flex-wrap items-center gap-2 py-2">
               <input

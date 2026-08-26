@@ -25,12 +25,12 @@ import {
   useTrials,
 } from "../hooks/useCollections";
 import { words } from "../services/vocabulary";
-import { Card, EmptyState, ErrorState, PageTitle, Skeleton, StatusPill } from "../components/ui";
+import { Card, CardTitle, EmptyState, ErrorState, PageTitle, Skeleton, StatusPill } from "../components/ui";
 import type { ArmAssumption, AssumptionCategory, Metric, PracticeArm } from "../types";
 
 const inputClass =
-  "w-full min-h-11 rounded-lg border border-ink/20 bg-surface px-3 py-2 " +
-  "focus:border-primary focus:outline-none dark:border-ink-dark/20 dark:bg-surface-dark";
+  "w-full min-h-11 rounded-lg border border-line-strong bg-surface px-3 py-2 " +
+  "focus:border-primary";
 
 export function EconomicsPage() {
   const { trialId } = useParams<{ trialId: string }>();
@@ -152,7 +152,7 @@ export function EconomicsPage() {
     <div className="space-y-4">
       <div>
         <PageTitle>Economics</PageTitle>
-        <p className="mt-1 text-ink/60 dark:text-ink-dark/60">{trial.name}</p>
+        <p className="mt-1 text-ink-soft">{trial.name}</p>
         {/* Split out from the trial's results, and framed as a tool rather
             than a finding. The app declines to do the statistics — the
             response summary says outright that it is not a significance test
@@ -182,7 +182,7 @@ export function EconomicsPage() {
             className={`min-h-11 rounded-full border px-4 py-2 font-medium ${
               selectedSiteId === null
                 ? "border-primary bg-primary text-white"
-                : "border-ink/20 dark:border-ink-dark/20"
+                : "border-line-strong"
             }`}
           >
             All sites combined
@@ -196,7 +196,7 @@ export function EconomicsPage() {
               className={`min-h-11 rounded-full border px-4 py-2 font-medium ${
                 selectedSiteId === site.siteId
                   ? "border-primary bg-primary text-white"
-                  : "border-ink/20 dark:border-ink-dark/20"
+                  : "border-line-strong"
               }`}
             >
               📍 {site.location}
@@ -208,11 +208,11 @@ export function EconomicsPage() {
       {blending ? (
         <Card>
           <h2 className="font-semibold">Scenarios in use</h2>
-          <p className="mt-1 text-sm text-ink/60 dark:text-ink-dark/60">
+          <p className="mt-1 text-sm text-ink-soft">
             Each site is calculated on its own season assumptions, then the outcomes are
             added together. Choose a site above to edit its numbers.
           </p>
-          <ul className="mt-2 divide-y divide-ink/10 text-sm dark:divide-ink-dark/10">
+          <ul className="mt-2 divide-y divide-line text-sm">
             {trialSites.map((site) => {
               const siteScenario = scenarioForSite(
                 scenarios.data ?? [],
@@ -223,7 +223,7 @@ export function EconomicsPage() {
               return (
                 <li key={site.siteId} className="py-2">
                   <span className="font-medium">📍 {site.location}</span>
-                  <span className="text-ink/60 dark:text-ink-dark/60">
+                  <span className="text-ink-soft">
                     {" "}
                     — {values.seasonTonnes.toLocaleString()} t at{" "}
                     {formatMoney(values.pricePerTonne)}/t, labour{" "}
@@ -240,7 +240,7 @@ export function EconomicsPage() {
         <h2 className="font-semibold">
           Scenario{selectedSite ? ` — ${selectedSite.location}` : ""}
         </h2>
-        <p className="mt-1 text-sm text-ink/60 dark:text-ink-dark/60">
+        <p className="mt-1 text-sm text-ink-soft">
           Season-level assumptions the calculations run against
           {selectedSite ? ` at ${selectedSite.location}` : ""}. Change them to test
           sensitivity — nothing is stored until you save.
@@ -299,10 +299,10 @@ export function EconomicsPage() {
       <ConfidenceBanner assumptions={trialAssumptions} />
 
       <section aria-label="Comparison results" className="space-y-3">
-        <h2 className="font-display text-lg font-bold">
+        <CardTitle>
           Each alternative vs “{control.name}”
           {selectedSite ? ` at ${selectedSite.location}` : " across all sites"}
-        </h2>
+        </CardTitle>
         {comparisons.map((comparison) => (
           <Card key={comparison.arm.armId}>
             <div className="flex flex-wrap items-center justify-between gap-2">
@@ -310,8 +310,8 @@ export function EconomicsPage() {
               <StatusPill status={comparison.arm.type} />
             </div>
             <dl className="mt-3 grid grid-cols-3 gap-2 text-center">
-              <div className="rounded-lg bg-paper p-2 dark:bg-paper-dark">
-                <dt className="text-xs text-ink/60 dark:text-ink-dark/60">Net benefit / yr</dt>
+              <div className="rounded-lg bg-sunk p-2">
+                <dt className="text-meta text-ink-soft">Net benefit / yr</dt>
                 <dd
                   className={`font-display text-xl font-bold ${
                     comparison.netBenefit >= 0 ? "text-success" : "text-danger"
@@ -320,14 +320,14 @@ export function EconomicsPage() {
                   {formatMoney(comparison.netBenefit)}
                 </dd>
               </div>
-              <div className="rounded-lg bg-paper p-2 dark:bg-paper-dark">
-                <dt className="text-xs text-ink/60 dark:text-ink-dark/60">Extra capex</dt>
+              <div className="rounded-lg bg-sunk p-2">
+                <dt className="text-meta text-ink-soft">Extra capex</dt>
                 <dd className="font-display text-xl font-bold">
                   {formatMoney(comparison.extraCapex)}
                 </dd>
               </div>
-              <div className="rounded-lg bg-paper p-2 dark:bg-paper-dark">
-                <dt className="text-xs text-ink/60 dark:text-ink-dark/60">Payback</dt>
+              <div className="rounded-lg bg-sunk p-2">
+                <dt className="text-meta text-ink-soft">Payback</dt>
                 <dd className="font-display text-xl font-bold">
                   {comparison.paybackYears === null
                     ? "—"
@@ -337,7 +337,7 @@ export function EconomicsPage() {
                 </dd>
               </div>
             </dl>
-            <p className="mt-2 text-sm text-ink/60 dark:text-ink-dark/60">
+            <p className="mt-2 text-sm text-ink-soft">
               Annual: revenue {formatMoney(comparison.economics.annualRevenue)} − costs{" "}
               {formatMoney(comparison.economics.annualCost)}. Capex{" "}
               {formatMoney(comparison.economics.capex)}.
@@ -347,8 +347,8 @@ export function EconomicsPage() {
       </section>
 
       <section aria-label="Assumptions" className="space-y-3">
-        <h2 className="font-display text-lg font-bold">Assumptions per {word.one}</h2>
-        <p className="text-sm text-ink/60 dark:text-ink-dark/60">
+        <CardTitle>Assumptions per {word.one}</CardTitle>
+        <p className="text-sm text-ink-soft">
           These describe what each {word.one} costs and returns, and apply across every site
           — what differs by site is the season scenario above. Units: $ one-off · $/yr flat
           annual · $/t and hr/t scale with season throughput · %yield values a
@@ -376,7 +376,7 @@ export function EconomicsPage() {
 
       <Link
         to={`/trials/${trial.trialId}`}
-        className="inline-block min-h-11 rounded-lg border border-ink/20 px-4 py-2.5 font-medium dark:border-ink-dark/20"
+        className="inline-block min-h-11 rounded-lg border border-line-strong px-4 py-2.5 font-medium"
       >
         Back to trial
       </Link>
@@ -457,17 +457,17 @@ function ArmAssumptionsCard({
       </div>
 
       {assumptions.length === 0 ? (
-        <p className="mt-2 text-sm text-ink/50 dark:text-ink-dark/50">
+        <p className="mt-2 text-sm text-ink-faint">
           No assumptions yet — the calculation treats this practice as $0 either way.
         </p>
       ) : (
-        <ul className="mt-2 divide-y divide-ink/10 text-sm dark:divide-ink-dark/10">
+        <ul className="mt-2 divide-y divide-line text-sm">
           {assumptions.map((assumption) => (
             <li
               key={assumption.assumptionId}
               className="flex flex-wrap items-center gap-2 py-2"
             >
-              <span className="rounded-full bg-primary/10 px-2 py-0.5 text-xs font-medium capitalize text-primary dark:bg-primary-soft/20 dark:text-primary-soft">
+              <span className="rounded-full bg-primary/10 px-2 py-0.5 text-meta font-medium capitalize text-primary dark:bg-primary-soft/20 dark:text-primary-soft">
                 {assumption.category}
               </span>
               <span className="min-w-[9rem] flex-1">{assumption.fieldName}</span>
@@ -573,7 +573,7 @@ function ConfirmToggle({ assumption }: { assumption: ArmAssumption }) {
           status: confirmed ? "placeholder" : "confirmed",
         })
       }
-      className={`min-h-11 rounded-full border px-3 text-xs font-medium ${
+      className={`min-h-11 rounded-full border px-3 text-meta font-medium ${
         confirmed
           ? "border-success/40 bg-success/10 text-success"
           : "border-warning/40 bg-warning/10 text-warning"
@@ -611,12 +611,12 @@ function ConfidenceBanner({ assumptions }: { assumptions: ArmAssumption[] }) {
         Indicative only — {confidence.placeholder} of {confidence.total}{" "}
         {confidence.total === 1 ? "figure is" : "figures are"} still a placeholder
       </h2>
-      <p className="mt-1 text-sm text-ink/70 dark:text-ink-dark/70">
+      <p className="mt-1 text-sm text-ink-soft">
         The results below are worked out from stand-in numbers, not this grower's costs.
         Replace them with real figures and mark each one confirmed before the payback is
         quoted to anyone.
       </p>
-      <p className="mt-1 text-sm text-ink/60 dark:text-ink-dark/60">
+      <p className="mt-1 text-sm text-ink-soft">
         Still to confirm: {names.join(", ")}.
       </p>
     </section>
@@ -639,10 +639,10 @@ function MeasuredContext({
       <h2 className="font-semibold">
         Measured so far{siteLabel ? ` — ${siteLabel}` : ""}
       </h2>
-      <p className="mt-1 text-sm text-ink/60 dark:text-ink-dark/60">
+      <p className="mt-1 text-sm text-ink-soft">
         Field data collected to date — use it to ground the assumptions above.
       </p>
-      <ul className="mt-2 divide-y divide-ink/10 text-sm dark:divide-ink-dark/10">
+      <ul className="mt-2 divide-y divide-line text-sm">
         {trialArms.map((arm) => {
           const eventIds = new Set(
             events.filter((event) => event.armId === arm.armId).map((event) => event.eventId),
@@ -657,7 +657,7 @@ function MeasuredContext({
           return (
             <li key={arm.armId} className="flex flex-wrap items-center gap-2 py-2">
               <span className="flex-1">{arm.name}</span>
-              <span className="text-ink/60 dark:text-ink-dark/60">
+              <span className="text-ink-soft">
                 {eventIds.size} entries
                 {tonnes > 0 ? ` · ${tonnes.toFixed(1)} t` : ""}
                 {tonnes > 0 && hours > 0 ? ` · ${(tonnes / hours).toFixed(1)} t/hr` : ""}

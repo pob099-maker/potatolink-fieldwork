@@ -26,7 +26,7 @@ export function SyncReassurance({ pendingCount }: { pendingCount: number }) {
 
   if (!backend) {
     return (
-      <p className="rounded-lg bg-surface-dark/5 p-2.5 text-sm text-ink/70 dark:bg-surface/5 dark:text-ink-dark/70">
+      <p className="rounded-lg bg-ink/5 p-2.5 text-sm text-ink-soft">
         📁 Saving to this device only.{waiting}
       </p>
     );
@@ -72,10 +72,10 @@ export function RecentEntries({
   return (
     <section
       aria-label="Recent entries at this site"
-      className="rounded-xl border border-ink/10 bg-surface p-4 dark:border-ink-dark/10 dark:bg-surface-dark"
+      className="rounded-xl border border-line bg-surface p-4"
     >
       <h2 className="font-semibold">Already recorded here</h2>
-      <ul className="mt-2 divide-y divide-ink/10 text-sm dark:divide-ink-dark/10">
+      <ul className="mt-2 divide-y divide-line text-sm">
         {recent.map(({ event, summary }) => {
           const arm = arms.find((candidate) => candidate.armId === event.armId);
           return (
@@ -92,10 +92,10 @@ export function RecentEntries({
                 {format(new Date(event.eventDate), "d MMM, h:mm a")}
               </span>
               {arm ? (
-                <span className="text-ink/60 dark:text-ink-dark/60">{arm.name}</span>
+                <span className="text-ink-soft">{arm.name}</span>
               ) : null}
               {summary ? (
-                <span className="text-ink/60 dark:text-ink-dark/60">{summary}</span>
+                <span className="text-ink-soft">{summary}</span>
               ) : null}
               <SyncBadge status={event.syncStatus} />
               <Link

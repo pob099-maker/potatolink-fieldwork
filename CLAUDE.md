@@ -55,8 +55,9 @@ src/
 9. MUST use semantic HTML elements. NEVER use div where a semantic element exists.
 10. MUST include alt text on every img element.
 11. MUST keep keyboard focus visible. The Tailwind reset removes it; `:focus-visible`
-    styling in `src/index.css` puts it back. Never add `focus:outline-none` without
-    replacing the indicator.
+    styling in `src/index.css` puts it back. Never add `focus:outline-none` — it beats
+    `:focus-visible` on specificity and silently removes the ring, which is exactly
+    what it had done to every text input in the app, the entry form included.
 12. MUST convey required and invalid state to assistive technology, not only with an
     asterisk and a colour. An `aria-hidden` asterisk tells a screen reader nothing.
 13. MUST NOT let an empty input become a number. `z.coerce.number()` turns `""` into
@@ -66,6 +67,18 @@ src/
     any of them afterwards silently re-labels every record already taken.
 15. MUST average readings that share an experimental unit before comparing treatments.
     Several samples in one plot are one observation, not several.
+16. MUST NOT make the app fetch anything it needs in order to run. Typefaces are
+    self-hosted and the shell is precached by `sw/service-worker.js`; a paddock has
+    no signal, and a font or a script requested over the network is one that is not
+    there when it matters.
+17. MUST take colours from the named tokens in `src/index.css` — `ink`, `ink-soft`,
+    `ink-faint`, `line`, `line-strong`, `paper`, `surface`, `sunk`. Never build a
+    grey out of opacity (`ink/60`): it composites differently over every ground,
+    compounds when nested, and cannot be contrast-checked because it is not a colour
+    until it is painted.
+18. MUST NOT add a `dark:` class for anything the tokens already flip. The palette
+    swaps under `html.dark` in one block; a per-element override is how one colour
+    gets left behind on the wrong ground.
 
 ## Database schema
 
@@ -110,7 +123,17 @@ Follow the PotatoLink brand guidelines, not the placeholder palette in
   (`primary`, `accent`, `paper`, `ink`, …), never raw hex in components.
 - Primary is rich brown; gold/tan is the accent for keylines, panels, and
   highlights; backgrounds are warm cream, not neutral grey.
-- `h1`/`h2` render bold uppercase — write headings in sentence case and let the
-  stylesheet do it.
+- `h1` renders bold uppercase — write headings in sentence case and let the
+  stylesheet do it. `h2` deliberately does **not**: with uppercase on both, a trial
+  page stacked fourteen all-caps headings, and uppercase destroys the word shape
+  that makes a heading scannable. The authority the guidelines are after comes from
+  one title being set that way and nothing else competing with it.
+- Type comes from the scale, not from ad-hoc sizes: `text-eyebrow`, `text-meta`,
+  `text-body`, `text-subtitle`, `text-title`, `text-display`. Each carries its own
+  line height.
+- Typefaces are Cabinet Grotesk (display) and Satoshi (body), self-hosted in
+  `src/assets/fonts`. They were previously requested from Fontshare's CDN, which
+  returned the wrong second family — so no heading in the app was ever set in
+  Cabinet Grotesk until they were bundled.
 - The logo mark is overlapping potato outlines; the header carries the
   "Australian Potato Industry Extension Project" descriptor.

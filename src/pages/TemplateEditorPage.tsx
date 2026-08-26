@@ -13,8 +13,8 @@ import { Card, EmptyState, ErrorState, PageTitle, Skeleton } from "../components
 import type { FieldType, FormField, FormTemplate } from "../types";
 
 const inputClass =
-  "w-full min-h-11 rounded-lg border border-ink/20 bg-surface px-3 py-2 " +
-  "focus:border-primary focus:outline-none dark:border-ink-dark/20 dark:bg-surface-dark";
+  "w-full min-h-11 rounded-lg border border-line-strong bg-surface px-3 py-2 " +
+  "focus:border-primary";
 
 export function TemplateEditorPage() {
   const { trialId } = useParams<{ trialId: string }>();
@@ -98,11 +98,11 @@ export function TemplateEditorPage() {
     <div className="space-y-4">
       <div>
         <PageTitle>Edit form</PageTitle>
-        <p className="mt-1 text-ink/60 dark:text-ink-dark/60">
+        <p className="mt-1 text-ink-soft">
           {trial.name} · {draft.name}
           {stored.frequency ? ` · ${stored.frequency}` : ""}
         </p>
-        <p className="mt-1 text-sm text-ink/50 dark:text-ink-dark/50">
+        <p className="mt-1 text-sm text-ink-faint">
           Filled in {stored.audience === "staff" ? "by staff" : "on site"}.
         </p>
       </div>
@@ -125,7 +125,7 @@ export function TemplateEditorPage() {
       {draft.fields.map((field, index) => (
         <Card key={field.fieldName} className="space-y-3">
           <div className="flex items-center justify-between gap-2">
-            <span className="text-sm font-semibold text-ink/50 dark:text-ink-dark/50">
+            <span className="text-sm font-semibold text-ink-faint">
               Question {index + 1} of {draft.fields.length}
             </span>
             <span className="flex gap-1">
@@ -134,7 +134,7 @@ export function TemplateEditorPage() {
                 aria-label={`Move question ${index + 1} up`}
                 disabled={index === 0}
                 onClick={() => setDraft({ ...draft, fields: moveField(draft.fields, index, -1) })}
-                className="min-h-11 min-w-11 rounded-lg border border-ink/15 disabled:opacity-30 dark:border-ink-dark/15"
+                className="min-h-11 min-w-11 rounded-lg border border-line disabled:opacity-30"
               >
                 ↑
               </button>
@@ -143,7 +143,7 @@ export function TemplateEditorPage() {
                 aria-label={`Move question ${index + 1} down`}
                 disabled={index === draft.fields.length - 1}
                 onClick={() => setDraft({ ...draft, fields: moveField(draft.fields, index, 1) })}
-                className="min-h-11 min-w-11 rounded-lg border border-ink/15 disabled:opacity-30 dark:border-ink-dark/15"
+                className="min-h-11 min-w-11 rounded-lg border border-line disabled:opacity-30"
               >
                 ↓
               </button>
@@ -194,7 +194,7 @@ export function TemplateEditorPage() {
                   </option>
                 ))}
               </select>
-              <p className="mt-1 text-xs text-ink/50 dark:text-ink-dark/50">
+              <p className="mt-1 text-meta text-ink-faint">
                 {FIELD_TYPE_HELP.find((help) => help.type === field.type)?.hint}
               </p>
             </div>
@@ -274,7 +274,7 @@ export function TemplateEditorPage() {
             ],
           })
         }
-        className="min-h-11 w-full rounded-lg border border-dashed border-ink/30 font-medium text-ink/70 dark:border-ink-dark/30 dark:text-ink-dark/70"
+        className="min-h-11 w-full rounded-lg border border-dashed border-line-strong font-medium text-ink-soft"
       >
         + Add a question
       </button>
@@ -289,7 +289,7 @@ export function TemplateEditorPage() {
       <div className="flex gap-2">
         <Link
           to={`/trials/${trial.trialId}`}
-          className="min-h-11 flex-1 rounded-lg border border-ink/20 px-4 py-2.5 text-center font-medium dark:border-ink-dark/20"
+          className="min-h-11 flex-1 rounded-lg border border-line-strong px-4 py-2.5 text-center font-medium"
         >
           Back to trial
         </Link>

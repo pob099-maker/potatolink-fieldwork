@@ -17,8 +17,8 @@ import { accuracyNote, stripArea, type Fix } from "../services/stripMeasure";
 import type { FormField, MediaKind } from "../types";
 
 const inputClass =
-  "w-full min-h-11 rounded-lg border border-ink/20 bg-surface px-3 py-2.5 text-base " +
-  "focus:border-primary focus:outline-none dark:border-ink-dark/20 dark:bg-surface-dark";
+  "w-full min-h-11 rounded-lg border border-line-strong bg-surface px-3 py-2.5 text-base " +
+  "focus:border-primary";
 
 interface FieldProps<T extends FieldValues> {
   field: FormField;
@@ -53,7 +53,7 @@ export function EntryField<T extends FieldValues>({
     <div>
       <label id={labelId} htmlFor={field.fieldName} className="mb-1.5 block font-medium">
         {field.label}
-        {field.unit ? <span className="text-ink/50 dark:text-ink-dark/50"> ({field.unit})</span> : null}
+        {field.unit ? <span className="text-ink-faint"> ({field.unit})</span> : null}
         {/* The asterisk is decoration — hidden from assistive technology, and
             the only thing that said "required". Without aria-required a screen
             reader user filled in what they thought was needed and met a
@@ -165,7 +165,7 @@ function StripMeasure<T extends FieldValues>({
 
   if (widthM === null) {
     return (
-      <p className="mt-1 text-sm text-ink/50 dark:text-ink-dark/50">
+      <p className="mt-1 text-sm text-ink-faint">
         Set the plot width on the trial and this can be measured by walking the strip
         instead of typed.
       </p>
@@ -178,7 +178,7 @@ function StripMeasure<T extends FieldValues>({
         type="button"
         disabled={busy}
         onClick={() => void mark()}
-        className="min-h-11 w-full rounded-lg border border-dashed border-ink/30 px-4 py-2.5 font-medium text-ink/70 disabled:opacity-60 dark:border-ink-dark/30 dark:text-ink-dark/70"
+        className="min-h-11 w-full rounded-lg border border-dashed border-line-strong px-4 py-2.5 font-medium text-ink-soft disabled:opacity-60"
       >
         📍{" "}
         {busy
@@ -188,7 +188,7 @@ function StripMeasure<T extends FieldValues>({
             : `Measure by walking (${widthM} m wide)`}
       </button>
       {note ? (
-        <p role="status" className="mt-1 text-sm text-ink/60 dark:text-ink-dark/60">
+        <p role="status" className="mt-1 text-sm text-ink-soft">
           {note}
         </p>
       ) : null}
@@ -229,7 +229,7 @@ function YieldHint<T extends FieldValues>({
   const perHectare = yieldPerHectare(weight, unit, plotAreaM2);
   if (perHectare === null) return null;
   return (
-    <p className="mt-1 text-sm text-ink/60 dark:text-ink-dark/60">
+    <p className="mt-1 text-sm text-ink-soft">
       ≈ <span className="font-medium">{perHectare.toFixed(1)} t/ha</span> over{" "}
       {areaLabel(plotAreaM2)}
     </p>
@@ -334,7 +334,7 @@ function FieldInput<T extends FieldValues>({
                   className={`min-h-11 flex-1 rounded-lg border px-4 py-2.5 font-medium ${
                     controller.value === choice.value
                       ? "border-primary bg-primary text-white"
-                      : "border-ink/20 dark:border-ink-dark/20"
+                      : "border-line-strong"
                   }`}
                 >
                   {choice.label}
@@ -361,9 +361,9 @@ function FieldInput<T extends FieldValues>({
                 onChange={(changeEvent) => controller.onChange(Number(changeEvent.target.value))}
                 className="w-full accent-primary"
               />
-              <div className="flex justify-between text-sm text-ink/50 dark:text-ink-dark/50">
+              <div className="flex justify-between text-sm text-ink-faint">
                 <span>{field.min ?? 1} — poor</span>
-                <span className="font-semibold text-ink dark:text-ink-dark">
+                <span className="font-semibold text-ink">
                   {typeof controller.value === "number" ? controller.value : "–"}
                 </span>
                 <span>{field.max ?? 5} — great</span>
@@ -404,7 +404,7 @@ function FieldInput<T extends FieldValues>({
                       className={`min-h-11 rounded-full border px-4 py-2 font-medium ${
                         isOn
                           ? "border-primary bg-primary text-white"
-                          : "border-ink/20 dark:border-ink-dark/20"
+                          : "border-line-strong"
                       }`}
                     >
                       {isOn ? "✓ " : ""}
@@ -466,12 +466,12 @@ function GpsInput<T extends FieldValues>({
                   { enableHighAccuracy: true, timeout: 15_000 },
                 );
               }}
-              className="min-h-11 w-full rounded-lg border border-dashed border-ink/30 px-4 py-2.5 font-medium text-ink/70 disabled:opacity-60 dark:border-ink-dark/30 dark:text-ink-dark/70"
+              className="min-h-11 w-full rounded-lg border border-dashed border-line-strong px-4 py-2.5 font-medium text-ink-soft disabled:opacity-60"
             >
               📍 {busy ? "Getting location…" : captured ? "Location captured — tap to update" : "Capture this location"}
             </button>
             {captured ? (
-              <p className="mt-1 text-sm text-ink/60 dark:text-ink-dark/60">
+              <p className="mt-1 text-sm text-ink-soft">
                 {String(controller.value)}
               </p>
             ) : null}
@@ -561,7 +561,7 @@ function MediaInput<T extends FieldValues>({
             <button
               type="button"
               onClick={() => fileRef.current?.click()}
-              className="min-h-11 w-full rounded-lg border border-dashed border-ink/30 px-4 py-2.5 font-medium text-ink/70 dark:border-ink-dark/30 dark:text-ink-dark/70"
+              className="min-h-11 w-full rounded-lg border border-dashed border-line-strong px-4 py-2.5 font-medium text-ink-soft"
             >
               {kind === "video"
                 ? `🎬 ${hasMedia ? "Video added — tap to replace" : "Record or choose a video"}`
@@ -570,12 +570,12 @@ function MediaInput<T extends FieldValues>({
                   : `📎 ${hasMedia ? "File attached — tap to replace" : "Attach a file"}`}
             </button>
             {kind === "video" ? (
-              <p className="mt-1 text-xs text-ink/50 dark:text-ink-dark/50">
+              <p className="mt-1 text-meta text-ink-faint">
                 Keep clips short — under about a minute uploads best from the paddock.
               </p>
             ) : null}
             {kind === "file" ? (
-              <p className="mt-1 text-xs text-ink/50 dark:text-ink-dark/50">
+              <p className="mt-1 text-meta text-ink-faint">
                 CSV exports, PDFs, spreadsheets — up to 25 MB.
               </p>
             ) : null}

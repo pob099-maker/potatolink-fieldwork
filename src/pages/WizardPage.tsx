@@ -23,14 +23,13 @@ import {
   type Question,
   type WizardAnswers,
 } from "../services/wizard";
-import { Card, ErrorState, PageTitle } from "../components/ui";
+import { Card, CardTitle, ErrorState, PageTitle } from "../components/ui";
 import type { FieldType } from "../types";
 
 const STEPS = ["What kind of trial", "What you're comparing", "Where", "What to record"] as const;
 
 const inputClass =
-  "mt-1 min-h-11 w-full rounded-lg border border-ink/20 bg-surface px-3 py-2 " +
-  "dark:border-ink-dark/20 dark:bg-surface-dark";
+  "mt-1 min-h-11 w-full rounded-lg border border-line-strong bg-surface px-3 py-2";
 
 export type Setter = <K extends keyof WizardAnswers>(key: K, value: WizardAnswers[K]) => void;
 
@@ -63,7 +62,7 @@ export function WizardPage() {
     <div className="space-y-4">
       <div>
         <PageTitle>Set up a trial</PageTitle>
-        <p className="mt-1 text-ink/70 dark:text-ink-dark/70">
+        <p className="mt-1 text-ink-soft">
           {onReview
             ? "Everything here can be changed. Nothing is saved until you say so."
             : `Step ${step + 1} of ${STEPS.length} — ${STEPS[step]}. Every answer can be changed afterwards.`}
@@ -78,7 +77,7 @@ export function WizardPage() {
           {problems.length > 0 ? (
             <Card className="border-warning/40">
               <h2 className="font-semibold text-warning">Still needed</h2>
-              <ul className="mt-1 list-disc space-y-1 pl-5 text-sm text-ink/70 dark:text-ink-dark/70">
+              <ul className="mt-1 list-disc space-y-1 pl-5 text-sm text-ink-soft">
                 {problems.map((problem) => (
                   <li key={problem}>{problem}</li>
                 ))}
@@ -107,7 +106,7 @@ export function WizardPage() {
           <button
             type="button"
             onClick={() => setStep(step - 1)}
-            className="min-h-11 rounded-lg border border-ink/20 px-4 py-2.5 font-medium dark:border-ink-dark/20"
+            className="min-h-11 rounded-lg border border-line-strong px-4 py-2.5 font-medium"
           >
             ← Back
           </button>
@@ -147,8 +146,8 @@ export function WizardPage() {
 function KindStep({ answers, set }: { answers: WizardAnswers; set: Setter }) {
   return (
     <Card>
-      <h2 className="font-display text-lg font-bold">What kind of trial is this?</h2>
-      <p className="mt-1 text-sm text-ink/60 dark:text-ink-dark/60">
+      <CardTitle>What kind of trial is this?</CardTitle>
+      <p className="mt-1 text-sm text-ink-soft">
         This decides what you are asked next, and what the app calls things.
       </p>
       <div className="mt-3 space-y-2">
@@ -175,7 +174,7 @@ function KindStep({ answers, set }: { answers: WizardAnswers; set: Setter }) {
             onChange={(event) => set("replicates", Number(event.target.value) || 0)}
             className={inputClass}
           />
-          <span className="mt-1 block text-sm font-normal text-ink/60 dark:text-ink-dark/60">
+          <span className="mt-1 block text-sm font-normal text-ink-soft">
             Each block holds one plot of every treatment. Three or four is usual.
           </span>
         </label>
@@ -194,7 +193,7 @@ function ComparingStep({ answers, set }: { answers: WizardAnswers; set: Setter }
 
   return (
     <Card>
-      <h2 className="font-display text-lg font-bold">What are you comparing?</h2>
+      <CardTitle>What are you comparing?</CardTitle>
       <label className="mt-3 block text-sm font-medium">
         Give the trial a name
         <input
@@ -223,7 +222,7 @@ function ComparingStep({ answers, set }: { answers: WizardAnswers; set: Setter }
           placeholder="e.g. Current spacing"
           className={inputClass}
         />
-        <span className="mt-1 block text-sm font-normal text-ink/60 dark:text-ink-dark/60">
+        <span className="mt-1 block text-sm font-normal text-ink-soft">
           The control — what everything else is measured against.
         </span>
       </label>
@@ -249,7 +248,7 @@ function ComparingStep({ answers, set }: { answers: WizardAnswers; set: Setter }
                     answers.alternatives.filter((_, position) => position !== index),
                   )
                 }
-                className="mt-1 min-h-11 min-w-11 rounded-lg border border-ink/20 dark:border-ink-dark/20"
+                className="mt-1 min-h-11 min-w-11 rounded-lg border border-line-strong"
               >
                 ✕
               </button>
@@ -259,7 +258,7 @@ function ComparingStep({ answers, set }: { answers: WizardAnswers; set: Setter }
         <button
           type="button"
           onClick={() => set("alternatives", [...answers.alternatives, ""])}
-          className="mt-2 min-h-11 rounded-lg border border-ink/20 px-4 py-2.5 font-medium dark:border-ink-dark/20"
+          className="mt-2 min-h-11 rounded-lg border border-line-strong px-4 py-2.5 font-medium"
         >
           + Add another
         </button>
@@ -271,8 +270,8 @@ function ComparingStep({ answers, set }: { answers: WizardAnswers; set: Setter }
 function WhereStep({ answers, set }: { answers: WizardAnswers; set: Setter }) {
   return (
     <Card>
-      <h2 className="font-display text-lg font-bold">Where does it run?</h2>
-      <p className="mt-1 text-sm text-ink/60 dark:text-ink-dark/60">
+      <CardTitle>Where does it run?</CardTitle>
+      <p className="mt-1 text-sm text-ink-soft">
         One site to start with. More can be added on the trial page, and each gets its own
         randomised layout.
       </p>
@@ -317,8 +316,8 @@ function RecordStep({ answers, set }: { answers: WizardAnswers; set: Setter }) {
 
   return (
     <Card>
-      <h2 className="font-display text-lg font-bold">What gets recorded in the field?</h2>
-      <p className="mt-1 text-sm text-ink/60 dark:text-ink-dark/60">
+      <CardTitle>What gets recorded in the field?</CardTitle>
+      <p className="mt-1 text-sm text-ink-soft">
         Rename anything, change what it asks for, or add your own. A trial measuring tuber
         counts or a disease score says so here rather than settling for the nearest
         offered word.
@@ -331,7 +330,7 @@ function RecordStep({ answers, set }: { answers: WizardAnswers; set: Setter }) {
           return (
             <li
               key={index}
-              className="rounded-lg border border-ink/15 p-3 dark:border-ink-dark/15"
+              className="rounded-lg border border-line p-3"
             >
               <div className="flex items-end gap-2">
                 <label className="flex-1 text-sm font-medium">
@@ -347,7 +346,7 @@ function RecordStep({ answers, set }: { answers: WizardAnswers; set: Setter }) {
                   type="button"
                   aria-label={`Remove question ${index + 1}`}
                   onClick={() => remove(index)}
-                  className="mt-1 min-h-11 min-w-11 rounded-lg border border-ink/20 dark:border-ink-dark/20"
+                  className="mt-1 min-h-11 min-w-11 rounded-lg border border-line-strong"
                 >
                   ✕
                 </button>
@@ -380,7 +379,7 @@ function RecordStep({ answers, set }: { answers: WizardAnswers; set: Setter }) {
                       placeholder="kg, t, cm, count…"
                       className={inputClass}
                     />
-                    <span className="mt-1 block text-sm font-normal text-ink/60 dark:text-ink-dark/60">
+                    <span className="mt-1 block text-sm font-normal text-ink-soft">
                       kg or t lets the app work out tonnes per hectare.
                     </span>
                   </label>
@@ -421,7 +420,7 @@ function RecordStep({ answers, set }: { answers: WizardAnswers; set: Setter }) {
               { label: "", type: "number", unit: "", required: false },
             ])
           }
-          className="min-h-11 rounded-lg border border-ink/20 px-4 py-2.5 font-medium dark:border-ink-dark/20"
+          className="min-h-11 rounded-lg border border-line-strong px-4 py-2.5 font-medium"
         >
           + Add a question
         </button>
@@ -444,9 +443,9 @@ function Summary({ answers }: { answers: WizardAnswers }) {
   const parsed = toParsedTrial(answers);
   return (
     <Card className="border-accent/50">
-      <h2 className="font-display text-lg font-bold">
+      <CardTitle>
         {parsed.name || "Untitled trial"}
-      </h2>
+      </CardTitle>
       <dl className="mt-3 space-y-3 text-sm">
         <Row label="Design">
           {parsed.design === "replicated"
@@ -469,7 +468,7 @@ function Summary({ answers }: { answers: WizardAnswers }) {
           </Row>
         ) : null}
       </dl>
-      <p className="mt-3 text-sm text-ink/50 dark:text-ink-dark/50">
+      <p className="mt-3 text-sm text-ink-faint">
         This gets you a trial you can record against. Plot size, extra sites, more
         questions and the economics all live on the trial page.
       </p>
@@ -479,9 +478,9 @@ function Summary({ answers }: { answers: WizardAnswers }) {
 
 function Row({ label, children }: { label: string; children: ReactNode }) {
   return (
-    <div className="flex flex-wrap gap-x-2 border-t border-ink/10 pt-2 dark:border-ink-dark/10">
+    <div className="flex flex-wrap gap-x-2 border-t border-line pt-2">
       <dt className="w-32 shrink-0 font-medium">{label}</dt>
-      <dd className="flex-1 text-ink/70 dark:text-ink-dark/70">{children}</dd>
+      <dd className="flex-1 text-ink-soft">{children}</dd>
     </div>
   );
 }
@@ -500,7 +499,7 @@ function Choice({
   return (
     <label
       className={`flex cursor-pointer gap-3 rounded-lg border p-3 ${
-        checked ? "border-primary bg-primary/5" : "border-ink/15 dark:border-ink-dark/15"
+        checked ? "border-primary bg-primary/5" : "border-line"
       }`}
     >
       <input
@@ -512,7 +511,7 @@ function Choice({
       />
       <span>
         <span className="block font-medium">{title}</span>
-        <span className="block text-sm text-ink/60 dark:text-ink-dark/60">{detail}</span>
+        <span className="block text-sm text-ink-soft">{detail}</span>
       </span>
     </label>
   );
