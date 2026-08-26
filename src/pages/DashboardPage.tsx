@@ -1,4 +1,4 @@
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import { formatDistanceToNow } from "date-fns";
 import {
@@ -14,6 +14,8 @@ import { describeEvent, describeEventScope, eventsForTrial, tallySync } from "..
 import { isSeedTrial, seedPresence, type SeedPresence } from "../services/seed";
 import { hiddenCount, visibleTrials } from "../services/lifecycle";
 import { useOnline } from "../hooks/useOnline";
+import { retryFailedEntries } from "../services/store";
+import { deviceSyncSentence, emptySyncState } from "../services/syncHealth";
 import {
   Card,
   CardTitle,
@@ -128,6 +130,24 @@ export function DashboardPage() {
   const trouble = useSyncTrouble();
   const waiting = useWaitingToSync();
   const online = useOnline();
+  const deviceSync = deviceSyncSentence(waiting.data ?? emptySyncState());
+  const [retrying, setRetrying] = useState(false);
+  const [retryResult, setRetryResult] = useState<string | null>(null);
+
+  async function retry(): Promise<void> {
+    setRetrying(true);
+    setRetryResult(null);
+    const result = await retryFailedEntries();
+    setRetrying(false);
+    await waiting.refetch();
+    setRetryResult(
+      !result.success
+        ? result.error
+        : result.data === 0
+          ? "Still refused. The reason above is what the cloud said this time."
+          : `${result.data} ${result.data === 1 ? "entry" : "entries"} went up.`,
+    );
+  }
   const recentEvents = useMemo(
     () =>
       [...(events.data ?? [])]
@@ -182,17 +202,40 @@ export function DashboardPage() {
         </p>
         {waiting.isPending ? (
           <Skeleton lines={1} />
-        ) : (waiting.data ?? 0) > 0 ? (
-          <p className="mt-1 text-sm text-ink-soft">
-            {waiting.data} {waiting.data === 1 ? "record is" : "records are"} waiting to
-            leave this device.
-          </p>
         ) : (
-          <p className="mt-1 text-sm text-ink-soft">
-            Everything on this device has reached the cloud.
-          </p>
+          <p className="mt-1 text-sm text-ink-soft">{deviceSync.text}</p>
         )}
-        {trouble.data ? (
+        {/* A refusal gets its own block, in its own colour, below the count —
+            never folded into it. The two are separately true, and the calm one
+            must not be allowed to soften the other. */}
+        {deviceSync.alert ? (
+          <div className="mt-3 rounded-lg bg-danger/15 p-3 text-sm">
+            <p className="font-medium text-danger">{deviceSync.alert}</p>
+            {trouble.data ? (
+              <p className="mt-1 text-ink-soft">
+                The cloud said:{" "}
+                <span className="break-words font-mono">{trouble.data.message}</span>
+              </p>
+            ) : null}
+            <p className="mt-1 text-ink-soft">
+              Nothing has been lost — it is all still on this device. Fix the cause, then
+              try again.
+            </p>
+            <button
+              type="button"
+              disabled={retrying}
+              onClick={() => void retry()}
+              className="mt-2 min-h-11 rounded-lg border border-danger/40 px-4 py-2.5 font-medium text-danger disabled:opacity-60"
+            >
+              {retrying ? "Trying…" : "Try sending again"}
+            </button>
+            {retryResult ? (
+              <p className="mt-2 text-ink-soft" role="status">
+                {retryResult}
+              </p>
+            ) : null}
+          </div>
+        ) : trouble.data ? (
           <div className="mt-3 rounded-lg bg-warning/15 p-3 text-sm">
             <p className="font-medium text-warning">
               The last attempt to send was refused.
@@ -200,7 +243,7 @@ export function DashboardPage() {
             <p className="mt-1 text-ink-soft">
               Nothing has been lost — it is all saved on this device and will go up once
               the cause is fixed. The cloud said:{" "}
-              <span className="font-mono">{trouble.data.message}</span>
+              <span className="break-words font-mono">{trouble.data.message}</span>
             </p>
           </div>
         ) : null}

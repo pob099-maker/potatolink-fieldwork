@@ -8,39 +8,55 @@ import { useOnline } from "../hooks/useOnline";
 import { isBackendConfigured } from "../lib/supabase";
 import { recentEntriesAtSite } from "../services/events";
 import { SyncBadge } from "./ui";
+import { syncSentence, type SyncState, type SyncTone } from "../services/syncHealth";
 import type { MeasurementEvent, Metric, PracticeArm } from "../types";
 
 /**
  * A standing line above the form saying where entries go. Offline is stated as
  * a normal, safe condition rather than an error — it is the expected case in a
  * paddock, and the app is built for it.
+ *
+ * A refusal is not. It gets a second line that does not share the first one's
+ * colour or its calm, because the two facts are separately true and the
+ * reassuring one used to swallow the other whole.
  */
-export function SyncReassurance({ pendingCount }: { pendingCount: number }) {
+const TONE_STYLES: Record<SyncTone, string> = {
+  ok: "bg-success/10 text-success",
+  offline: "bg-warning/15 text-warning",
+  local: "bg-ink/5 text-ink-soft",
+  danger: "bg-success/10 text-success",
+};
+
+const TONE_MARKS: Record<SyncTone, string> = {
+  ok: "●",
+  offline: "◌",
+  local: "📁",
+  danger: "●",
+};
+
+export function SyncReassurance({ state }: { state: SyncState }) {
   const online = useOnline();
   const backend = isBackendConfigured();
+  const sentence = syncSentence(state, { online, backend });
 
-  const waiting =
-    pendingCount > 0
-      ? ` ${pendingCount} ${pendingCount === 1 ? "entry is" : "entries are"} waiting to send.`
-      : "";
-
-  if (!backend) {
-    return (
-      <p className="rounded-lg bg-ink/5 p-2.5 text-sm text-ink-soft">
-        📁 Saving to this device only.{waiting}
+  return (
+    <div className="flex flex-col gap-2">
+      <p className={`rounded-lg p-2.5 text-sm ${TONE_STYLES[sentence.tone]}`}>
+        <span aria-hidden>{TONE_MARKS[sentence.tone]}</span> {sentence.text}
       </p>
-    );
-  }
-
-  return online ? (
-    <p className="rounded-lg bg-success/10 p-2.5 text-sm text-success">
-      ● Connected — entries send as you save.{waiting}
-    </p>
-  ) : (
-    <p className="rounded-lg bg-warning/15 p-2.5 text-sm text-warning">
-      ◌ No signal — entries save on this device and send themselves when you are back in
-      range.{waiting}
-    </p>
+      {/* Its own line, its own colour, and a live region — because this is the
+          one thing on the screen somebody must not scroll past. Folding it into
+          the green line above is exactly how sixteen dead entries passed for
+          "waiting to send". */}
+      {sentence.alert ? (
+        <p
+          role="alert"
+          className="rounded-lg bg-danger/15 p-2.5 text-sm font-medium text-danger"
+        >
+          ⚠ {sentence.alert} Tell whoever set the trial up — the dashboard says why.
+        </p>
+      ) : null}
+    </div>
   );
 }
 

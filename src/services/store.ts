@@ -3,6 +3,7 @@
 // when a backend is configured and the device is online.
 
 import type { ZodTypeAny } from "zod";
+import { summariseSync, type SyncState } from "./syncHealth";
 import {
   armAssumptionSchema,
   contactSchema,
@@ -232,18 +233,20 @@ async function clearTrouble(): Promise<void> {
 }
 
 /**
- * How many records are waiting to leave this device: queued setup edits plus
- * entries not yet acknowledged by the cloud.
+ * What has not reached the cloud from this device, split by whether it is
+ * going to get there on its own. A record the cloud refused is not "waiting"
+ * for anything, and counting it as though it were is how sixteen dead entries
+ * sat behind a green banner.
  *
  * This is a property of the device, not of any one trial — the queue and the
  * connection belong to the phone in somebody's hand. A trial's own count of
  * outstanding entries is a different question, answered where the trial is.
  */
-export async function waitingToSync(): Promise<number> {
+export async function waitingToSync(): Promise<SyncState> {
   const queued = (await readOutbox()).length;
   const deletions = (await readDeletions()).length;
   const events = await dbGetAll<MeasurementEvent>("measurementEvents");
-  return queued + deletions + events.filter((event) => event.syncStatus !== "synced").length;
+  return summariseSync(events, queued, deletions);
 }
 
 /**
@@ -387,10 +390,10 @@ const OUTBOX_ORDER: CollectionName[] = [
   "armAssumptions",
 ];
 
-async function drainOutbox(): Promise<void> {
-  if (!supabase || !navigator.onLine) return;
+async function drainOutbox(): Promise<{ stuck: number; lastError: string | null }> {
+  if (!supabase || !navigator.onLine) return { stuck: 0, lastError: null };
   const items = await readOutbox();
-  if (items.length === 0) return;
+  if (items.length === 0) return { stuck: 0, lastError: null };
   const ordered = [...items].sort(
     (a, b) => OUTBOX_ORDER.indexOf(a.collection) - OUTBOX_ORDER.indexOf(b.collection),
   );
@@ -415,12 +418,11 @@ async function drainOutbox(): Promise<void> {
     await dequeueOutbox(item.collection, item.id);
   }
 
-  const left = await readOutbox();
-  if (left.length === 0) {
-    await clearTrouble();
-  } else if (lastError) {
-    await recordTrouble(left.length, lastError);
-  }
+  // Deliberately does not clear the trouble slot on its own any more. It is
+  // shared with the entry push, and an empty outbox was wiping a refusal that
+  // belonged to somebody's field data. pushPending decides, once, with both
+  // halves in front of it.
+  return { stuck: (await readOutbox()).length, lastError };
 }
 
 export async function saveAssumption(assumption: ArmAssumption): Promise<Result<ArmAssumption>> {
@@ -1376,13 +1378,23 @@ async function pushPending(): Promise<void> {
       listMetrics(),
       listEntryLogs(),
     ]);
-    const pending = events.filter((event) => event.syncStatus !== "synced");
-    for (const event of pending) {
+    // Every unsent entry is retried, refused ones included: a refusal is often
+    // temporary in the way that matters here — a migration that has since been
+    // applied, a policy since fixed — and an entry nobody retries is an entry
+    // nobody recovers.
+    const unsent = events.filter((event) => event.syncStatus !== "synced");
+    let stuckEvents = 0;
+    let lastEventError: string | null = null;
+
+    for (const event of unsent) {
       const eventMetrics = metrics.filter((metric) => metric.eventId === event.eventId);
       const eventLogs = logs.filter((log) => log.eventId === event.eventId);
-      const status: SyncStatus = (await pushEvent(event, eventMetrics, eventLogs))
-        ? "synced"
-        : "error";
+      const result = await pushEvent(event, eventMetrics, eventLogs);
+      if (!result.ok) {
+        stuckEvents += 1;
+        lastEventError = result.message;
+      }
+      const status: SyncStatus = result.ok ? "synced" : "error";
       await dbPutMany([
         { collection: "measurementEvents", value: { ...event, syncStatus: status } },
         ...eventLogs.map((log) => ({
@@ -1391,10 +1403,59 @@ async function pushPending(): Promise<void> {
         })),
       ]);
     }
-    if (pending.length > 0) notify();
-    await drainOutbox();
+    if (unsent.length > 0) notify();
+
+    const outbox = await drainOutbox();
     await drainDeletions();
+
+    // One decision, with both halves in front of it. Whichever refusal came
+    // last is the one shown, and the count covers everything actually stuck.
+    const stuck = stuckEvents + outbox.stuck;
+    const reason = lastEventError ?? outbox.lastError;
+    if (stuck === 0) {
+      await clearTrouble();
+    } else if (reason) {
+      await recordTrouble(stuck, reason);
+    }
   }
+}
+
+/**
+ * Put every refused entry back in the queue and try again now.
+ *
+ * A refusal usually has a cause outside the app — a migration not yet run, a
+ * policy that says no — and the person who fixes that cause needs a way to say
+ * "try again" without waiting out the retry timer or, worse, re-entering the
+ * data. Nothing is deleted and nothing is invented: the records were always
+ * still here, which is the one good thing about this failure mode.
+ */
+export async function retryFailedEntries(): Promise<Result<number>> {
+  const events = await listEvents();
+  const failed = events.filter((event) => event.syncStatus === "error");
+  if (failed.length === 0) return { success: true, data: 0 };
+
+  try {
+    await dbPutMany(
+      failed.map((event) => ({
+        collection: "measurementEvents" as const,
+        value: { ...event, syncStatus: "pending" as SyncStatus },
+      })),
+    );
+  } catch {
+    return { success: false, error: "Could not queue the entries on this device." };
+  }
+  notify();
+  await syncPending();
+
+  // Count the ones that actually arrived, by id. Counting "no longer an error"
+  // would score a record that merely went back to pending — which is what
+  // happens on a device with no cloud configured at all — as a success, and
+  // report data as sent that never moved.
+  const retried = new Set(failed.map((event) => event.eventId));
+  const sent = (await listEvents()).filter(
+    (event) => retried.has(event.eventId) && event.syncStatus === "synced",
+  ).length;
+  return { success: true, data: sent };
 }
 
 const MEDIA_BUCKET = "media";
@@ -1424,17 +1485,29 @@ async function resolveMediaPointer(metric: Metric): Promise<Metric | null> {
   return { ...metric, photoUrl: data.publicUrl };
 }
 
+/**
+ * The outcome of a push, with the reason when there is one.
+ *
+ * This used to be a bare boolean, which made a dropped connection and a
+ * permanent refusal indistinguishable to everything downstream — and threw
+ * away the one piece of text that names the actual problem. The outbox learned
+ * this lesson already; the path carrying the field data had not.
+ */
+type PushResult = { ok: true } | { ok: false; message: string };
+
 async function pushEvent(
   event: MeasurementEvent,
   metrics: Metric[],
   logs: DataEntryLog[],
-): Promise<boolean> {
-  if (!supabase) return false;
+): Promise<PushResult> {
+  if (!supabase) return { ok: false, message: "No cloud is configured on this device." };
 
   const resolvedMetrics: Metric[] = [];
   for (const metric of metrics) {
     const resolved = await resolveMediaPointer(metric);
-    if (!resolved) return false;
+    if (!resolved) {
+      return { ok: false, message: "A photo or video attached to this entry could not be uploaded." };
+    }
     if (resolved !== metric) await dbPut("metrics", resolved);
     resolvedMetrics.push(resolved);
   }
@@ -1442,15 +1515,22 @@ async function pushEvent(
   const eventResult = await supabase
     .from("measurement_events")
     .upsert(toRow({ ...event, syncStatus: "synced" }));
-  if (eventResult.error) return false;
+  if (eventResult.error) {
+    return { ok: false, message: `measurement_events: ${eventResult.error.message}` };
+  }
   const metricsResult = await supabase
     .from("metrics")
     .upsert(resolvedMetrics.map((m) => toRow(m)));
-  if (metricsResult.error) return false;
+  if (metricsResult.error) {
+    return { ok: false, message: `metrics: ${metricsResult.error.message}` };
+  }
   const logsResult = await supabase
     .from("data_entry_logs")
     .upsert(logs.map((log) => toRow({ ...log, syncStatus: "synced" })));
-  return !logsResult.error;
+  if (logsResult.error) {
+    return { ok: false, message: `data_entry_logs: ${logsResult.error.message}` };
+  }
+  return { ok: true };
 }
 
 /**
