@@ -20,6 +20,8 @@ import {
   soilSampleSchema,
   soilResultSchema,
   libraryEntrySchema,
+  factorSchema,
+  factorLevelSchema,
 } from "../schemas";
 import type {
   FormAudience,
@@ -43,6 +45,8 @@ import type {
   SoilSample,
   SoilResult,
   LibraryEntry,
+  Factor,
+  FactorLevel,
 } from "../types";
 import { newId, nowIso } from "../lib/id";
 import { dbDelete, dbGet, dbGetAll, dbPut, dbPutMany, type CollectionName } from "../lib/localdb";
@@ -50,6 +54,7 @@ import { fromRow, isBackendConfigured, supabase, toColumn, toRow } from "../lib/
 import { fileExtension, getMedia, isMediaPointer, markUploaded, mediaIdFromPointer } from "./media";
 import { makeFieldName } from "./templates";
 import { findExisting, fromFormField, isBuiltIn, libraryEntries } from "./measurementLibrary";
+import { buildCombinations, canBuild, designLoad } from "./factorial";
 
 const TABLE_NAMES: Partial<Record<CollectionName, string>> = {
   projects: "projects",
@@ -68,6 +73,8 @@ const TABLE_NAMES: Partial<Record<CollectionName, string>> = {
   soilSamples: "soil_samples",
   soilResults: "soil_results",
   measurementLibrary: "measurement_library",
+  factors: "factors",
+  factorLevels: "factor_levels",
 };
 
 type Listener = () => void;
@@ -105,6 +112,9 @@ export const listSoilSamples = (): Promise<SoilSample[]> => dbGetAll<SoilSample>
 export const listSoilResults = (): Promise<SoilResult[]> => dbGetAll<SoilResult>("soilResults");
 export const listLibrary = (): Promise<LibraryEntry[]> =>
   dbGetAll<LibraryEntry>("measurementLibrary");
+export const listFactors = (): Promise<Factor[]> => dbGetAll<Factor>("factors");
+export const listFactorLevels = (): Promise<FactorLevel[]> =>
+  dbGetAll<FactorLevel>("factorLevels");
 
 /**
  * Save locally, then mirror to Supabase. The cloud write is awaited rather
@@ -157,6 +167,8 @@ const PRIMARY_KEY: Record<CollectionName, string> = {
   soilSamples: "sampleId",
   soilResults: "resultId",
   measurementLibrary: "entryId",
+  factors: "factorId",
+  factorLevels: "levelId",
   media: "mediaId",
   meta: "key",
 };
@@ -931,6 +943,148 @@ export async function rememberMeasurements(fields: FormField[]): Promise<Result<
   return { success: true, data: toWrite.length };
 }
 
+
+/**
+ * Rebuild a trial's arms from its factors and levels.
+ *
+ * This is the only place the two models meet. Combinations are generated, and
+ * each becomes a practice arm — so the layout engine, the plot picker, the
+ * export and every recorded entry carry on keying on armId, knowing nothing
+ * about factors at all.
+ *
+ * Refused once a layout has been recorded against. Regenerating combinations
+ * would mint new arm ids, and every measurement already filed against the old
+ * ones would be orphaned — the same silent re-labelling that freezing the
+ * layout exists to prevent (rule 14). The check is here rather than only in
+ * the interface, because an invariant that lives in a disabled button is one
+ * button away from not existing.
+ */
+export async function rebuildFactorialArms(input: {
+  trialId: string;
+  factors: Factor[];
+  levels: FactorLevel[];
+}): Promise<Result<number>> {
+  const events = await dbGetAll<MeasurementEvent>("measurementEvents");
+  const existing = (await dbGetAll<PracticeArm>("practiceArms")).filter(
+    (arm) => arm.trialId === input.trialId,
+  );
+  const armIds = new Set(existing.map((arm) => arm.armId));
+  const recorded = events.some((event) => event.armId !== null && armIds.has(event.armId));
+  if (recorded) {
+    return {
+      success: false,
+      error:
+        "Something has already been recorded against this trial, so the combinations are frozen. Changing them now would re-label every record already taken.",
+    };
+  }
+
+  const combinations = buildCombinations(input.factors, input.levels);
+  if (combinations.length === 0) {
+    return { success: false, error: "Give every factor at least one level first." };
+  }
+
+  const load = designLoad({
+    combinations: combinations.length,
+    replicates: 1,
+    blocking: "blocks",
+  });
+  if (!canBuild(load)) {
+    return { success: false, error: load.message ?? "That design is too large to run." };
+  }
+
+  const createdAt = nowIso();
+  // Reuse an arm id where the same combination already exists, so editing a
+  // factor's *name* does not throw away arms that mean the same thing.
+  const byMembers = new Map(
+    existing.map((arm) => [JSON.stringify(arm.factorLevels ?? {}), arm.armId]),
+  );
+
+  const arms: PracticeArm[] = combinations.map((combination, index) => ({
+    armId: byMembers.get(JSON.stringify(combination.members)) ?? newId(),
+    trialId: input.trialId,
+    name: combination.shortLabel,
+    // The first combination is the reference the others are read against.
+    // A factorial has no natural control, so this is a label rather than a
+    // claim, and the analysis never treats it as a baseline.
+    type: index === 0 ? "control" : "alternative",
+    description: combination.label,
+    sortOrder: index,
+    archived: false,
+    factorLevels: combination.members,
+    createdAt,
+  }));
+
+  const gone = existing.filter((arm) => !arms.some((next) => next.armId === arm.armId));
+
+  try {
+    await dbPutMany(arms.map((value) => ({ collection: "practiceArms" as const, value })));
+    for (const arm of gone) await dbDelete("practiceArms", arm.armId);
+  } catch {
+    return { success: false, error: "Could not save the combinations on this device." };
+  }
+  if (supabase) {
+    void supabase.from("practice_arms").upsert(arms.map((arm) => toRow(arm))).then();
+    for (const arm of gone) {
+      void supabase.from("practice_arms").delete().eq("arm_id", arm.armId).then();
+    }
+  }
+  notify();
+  return { success: true, data: arms.length };
+}
+
+/** Save a trial's factors and levels, then rebuild the combinations from them. */
+export async function saveFactorial(input: {
+  trialId: string;
+  factors: Factor[];
+  levels: FactorLevel[];
+}): Promise<Result<number>> {
+  for (const factor of input.factors) {
+    if (!factorSchema.safeParse(factor).success) {
+      return { success: false, error: "Every factor needs a name." };
+    }
+  }
+  for (const level of input.levels) {
+    if (!factorLevelSchema.safeParse(level).success) {
+      return { success: false, error: "Every level needs a label." };
+    }
+  }
+
+  const rebuilt = await rebuildFactorialArms(input);
+  if (!rebuilt.success) return rebuilt;
+
+  // Written after the rebuild, so a refused rebuild leaves the trial exactly
+  // as it was rather than half-changed.
+  const currentFactors = (await dbGetAll<Factor>("factors")).filter(
+    (factor) => factor.trialId === input.trialId,
+  );
+  const keptFactors = new Set(input.factors.map((factor) => factor.factorId));
+  const keptLevels = new Set(input.levels.map((level) => level.levelId));
+  const currentLevels = (await dbGetAll<FactorLevel>("factorLevels")).filter((level) =>
+    currentFactors.some((factor) => factor.factorId === level.factorId),
+  );
+
+  try {
+    await dbPutMany([
+      ...input.factors.map((value) => ({ collection: "factors" as const, value })),
+      ...input.levels.map((value) => ({ collection: "factorLevels" as const, value })),
+    ]);
+    for (const level of currentLevels) {
+      if (!keptLevels.has(level.levelId)) await dbDelete("factorLevels", level.levelId);
+    }
+    for (const factor of currentFactors) {
+      if (!keptFactors.has(factor.factorId)) await dbDelete("factors", factor.factorId);
+    }
+  } catch {
+    return { success: false, error: "Could not save the factors on this device." };
+  }
+  if (supabase) {
+    void supabase.from("factors").upsert(input.factors.map((row) => toRow(row))).then();
+    void supabase.from("factor_levels").upsert(input.levels.map((row) => toRow(row))).then();
+  }
+  notify();
+  return rebuilt;
+}
+
 /** Persist trial changes, including its design mode. */
 export async function saveTrial(trial: Trial): Promise<Result<Trial>> {
   const next = { ...trial, updatedAt: nowIso() };
@@ -1349,6 +1503,8 @@ const PULL_SPECS: Array<{ collection: CollectionName; table: string; schema: Zod
   { collection: "soilSamples", table: "soil_samples", schema: soilSampleSchema },
   { collection: "soilResults", table: "soil_results", schema: soilResultSchema },
   { collection: "measurementLibrary", table: "measurement_library", schema: libraryEntrySchema },
+  { collection: "factors", table: "factors", schema: factorSchema },
+  { collection: "factorLevels", table: "factor_levels", schema: factorLevelSchema },
 ];
 
 /** Fetch every synced table from Supabase into the local store. */

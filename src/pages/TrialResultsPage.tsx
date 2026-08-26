@@ -29,6 +29,7 @@ import {
   SyncBadge,
   SyncTallyLine,
 } from "../components/ui";
+import { FactorialResults } from "../components/FactorialResults";
 import {
   EditEntryLink,
   ReplicationStatusCard,
@@ -178,6 +179,19 @@ export function TrialResultsPage() {
             word={word}
           />
         </Section>
+      ) : null}
+
+      {data.isFactorial && trial.responseMetric ? (
+        <FactorialResults
+          trial={trial}
+          factors={data.factors}
+          levels={data.levels}
+          arms={activeArms}
+          events={events}
+          metrics={metrics}
+          responseLabel={responseLabel ?? ""}
+          responseUnit={responseField?.unit ?? ""}
+        />
       ) : null}
 
       <Section

@@ -13,6 +13,8 @@ import {
   listSoilSamples,
   listSoilResults,
   listLibrary,
+  listFactors,
+  listFactorLevels,
   listScenarios,
   listSites,
   listTemplates,
@@ -58,6 +60,9 @@ export const useSoilSamples = () =>
 export const useSoilResults = () =>
   useQuery({ queryKey: ["soilResults"], queryFn: listSoilResults });
 export const useLibrary = () => useQuery({ queryKey: ["library"], queryFn: listLibrary });
+export const useFactors = () => useQuery({ queryKey: ["factors"], queryFn: listFactors });
+export const useFactorLevels = () =>
+  useQuery({ queryKey: ["factorLevels"], queryFn: listFactorLevels });
 export const useSyncTrouble = () =>
   useQuery({ queryKey: ["syncTrouble"], queryFn: syncTrouble });
 export const useWaitingToSync = () =>
