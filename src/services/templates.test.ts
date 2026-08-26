@@ -70,6 +70,7 @@ describe("saveTemplate", () => {
     eventType: "field_record",
     audience: "grower",
     frequency: "",
+    timing: null,
     requiresSite: true,
     requiresArm: true,
     fields: [field("notes", 0)],

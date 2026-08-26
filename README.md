@@ -67,6 +67,15 @@ form.
 **A lifecycle.** A finished trial can be closed and archived — out of the lists,
 still fully readable, back with one tap.
 
+**Observation timing, anchored to the crop.** Protocols say "at tuber
+initiation", not "on 14 October", because a season that runs late moves every
+date with it. Each site records its planting date; each form says which growth
+stage it hangs off. Until the stage arrives the app shows an estimated window
+and says so; confirm the stage and every date hanging off it re-anchors to the
+real one. The dashboard shows what is due or late, and the schedule exports as
+a calendar file so the phone's own calendar does the reminding — Fieldwork has
+no server and cannot send anything, which is stated rather than worked around.
+
 **Provenance.** A trial records where its data comes from — a sensor datastream,
 a machinery export, a protocol — scoped to a plot, a treatment, a site or the
 trial, and every exported row names the sources covering it.

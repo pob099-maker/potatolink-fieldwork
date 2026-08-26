@@ -97,6 +97,9 @@ function StartHere({ presence }: { presence: SeedPresence }) {
   );
 }
 
+import { DueNowBanner } from "../components/ObservationTiming";
+import { buildDueList, todayIso } from "../services/dueList";
+
 export function DashboardPage() {
   const trials = useTrials();
   const sites = useSites();
@@ -106,6 +109,21 @@ export function DashboardPage() {
 
   const loading = trials.isPending || sites.isPending || events.isPending || arms.isPending;
   const failed = trials.isError || sites.isError || events.isError;
+
+  // What is waiting on the crop, rather than on the network. Recomputed from
+  // the same data the rest of the dashboard already has, so it costs nothing
+  // extra and cannot drift from what the trial pages say.
+  const due = useMemo(
+    () =>
+      buildDueList({
+        trials: trials.data ?? [],
+        sites: sites.data ?? [],
+        templates: templates.data ?? [],
+        events: events.data ?? [],
+        today: todayIso(),
+      }),
+    [trials.data, sites.data, templates.data, events.data],
+  );
 
   const trouble = useSyncTrouble();
   const waiting = useWaitingToSync();
@@ -138,6 +156,11 @@ export function DashboardPage() {
           + New trial
         </Link>
       </div>
+
+      {/* Above everything, because it is the only thing on this screen that
+          is time-critical — an observation window closes whether or not
+          anybody scrolled. */}
+      <DueNowBanner items={due} />
 
       <StartHere presence={seedPresence((trials.data ?? []).map((trial) => trial.trialId))} />
 

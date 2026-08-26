@@ -21,6 +21,8 @@ const sites: Site[] = [
     region: "SA",
     soilType: "",
     coordinates: null,
+    plantingDate: null,
+    stageDates: {},
     createdAt: T0,
   },
 ];
@@ -95,6 +97,7 @@ describe("describing records", () => {
       eventType: "cost_log",
       audience: "staff",
       frequency: "Once per trial",
+      timing: null,
       requiresSite: false,
       requiresArm: false,
       fields: [],

@@ -191,7 +191,57 @@ samples, and the app would be showing a confidence nobody earned.
 
 The summary says so when it happens, and **n** reads like `2 (3 readings)`.
 
-## 10. Record where the data came from
+## 10. Say when observations are due
+
+**Planting and growth stages**, on the trial page. Enter the **planting date**
+for each site. Then, on each form under **Trial forms**, set *When is this
+wanted?* — "at tuber initiation", "at harvest", or a set number of days after
+planting.
+
+### Why it asks for a stage and not a date
+
+Because your protocol does. Nobody writes "assess on 14 October"; they write
+"at tuber initiation", because that is when the thing being measured is
+happening. A date fixed at setup is wrong the first time a season runs late,
+and every week after that it is wronger — and a schedule that is wrong is worse
+than no schedule, because people learn to ignore it.
+
+So the app works from what it actually knows:
+
+- **The planting date** is the anchor. It is the one date on a trial that
+  somebody always knows exactly. Per site, because two sites planted a
+  fortnight apart are two schedules.
+- **A typical day count** turns that into an estimated window — tuber
+  initiation is usually 35 to 45 days after planting. This is a guess, and the
+  app labels it *estimated* everywhere it appears.
+- **A confirmed stage** replaces the guess. When somebody standing in the crop
+  says the stage has arrived, choose it under *Confirm a stage has arrived* and
+  every window hanging off it re-anchors to the real date — and stops being
+  called an estimate.
+
+That last step is what stops the schedule decaying. Do it as you go.
+
+### The reminder
+
+**Add to calendar** downloads a `.ics` file. Open it on the phone that does the
+recording and the observations land in its own calendar, with an alarm the day
+before.
+
+This is the reminder, and it is worth being straight about why: Fieldwork has
+no server. Nothing runs on a schedule, so the app cannot send you anything. The
+phone's calendar can, it is already checked every morning, and it needs no
+account and no permission from us.
+
+The file is a snapshot. Confirm a stage — which moves the dates — and download
+it again.
+
+### What you will see
+
+The dashboard shows a banner for anything **due now** or **late**, with a
+Record button that opens the right form at the right site. Nothing upcoming
+appears there: a banner that is always on is furniture, not a warning.
+
+## 11. Record where the data came from
 
 **Where the data comes from** — a sensor datastream, a machinery export, the
 written protocol. Scoped to a plot, a treatment, a site or the whole trial.
@@ -201,13 +251,13 @@ Every exported row names the sources covering it. Under variable-rate irrigation
 a flow meter belongs to one plot, because the point of the machine is that each
 zone gets its own rate.
 
-## 11. Export
+## 12. Export
 
 **Export data (CSV)** — long format, one row per recorded value, with the plot,
 the treatment, the derived `yield_t_ha`, the `plot_area_m2` it used, and the
 data sources covering that row.
 
-## 12. Close it when it is done
+## 13. Close it when it is done
 
 **Stage**, on the trial page.
 

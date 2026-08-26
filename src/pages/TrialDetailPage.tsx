@@ -35,6 +35,8 @@ import {
 import { SetupChecklist, SiteManager } from "../components/TrialSetup";
 import { PlotLayout } from "../components/PlotLayout";
 import { DataSources } from "../components/DataSources";
+import { DueNowBanner, PlantingCard, TimingEditor, TrialSchedule } from "../components/ObservationTiming";
+import { buildDueList, todayIso } from "../services/dueList";
 import { generateLayout, layoutProblem } from "../services/layout";
 import { describePlot } from "../services/plotArea";
 import { useAccess } from "../contexts/AccessContext";
@@ -119,6 +121,23 @@ export function TrialDetailPage() {
   // rather than both meeting a compromise neither uses.
   const word = trial ? words(trial) : words({ vocabulary: null, design: "observational" });
 
+  // This trial's schedule. Same computation as the dashboard's, over the
+  // subset already loaded here, so the two can never disagree about what is
+  // due.
+  const due = useMemo(
+    () =>
+      trial
+        ? buildDueList({
+            trials: [trial],
+            sites: trialSites,
+            templates: trialTemplates,
+            events: trialEvents,
+            today: todayIso(),
+          })
+        : [],
+    [trial, trialSites, trialTemplates, trialEvents],
+  );
+
   // null = every site combined; otherwise one site's figures only.
   const [selectedSiteId, setSelectedSiteId] = useState<string | null>(null);
   const selectedSite = trialSites.find((site) => site.siteId === selectedSiteId);
@@ -158,6 +177,9 @@ export function TrialDetailPage() {
           </p>
         ) : null}
       </div>
+
+      {/* The trial name is already on screen, so the banner does not repeat it. */}
+      <DueNowBanner items={due} showTrial={false} />
 
       {trialSites.length > 1 ? (
         <div>
@@ -275,6 +297,9 @@ export function TrialDetailPage() {
         title="Collecting observations"
         description={`For whoever is in the paddock — a contractor, a staff member or the grower. One link per site and ${word.one}, and the form works with no signal.`}
       >
+      <TrialSchedule trial={trial} items={due} />
+      <PlantingCard sites={trialSites} />
+
       <DataSources trial={trial} sites={trialSites} arms={activeArms} />
 
       {closedReason(trial) ? (
@@ -1224,6 +1249,9 @@ function TrialForms({
             {template.requiresArm ? ` · per ${word.one}` : ""}
           </span>
         ) : null}
+        <span className="mt-2 block max-w-md">
+          <TimingEditor template={template} />
+        </span>
       </span>
       <Link
         to={`/trials/${trial.trialId}/entry?form=${template.templateId}`}

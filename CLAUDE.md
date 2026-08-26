@@ -76,7 +76,16 @@ src/
     grey out of opacity (`ink/60`): it composites differently over every ground,
     compounds when nested, and cannot be contrast-checked because it is not a colour
     until it is painted.
-18. MUST NOT add a `dark:` class for anything the tokens already flip. The palette
+18. MUST label an estimated observation window as estimated, every time it is shown.
+    A window from a planting date and a typical day count, and one from a stage
+    somebody confirmed, are different kinds of claim — and somebody deciding whether
+    to drive an hour is entitled to know which they are looking at. Never present a
+    guess in the same voice as a fact.
+19. MUST NOT let a pulled row overwrite a local field the backend did not send.
+    Absent means the column does not exist yet (a migration behind); null means
+    somebody cleared it. `keepColumnsTheCloudLacks` in `services/store.ts` holds the
+    line — without it, shipping a feature before its migration silently deletes data.
+20. MUST NOT add a `dark:` class for anything the tokens already flip. The palette
     swaps under `html.dark` in one block; a per-element override is how one colour
     gets left behind on the wrong ground.
 

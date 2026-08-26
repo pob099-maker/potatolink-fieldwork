@@ -123,6 +123,24 @@ export interface Site {
   region: string;
   soilType: string;
   coordinates: { lat: number; lng: number } | null;
+  /**
+   * When the crop went in here. The anchor everything else is measured from,
+   * and the one date on a trial that somebody always knows exactly.
+   *
+   * On the site rather than the trial, because two sites planted a fortnight
+   * apart are two schedules — the same reason each site gets its own
+   * randomised layout.
+   */
+  plantingDate: string | null;
+  /**
+   * Growth stage id → the date it was confirmed to have arrived here.
+   *
+   * This is what stops the schedule decaying. Estimated windows are worked out
+   * from the planting date and a typical day count, which the season moves; a
+   * confirmed date replaces the estimate for that stage and everything hung
+   * off it re-anchors. Empty until somebody standing in the crop says so.
+   */
+  stageDates: Record<string, string>;
   createdAt: string;
 }
 
@@ -298,6 +316,9 @@ export interface FormField {
 
 export type FormAudience = "grower" | "staff";
 
+export type { Timing } from "../services/timing";
+import type { Timing } from "../services/timing";
+
 export interface FormTemplate {
   templateId: string;
   trialId: string;
@@ -309,6 +330,16 @@ export interface FormTemplate {
   audience: FormAudience;
   /** Plain-language cadence shown to the person filling it in. */
   frequency: string;
+  /**
+   * When this form is expected, relative to the crop rather than the calendar.
+   *
+   * Kept alongside `frequency` rather than replacing it: the frequency string
+   * is what a person reads, and it is free text on purpose because protocols
+   * are written in prose. This is the structured half the app can compute a
+   * window from. null means the form is filled in whenever it is filled in,
+   * which is the honest default and what every existing form is.
+   */
+  timing: Timing | null;
   requiresSite: boolean;
   requiresArm: boolean;
   fields: FormField[];
