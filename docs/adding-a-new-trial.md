@@ -18,7 +18,7 @@ app asks what it asks, so this explains the decisions rather than the clicks.
 
 The first question decides everything after it, so it is worth getting right.
 
-**"Comparing two ways of doing something"** — a demonstration or on-farm
+**"Comparing ways of doing something"** — a demonstration or on-farm
 comparison. Record what happens under each, show a neighbour the difference.
 No replication, no statistics, and the app will call them *practices*.
 

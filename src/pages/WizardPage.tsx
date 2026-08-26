@@ -155,8 +155,8 @@ function KindStep({ answers, set }: { answers: WizardAnswers; set: Setter }) {
         <Choice
           checked={answers.kind === "comparison"}
           onChoose={() => set("kind", "comparison")}
-          title="Comparing two ways of doing something"
-          detail="A demonstration or on-farm comparison. Record what happens under each, and show a neighbour the difference. No replication, no statistics."
+          title="Comparing ways of doing something"
+          detail="A demonstration or on-farm comparison — two ways of doing something, or several. Record what happens under each, and show a neighbour the difference. No replication, no statistics."
         />
         <Choice
           checked={answers.kind === "experiment"}

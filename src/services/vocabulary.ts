@@ -66,6 +66,6 @@ export const VOCABULARY_CHOICES: Array<{ value: Vocabulary; label: string; detai
     value: "practice",
     label: "Practices",
     detail:
-      "What a grower comparing two ways of doing something calls them. Usual for a demonstration or on-farm comparison.",
+      "What a grower comparing ways of doing something calls them. Usual for a demonstration or on-farm comparison.",
   },
 ];
