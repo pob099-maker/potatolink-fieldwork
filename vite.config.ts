@@ -61,5 +61,22 @@ export default defineConfig({
   test: {
     environment: "node",
     include: ["src/**/*.test.ts"],
+    // Tests run with no backend, always.
+    //
+    // Vitest loads .env through Vite, so a developer with .env.local present
+    // had VITE_SUPABASE_URL set during the test run — which made the Supabase
+    // client real, and every store function that mirrors a write to the cloud
+    // did exactly that. `npm test` wrote fourteen junk form templates into a
+    // live project before anybody noticed, and would have kept doing it on
+    // every run.
+    //
+    // Blanking them here means `supabase` is null under test, so the local
+    // path is exercised and the cloud path is skipped. That is also the more
+    // honest test: these are unit tests of local-first behaviour, and one that
+    // depends on a network service is not testing what it claims to.
+    env: {
+      VITE_SUPABASE_URL: "",
+      VITE_SUPABASE_ANON_KEY: "",
+    },
   },
 });

@@ -101,3 +101,47 @@ values ('5f0a6c1e-0006-4000-8000-000000000002', '5f0a6c1e-0002-4000-8000-0000000
           {"fieldName":"notes","label":"Anything else worth noting?","type":"text","required":false,"options":null,"min":null,"max":null,"unit":null,"displayOrder":13}
         ]'::jsonb)
 on conflict do nothing;
+
+-- Nitrogen trial: the rest of the season.
+--
+-- One form per visit — an emergence count while the crop comes up, a canopy
+-- and disease check mid-season, the weights at harvest. Each carries its own
+-- timing, so the trial has three schedules rather than one.
+--
+-- These must exist here as well as in the app's own seed. A pull removes local
+-- records the cloud does not have, and a form template carries no sync status
+-- to protect it — so a form seeded only on the device appears, then disappears
+-- the first time the app syncs. Rows the demo needs to survive belong here.
+
+insert into form_templates (template_id, trial_id, arm_id, name, event_type, frequency, timing, fields)
+values ('5f0a6c1e-0006-4000-8000-000000000021', '5f0a6c1e-0002-4000-8000-000000000003', null,
+        'Emergence count',
+        'emergenceCount',
+        'Once per plot, as the crop comes up',
+        '{"stage":"emergence","dapFrom":0,"dapTo":7}'::jsonb,
+        '[
+          {"fieldName":"plantsEmerged","label":"Plants up in the counted rows","type":"number","required":true,"options":null,"min":0,"max":null,"unit":"count","displayOrder":0},
+          {"fieldName":"gaps","label":"Any obvious gaps?","type":"boolean","required":false,"options":null,"min":null,"max":null,"unit":null,"displayOrder":1},
+          {"fieldName":"notes","label":"Anything worth noting?","type":"text","required":false,"options":null,"min":null,"max":null,"unit":null,"displayOrder":2}
+        ]'::jsonb)
+on conflict do nothing;
+
+insert into form_templates (template_id, trial_id, arm_id, name, event_type, frequency, timing, fields)
+values ('5f0a6c1e-0006-4000-8000-000000000022', '5f0a6c1e-0002-4000-8000-000000000003', null,
+        'Canopy and disease check',
+        'midSeasonCheck',
+        'Once per plot, around tuber initiation',
+        '{"stage":"tuberInitiation","dapFrom":null,"dapTo":null}'::jsonb,
+        '[
+          {"fieldName":"canopyVigour","label":"Canopy vigour","type":"slider","required":true,"options":null,"min":1,"max":5,"unit":null,"displayOrder":0},
+          {"fieldName":"diseaseSeen","label":"Any disease showing?","type":"select","required":false,"options":["none","early blight","target spot","something else"],"min":null,"max":null,"unit":null,"displayOrder":1},
+          {"fieldName":"photo","label":"Photo of the canopy","type":"photo","required":false,"options":null,"min":null,"max":null,"unit":null,"displayOrder":2}
+        ]'::jsonb)
+on conflict do nothing;
+
+-- The harvest form belongs at harvest. It used to sit at tuber initiation
+-- because it was the trial's only form, so its timing was doing duty as the
+-- whole trial's schedule.
+update form_templates
+   set timing = '{"stage":"harvest","dapFrom":0,"dapTo":14}'::jsonb
+ where template_id = '5f0a6c1e-0006-4000-8000-000000000020';

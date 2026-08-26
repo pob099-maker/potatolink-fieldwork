@@ -92,7 +92,12 @@ src/
 21. MUST give every form its own `eventType`, unique within the trial. Records carry
     the event type, not the template id — two forms sharing one look like the same
     visit to the due list, to "already recorded here", and to anybody reading the export.
-22. MUST NOT add a `dark:` class for anything the tokens already flip. The palette
+22. MUST NOT let the test suite reach a real backend. Vitest loads .env through
+    Vite, so a developer with .env.local present once had `npm test` writing junk
+    rows into a live Supabase project on every run. `vite.config.ts` blanks the
+    credentials for tests and `src/lib/testIsolation.test.ts` fails if that stops
+    being true. Never work around it by re-supplying them.
+23. MUST NOT add a `dark:` class for anything the tokens already flip. The palette
     swaps under `html.dark` in one block; a per-element override is how one colour
     gets left behind on the wrong ground.
 
