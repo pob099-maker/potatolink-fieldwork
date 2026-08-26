@@ -105,6 +105,7 @@ export const practiceArmSchema = z.object({
   type: z.enum(["control", "alternative"]),
   description: z.string(),
   sortOrder: z.number().int(),
+  factorLevels: z.record(z.string(), z.string()).default({}),
   archived: z.boolean().default(false),
   createdAt: isoDate,
   updatedAt: optionalDate,
@@ -402,5 +403,25 @@ export const libraryEntrySchema = z.object({
   guidance: z.string().default(""),
   source: z.enum(["builtin", "added"]).default("added"),
   usageCount: z.number().int().min(0).default(1),
+  createdAt: isoDate,
+});
+
+/* --- Factorial ----------------------------------------------------------- */
+
+export const factorSchema = z.object({
+  factorId: id,
+  trialId: id,
+  name: z.string().min(1, "A factor needs a name"),
+  code: z.string().default(""),
+  sortOrder: z.number().int().default(0),
+  createdAt: isoDate,
+});
+
+export const factorLevelSchema = z.object({
+  levelId: id,
+  factorId: id,
+  label: z.string().min(1, "A level needs a label"),
+  numericValue: z.number().nullable().default(null),
+  sortOrder: z.number().int().default(0),
   createdAt: isoDate,
 });

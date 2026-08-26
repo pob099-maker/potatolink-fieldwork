@@ -193,6 +193,17 @@ export interface PracticeArm {
   sortOrder: number;
   /** Retired: kept for its data, but not offered for new entries. */
   archived: boolean;
+  /**
+   * For a factorial trial: which level of each factor this arm stands for,
+   * keyed by factorId. Empty for a trial that is not factorial.
+   *
+   * The arm *is* the treatment combination rather than pointing at one. A
+   * separate combinations table alongside this would be two rows for a single
+   * thing and a synchronisation problem — and everything that already works
+   * keys on armId: the layout engine, the plot picker, the export, the
+   * replication grid, every recorded entry.
+   */
+  factorLevels?: Record<string, string>;
   createdAt: string;
   /** Bumped on every edit; drives last-writer-wins on sync. */
   updatedAt?: string;
@@ -467,3 +478,45 @@ export interface SoilResult {
 }
 
 export type { LibraryEntry } from "../services/measurementLibrary";
+
+
+/* ---------------------------------------------------------------------------
+   Factorial designs
+   ---------------------------------------------------------------------------
+   A factorial arrangement is not a kind of trial. It describes how treatments
+   are combined — every level of every factor crossed with every other — and
+   says nothing about how they are laid out. The field design stays a separate
+   choice: randomised complete block, completely randomised, split-plot.
+
+   So these sit on top of the existing model. The combinations they produce
+   become practice arms, and the layout engine randomises them exactly as it
+   randomises any other set of treatments.
+   --------------------------------------------------------------------------- */
+
+/** A variable being tested — variety, nitrogen rate, irrigation regime. */
+export interface Factor {
+  factorId: string;
+  trialId: string;
+  name: string;
+  /** Short form for plot labels and column headings — "N", "Irr". */
+  code: string;
+  sortOrder: number;
+  createdAt: string;
+}
+
+/** One setting of one factor. */
+export interface FactorLevel {
+  levelId: string;
+  factorId: string;
+  label: string;
+  /**
+   * The level as a number where it is one — 0, 80, 160 kg N/ha.
+   *
+   * Kept apart from the label because a rate is a quantity and "High" is a
+   * name, and only one of them can be fitted to a trend or plotted against a
+   * response. Null for a genuinely categorical level such as a variety.
+   */
+  numericValue: number | null;
+  sortOrder: number;
+  createdAt: string;
+}

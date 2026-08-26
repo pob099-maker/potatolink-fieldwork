@@ -18,6 +18,8 @@ import {
   useTemplates,
   useTrials,
   useWeather,
+  useFactors,
+  useFactorLevels,
 } from "./useCollections";
 import { eventsForTrial } from "../services/events";
 import { buildDueList, todayIso } from "../services/dueList";
@@ -34,6 +36,8 @@ import type {
   SoilSample,
   Trial,
   WeatherObservation,
+  Factor,
+  FactorLevel,
 } from "../types";
 import type { DueItem } from "../services/timing";
 
@@ -54,6 +58,10 @@ export interface TrialData {
   weather: WeatherObservation[];
   soilSamples: SoilSample[];
   soilResults: SoilResult[];
+  factors: Factor[];
+  levels: FactorLevel[];
+  /** A trial is factorial once it has factors with levels. */
+  isFactorial: boolean;
   due: DueItem[];
   /** Records already filed against a plot. Above zero, the layout is frozen. */
   plotRecords: number;
@@ -74,11 +82,19 @@ export function useTrialData(trialId: string | undefined): TrialData {
   const weather = useWeather();
   const soilSamples = useSoilSamples();
   const soilResults = useSoilResults();
+  const factors = useFactors();
+  const factorLevels = useFactorLevels();
 
   const trial = (trials.data ?? []).find((candidate) => candidate.trialId === trialId);
   const trialSites = (sites.data ?? []).filter((site) => site.trialId === trialId);
   const trialArms = (arms.data ?? []).filter((arm) => arm.trialId === trialId);
-  const activeArms = trialArms.filter((arm) => !arm.archived);
+  // Sorted here rather than at each call site. IndexedDB returns key order,
+  // and the keys are random UUIDs, so an unsorted list renders treatments in a
+  // different order on every device. The layout engine sorts for itself, which
+  // is what keeps a seed reproducible; this is so the screen agrees with it.
+  const activeArms = trialArms
+    .filter((arm) => !arm.archived)
+    .sort((a, b) => a.sortOrder - b.sortOrder);
   const trialTemplates = (templates.data ?? []).filter((form) => form.trialId === trialId);
 
   const trialEvents = useMemo(
@@ -112,6 +128,13 @@ export function useTrialData(trialId: string | undefined): TrialData {
     return index;
   }, [trial, trialSites, activeArms]);
 
+  const trialFactors = (factors.data ?? [])
+    .filter((factor) => factor.trialId === trialId)
+    .sort((a, b) => a.sortOrder - b.sortOrder);
+  const trialLevels = (factorLevels.data ?? []).filter((level) =>
+    trialFactors.some((factor) => factor.factorId === level.factorId),
+  );
+
   const due = useMemo(
     () =>
       trial
@@ -142,6 +165,9 @@ export function useTrialData(trialId: string | undefined): TrialData {
     weather: weather.data ?? [],
     soilSamples: soilSamples.data ?? [],
     soilResults: soilResults.data ?? [],
+    factors: trialFactors,
+    levels: trialLevels,
+    isFactorial: trialFactors.length > 0 && trialLevels.length > 0,
     due,
     plotRecords,
     layoutLocked: plotRecords > 0,

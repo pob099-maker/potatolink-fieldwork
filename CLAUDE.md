@@ -123,7 +123,19 @@ src/
 29. MUST NOT store the shipped measurement list as rows. A pull removes local records
     the cloud does not have, so seeded built-ins vanish on first sync — that is what
     happened to the demo forms. Built-ins live in code; only additions are stored.
-30. MUST NOT add a `dark:` class for anything the tokens already flip. The palette
+30. MUST keep the factorial arrangement separate from the field layout. A factorial
+    says how treatments are *combined*; RCB, CRD and split-plot say how they are laid
+    out. An interface that conflates them teaches people that choosing "factorial"
+    replaced blocking, which it never did.
+31. MUST treat a practice arm as the treatment combination itself. Everything keys on
+    armId — the layout engine, the plot picker, the export, every recorded entry — so a
+    parallel combinations table would be two rows for one thing and a synchronisation
+    problem. Arms carry `factorLevels`.
+32. MUST compute a factorial main effect by averaging the combination means, never
+    every plot. They agree only while the design is balanced; the moment a plot is
+    missing, averaging plots weights each combination by how much data it happened to
+    return. See services/factorialAnalysis.ts.
+33. MUST NOT add a `dark:` class for anything the tokens already flip. The palette
     swaps under `html.dark` in one block; a per-element override is how one colour
     gets left behind on the wrong ground.
 

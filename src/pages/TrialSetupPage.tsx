@@ -42,6 +42,7 @@ import { PlotLayout } from "../components/PlotLayout";
 import { DataSources } from "../components/DataSources";
 import { PlantingCard } from "../components/ObservationTiming";
 import { SoilCard, WeatherCard } from "../components/WeatherAndSoil";
+import { FactorialDesign } from "../components/FactorialDesign";
 import {
   ArmManager,
   RemoveTrial,
@@ -106,6 +107,28 @@ export function TrialSetupPage() {
         description={`The ${word.many}, and whether this is a replicated experiment or an observational comparison.`}
       >
         <TrialDesignCard trial={trial} templates={templates} layoutLocked={data.layoutLocked} />
+        {/* Factors produce the arms below, so they come first. A trial with no
+            factors never sees this — it is folded until somebody asks for it. */}
+        {data.isFactorial ? (
+          <FactorialDesign
+            trial={trial}
+            factors={data.factors}
+            levels={data.levels}
+            layoutLocked={data.layoutLocked}
+          />
+        ) : (
+          <Foldaway
+            title="Compare combinations of two things at once"
+            summary="A factorial design — every variety at every nitrogen rate, say."
+          >
+            <FactorialDesign
+              trial={trial}
+              factors={data.factors}
+              levels={data.levels}
+              layoutLocked={data.layoutLocked}
+            />
+          </Foldaway>
+        )}
         <ArmManager
           trialId={trial.trialId}
           arms={arms}
