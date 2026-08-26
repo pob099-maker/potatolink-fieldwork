@@ -24,6 +24,7 @@ import {
 import { Card, EmptyState, ErrorState, PageTitle, Skeleton, SyncBadge } from "../components/ui";
 import { EntryField } from "../components/fields";
 import { RecentEntries, SyncReassurance } from "../components/EntryStatus";
+import { summariseSync } from "../services/syncHealth";
 import { useAccess } from "../contexts/AccessContext";
 import type { PlotAssignment } from "../services/layout";
 import type { Words } from "../services/vocabulary";
@@ -905,9 +906,7 @@ function EntryForm({
       </div>
 
       {preview ? null : (
-        <SyncReassurance
-          pendingCount={events.filter((event) => event.syncStatus !== "synced").length}
-        />
+        <SyncReassurance state={summariseSync(events, 0, 0)} />
       )}
 
       <p className="text-sm text-ink-faint" aria-live="polite">

@@ -174,3 +174,47 @@ describe("the arrangement the wizard promised", () => {
     expect(toParsedTrial(filled()).blocking).toBe("none");
   });
 });
+
+describe("a choice from a list", () => {
+  // The grower-facing guidance has always preferred a list over free text,
+  // because a typed answer can be spelled six ways and counted none. Until
+  // now the wizard could not make one, so the advice pointed at a door that
+  // was not there.
+  const withList = (options: string[]) =>
+    filled({
+      questions: [
+        { label: "Disease seen", type: "select" as const, unit: "", required: true, options },
+      ],
+    });
+
+  it("carries the choices through to the field", () => {
+    const trial = toParsedTrial(withList(["None", "Rhizoctonia", "Common scab"]));
+    expect(trial.forms[0].fields[0].options).toEqual(["None", "Rhizoctonia", "Common scab"]);
+  });
+
+  it("drops blank choices rather than offering one nobody can read", () => {
+    const trial = toParsedTrial(withList(["None", "  ", "Scab"]));
+    expect(trial.forms[0].fields[0].options).toEqual(["None", "Scab"]);
+  });
+
+  it("refuses a list that is not yet a choice", () => {
+    expect(wizardProblems(withList(["None", ""]))).toContain(
+      "Give “Disease seen” at least two choices to pick from.",
+    );
+    expect(wizardProblems(withList(["None", "Scab"]))).toEqual([]);
+  });
+
+  it("leaves options off every other type", () => {
+    const trial = toParsedTrial(
+      filled({
+        questions: [{ label: "Harvested weight", type: "number", unit: "kg", required: true }],
+      }),
+    );
+    expect(trial.forms[0].fields[0].options).toBeNull();
+  });
+
+  it("passes the importer's validator, which insists a list has options", () => {
+    const trial = toParsedTrial(withList(["None", "Scab"]));
+    expect(validateTemplate(trial).filter((issue) => issue.level === "error")).toEqual([]);
+  });
+});

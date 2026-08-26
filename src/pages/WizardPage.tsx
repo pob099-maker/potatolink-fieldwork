@@ -347,6 +347,7 @@ function RecordStep({ answers, set }: { answers: WizardAnswers; set: Setter }) {
                   type: entry.type,
                   unit: entry.unit,
                   required: false,
+                  options: entry.options ?? undefined,
                 },
               ]);
             }}
@@ -388,9 +389,16 @@ function RecordStep({ answers, set }: { answers: WizardAnswers; set: Setter }) {
                   <select
                     value={question.type}
                     aria-label={`Recorded as, item ${index + 1}`}
-                    onChange={(event) =>
-                      update(index, { type: event.target.value as FieldType })
-                    }
+                    onChange={(event) => {
+                      const type = event.target.value as FieldType;
+                      update(index, {
+                        type,
+                        options:
+                          type === "select" && !question.options?.length
+                            ? ["", ""]
+                            : question.options,
+                      });
+                    }}
                     className={inputClass}
                   >
                     {RECORD_TYPES.map((entry) => (
@@ -416,6 +424,57 @@ function RecordStep({ answers, set }: { answers: WizardAnswers; set: Setter }) {
                   </label>
                 ) : null}
               </div>
+
+              {question.type === "select" ? (
+                <fieldset className="mt-2">
+                  <legend className="text-sm font-medium">The choices</legend>
+                  <p className="text-sm text-ink-soft">
+                    Pick from a list rather than typing. A typed answer can be spelled six
+                    ways and counted none.
+                  </p>
+                  <ul className="mt-2 space-y-2">
+                    {(question.options ?? []).map((choice, choiceIndex) => (
+                      <li key={choiceIndex} className="flex items-end gap-2">
+                        <input
+                          value={choice}
+                          aria-label={`Choice ${choiceIndex + 1} for item ${index + 1}`}
+                          placeholder={choiceIndex === 0 ? "e.g. None" : "Another choice"}
+                          onChange={(event) =>
+                            update(index, {
+                              options: (question.options ?? []).map((entry, position) =>
+                                position === choiceIndex ? event.target.value : entry,
+                              ),
+                            })
+                          }
+                          className={inputClass}
+                        />
+                        <button
+                          type="button"
+                          aria-label={`Remove choice ${choiceIndex + 1} for item ${index + 1}`}
+                          onClick={() =>
+                            update(index, {
+                              options: (question.options ?? []).filter(
+                                (_, position) => position !== choiceIndex,
+                              ),
+                            })
+                          }
+                          className="mt-1 min-h-11 min-w-11 rounded-lg border border-line-strong"
+                        >
+                          ✕
+                        </button>
+                      </li>
+                    ))}
+                  </ul>
+                  <button
+                    type="button"
+                    onClick={() => update(index, { options: [...(question.options ?? []), ""] })}
+                    className="mt-2 min-h-11 rounded-lg border border-line-strong px-4 py-2.5 font-medium"
+                  >
+                    + Add a choice
+                  </button>
+                </fieldset>
+              ) : null}
+
               <label className="mt-2 flex items-center gap-2 text-sm">
                 <input
                   type="checkbox"

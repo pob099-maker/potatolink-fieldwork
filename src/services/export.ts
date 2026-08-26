@@ -165,9 +165,26 @@ export function csvFileName(trial: Trial): string {
 }
 
 /** Hand the CSV to the browser as a download. No-op outside a DOM. */
+/**
+ * A byte-order mark, so Excel reads the file as UTF-8.
+ *
+ * Excel on Windows does not look at the charset in a MIME type or trust the
+ * bytes: without a BOM it decodes a .csv in the system code page, which in
+ * Australia is Windows-1252. Every character outside ASCII then arrives as
+ * mojibake — a variety written in katakana, a soil class with an accent, the
+ * m² in a plot area, the ± in a standard error.
+ *
+ * R and GenStat read UTF-8 either way, so this costs them nothing. Excel is
+ * the one that breaks, and it is the first thing a field agronomist opens.
+ *
+ * Reading is already safe: readCsv strips a leading BOM, so a template
+ * downloaded from here and filled in still imports.
+ */
+const UTF8_BOM = "\uFEFF";
+
 export function downloadCsv(fileName: string, csv: string): void {
   if (typeof document === "undefined") return;
-  const blob = new Blob([csv], { type: "text/csv;charset=utf-8" });
+  const blob = new Blob([UTF8_BOM + csv], { type: "text/csv;charset=utf-8" });
   const url = URL.createObjectURL(blob);
   const anchor = document.createElement("a");
   anchor.href = url;

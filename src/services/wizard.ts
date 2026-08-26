@@ -38,6 +38,7 @@ export type TrialKind = "comparison" | "experiment";
 export const RECORD_TYPES: Array<{ value: FieldType; label: string; wantsUnit: boolean }> = [
   { value: "number", label: "A number", wantsUnit: true },
   { value: "slider", label: "A rating out of five", wantsUnit: false },
+  { value: "select", label: "A choice from a list", wantsUnit: false },
   { value: "photo", label: "A photo", wantsUnit: false },
   { value: "video", label: "A video", wantsUnit: false },
   { value: "boolean", label: "Yes or no", wantsUnit: false },
@@ -50,6 +51,15 @@ export interface Question {
   /** Only meaningful for numbers; kg and t unlock the yield conversion. */
   unit: string;
   required: boolean;
+  /**
+   * The choices, for a list to pick from.
+   *
+   * The grower-facing guidance has always said to prefer a list over free
+   * text, because every typed field costs completion and a typed answer
+   * cannot be counted. The wizard could not make one, so the advice pointed
+   * at a door that was not there.
+   */
+  options?: string[];
 }
 
 export interface WizardAnswers {
@@ -125,6 +135,12 @@ export function wizardProblems(answers: WizardAnswers): string[] {
   if (answers.questions.filter((question) => question.label.trim()).length === 0) {
     problems.push("Record at least one thing in the field.");
   }
+  for (const question of answers.questions) {
+    if (question.type !== "select" || !question.label.trim()) continue;
+    if ((question.options ?? []).filter((choice) => choice.trim()).length < 2) {
+      problems.push(`Give “${question.label.trim()}” at least two choices to pick from.`);
+    }
+  }
   if (answers.kind === "experiment" && responseQuestion(answers) === null) {
     problems.push("Choose which number the trial is comparing.");
   }
@@ -162,7 +178,12 @@ export function toParsedTrial(answers: WizardAnswers): ParsedTrial {
     unit: question.type === "number" && question.unit.trim() ? question.unit.trim() : null,
     min: question.type === "slider" ? 1 : null,
     max: question.type === "slider" ? 5 : null,
-    options: null,
+    // Blank choices are dropped rather than becoming empty options nobody can
+    // pick, and a list with none left is not a list.
+    options:
+      question.type === "select"
+        ? (question.options ?? []).map((choice) => choice.trim()).filter(Boolean)
+        : null,
     isResponse: response !== null && question === response,
     row: index + 1,
   }));
