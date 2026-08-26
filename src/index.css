@@ -234,6 +234,128 @@ table,
   outline-color: var(--color-ink-dark);
 }
 
+/* ---------------------------------------------------------------------------
+   Print
+   ---------------------------------------------------------------------------
+   The trial report is saved as a PDF through the browser's own print dialog
+   rather than a bundled PDF library — see src/pages/ReportPage.tsx for why.
+   That makes this stylesheet the thing that decides whether the PDF is worth
+   having, so it is treated as a layout rather than an afterthought.
+   --------------------------------------------------------------------------- */
+@media print {
+  /* Paper is white whatever the reader's screen was. Forcing the light tokens
+     back beats hoping the dark theme prints tolerably — it does not: a dark
+     ground either wastes a cartridge or is dropped, taking the light text
+     with it and printing a blank page. */
+  :root,
+  html.dark {
+    --color-paper: #ffffff;
+    --color-surface: #ffffff;
+    --color-sunk: #f4f0e8;
+    --color-ink: #1a1a1a;
+    --color-ink-soft: #444444;
+    --color-ink-faint: #666666;
+    --color-line: #cccccc;
+    --color-line-strong: #999999;
+    color-scheme: light;
+  }
+
+  @page {
+    margin: 16mm;
+  }
+
+  /* The app around the report is navigation, and navigation does not print. */
+  header:has(nav),
+  nav,
+  .no-print {
+    display: none !important;
+  }
+
+  body {
+    font-size: 10.5pt;
+    line-height: 1.4;
+  }
+
+  main {
+    max-width: none !important;
+    padding: 0 !important;
+  }
+
+  /* A section split across a page break, or a heading stranded at the foot of
+     one, is the difference between a report and a printout. */
+  .report-section {
+    break-inside: avoid;
+  }
+
+  h1,
+  h2,
+  h3 {
+    break-after: avoid;
+  }
+
+  .report-table {
+    border-collapse: collapse;
+    break-inside: auto;
+  }
+
+  .report-table th,
+  .report-table td {
+    border: 1px solid var(--color-line);
+    padding: 4pt 6pt;
+    text-align: left;
+  }
+
+  .report-table thead {
+    /* Repeat the header on every page a long table runs onto. */
+    display: table-header-group;
+  }
+
+  .report-table tr {
+    break-inside: avoid;
+  }
+
+  figure {
+    break-inside: avoid;
+  }
+
+  .photo-grid img {
+    max-height: 60mm;
+    object-fit: cover;
+  }
+
+  /* Underlines on every link are noise on paper, where they cannot be clicked. */
+  a {
+    text-decoration: none;
+    color: inherit;
+  }
+}
+
+/* Screen styling for the report's tables, so the page is readable before it is
+   printed rather than only afterwards. */
+.report-table {
+  border-collapse: collapse;
+}
+
+.report-table th,
+.report-table td {
+  border-bottom: 1px solid var(--color-line);
+  padding: 0.4rem 0.5rem;
+  text-align: left;
+}
+
+.report-table th {
+  font-family: var(--font-display);
+  font-size: var(--text-meta);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--color-ink-faint);
+}
+
+.report-table .num {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
 /* Someone who has asked their operating system to stop animations means it.
    The pulsing skeletons are the only motion in the app, and a placeholder is
    perfectly legible standing still. */

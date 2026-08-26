@@ -12,6 +12,7 @@ import { EntryPage } from "./pages/EntryPage";
 import { ImportTrialPage } from "./pages/ImportTrialPage";
 import { NewTrialPage } from "./pages/NewTrialPage";
 import { WizardPage } from "./pages/WizardPage";
+import { ReportPage } from "./pages/ReportPage";
 import { TemplateEditorPage } from "./pages/TemplateEditorPage";
 import { EconomicsPage } from "./pages/EconomicsPage";
 import { SettingsPage } from "./pages/SettingsPage";
@@ -74,6 +75,7 @@ function AppRoutes() {
                 <Route path="/trials/:trialId" element={<TrialDetailPage />} />
                 <Route path="/trials/:trialId/template" element={<TemplateEditorPage />} />
                 <Route path="/trials/:trialId/economics" element={<EconomicsPage />} />
+                <Route path="/trials/:trialId/report" element={<ReportPage />} />
                 {/* The page was called "results" while it only ever held the
                     economics. Old links keep working. */}
                 <Route path="/trials/:trialId/results" element={<LegacyResultsRedirect />} />

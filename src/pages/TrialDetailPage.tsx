@@ -10,7 +10,7 @@ import {
   useTemplates,
   useTrials,
 } from "../hooks/useCollections";
-import { addArm, removeArm, removeTrial, saveArm } from "../services/store";
+import { addArm, addTemplate, removeArm, removeTrial, saveArm } from "../services/store";
 import { buildEntryUrl, summariseArm } from "../services/entryLinks";
 import { buildTrialCsv, csvFileName, downloadCsv } from "../services/export";
 import { describeEvent, describeEventScope, eventsForTrial, tallySync } from "../services/events";
@@ -41,7 +41,15 @@ import { generateLayout, layoutProblem } from "../services/layout";
 import { describePlot } from "../services/plotArea";
 import { useAccess } from "../contexts/AccessContext";
 import { VOCABULARY_CHOICES, trialVocabulary, words, type Words } from "../services/vocabulary";
-import type { FormTemplate, MeasurementEvent, Metric, PracticeArm, Site, Trial } from "../types";
+import type {
+  FormAudience,
+  FormTemplate,
+  MeasurementEvent,
+  Metric,
+  PracticeArm,
+  Site,
+  Trial
+} from "../types";
 
 export function TrialDetailPage() {
   const { trialId } = useParams<{ trialId: string }>();
@@ -240,6 +248,12 @@ export function TrialDetailPage() {
             Preview the observation form
           </Link>
         ) : null}
+        <Link
+          to={`/trials/${trial.trialId}/report`}
+          className="min-h-11 rounded-lg border border-line-strong px-4 py-2.5 font-medium"
+        >
+          Trial report
+        </Link>
         <Link
           to={`/trials/${trial.trialId}/economics`}
           className="min-h-11 rounded-lg border border-primary px-4 py-2.5 font-medium text-primary dark:text-primary-soft"
@@ -1236,8 +1250,6 @@ function TrialForms({
   const growerForms = templates.filter((template) => template.audience === "grower");
   const staffForms = templates.filter((template) => template.audience === "staff");
 
-  if (templates.length === 0) return null;
-
   const row = (template: FormTemplate) => (
     <li key={template.templateId} className="flex flex-wrap items-center gap-2 py-2">
       <span className="flex-1">
@@ -1291,7 +1303,121 @@ function TrialForms({
           </ul>
         </>
       ) : null}
+      <AddForm trial={trial} />
     </Card>
+  );
+}
+
+/**
+ * A second form, and a third.
+ *
+ * Most protocols are several visits, not one: an emergence count, a mid-season
+ * disease score, a harvest weight. Each wants its own questions, its own
+ * audience and — since timing hangs off a form — its own place in the season.
+ * Until now a trial got exactly one form when it was created and there was no
+ * way to add another short of rebuilding the trial from a spreadsheet.
+ */
+function AddForm({ trial }: { trial: Trial }) {
+  const navigate = useNavigate();
+  const [open, setOpen] = useState(false);
+  const [name, setName] = useState("");
+  const [audience, setAudience] = useState<FormAudience>("grower");
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  async function create(): Promise<void> {
+    setSaving(true);
+    setError(null);
+    const result = await addTemplate({ trialId: trial.trialId, name, audience });
+    setSaving(false);
+    if (!result.success) {
+      setError(result.error);
+      return;
+    }
+    // Straight into the editor: a new form has one placeholder question and is
+    // no use until somebody says what it asks.
+    navigate(`/trials/${trial.trialId}/template?form=${result.data.templateId}`);
+  }
+
+  if (!open) {
+    return (
+      <button
+        type="button"
+        onClick={() => setOpen(true)}
+        className="mt-3 min-h-11 w-full rounded-lg border border-dashed border-line-strong px-4 py-2.5 font-medium text-ink-soft"
+      >
+        + Add a form
+      </button>
+    );
+  }
+
+  return (
+    <form
+      className="mt-3 space-y-3 rounded-lg border border-line p-3"
+      onSubmit={(submitEvent) => {
+        submitEvent.preventDefault();
+        void create();
+      }}
+    >
+      <label className="block text-sm font-medium">
+        What is this form for?
+        <input
+          value={name}
+          onChange={(changeEvent) => setName(changeEvent.target.value)}
+          required
+          placeholder="e.g. Emergence count"
+          className="mt-1 min-h-11 w-full rounded-lg border border-line-strong bg-surface px-3 py-2"
+        />
+        <span className="mt-1 block text-sm font-normal text-ink-faint">
+          Name it after the visit, not the trial — it is what somebody picks from a list
+          in a paddock.
+        </span>
+      </label>
+
+      <fieldset>
+        <legend className="text-sm font-medium">Who fills it in?</legend>
+        <div className="mt-1 flex flex-wrap gap-2">
+          {(["grower", "staff"] as const).map((who) => (
+            <label
+              key={who}
+              className={`min-h-11 flex-1 cursor-pointer rounded-lg border px-3 py-2.5 ${
+                audience === who ? "border-primary bg-primary/10" : "border-line-strong"
+              }`}
+            >
+              <input
+                type="radio"
+                name="audience"
+                className="sr-only"
+                checked={audience === who}
+                onChange={() => setAudience(who)}
+              />
+              <span className="font-medium">
+                {who === "grower" ? "In the paddock" : "Staff"}
+              </span>
+            </label>
+          ))}
+        </div>
+      </fieldset>
+
+      {error ? <ErrorState message={error} /> : null}
+
+      <div className="flex flex-wrap gap-2">
+        <button
+          type="submit"
+          disabled={saving || !name.trim()}
+          className="min-h-11 flex-1 rounded-lg bg-primary px-4 py-2.5 font-medium text-white disabled:opacity-60"
+        >
+          {saving ? "Adding…" : "Add the form"}
+        </button>
+        <button
+          type="button"
+          onClick={() => { setOpen(false); setError(null); }}
+          className="min-h-11 rounded-lg border border-line-strong px-4 py-2.5 font-medium"
+        >
+          Cancel
+        </button>
+      </div>
+    </form>
   );
 }
 
