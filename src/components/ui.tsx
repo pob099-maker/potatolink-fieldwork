@@ -92,6 +92,51 @@ export function Section({
   );
 }
 
+/**
+ * A section somebody opens only if they need it.
+ *
+ * Built on <details> rather than React state on purpose: it is keyboard
+ * operable, announced correctly by a screen reader, findable by the browser's
+ * own in-page search, and works before any JavaScript has run. Reimplementing
+ * that with a button and a boolean is a lot of code to arrive back where the
+ * platform already was.
+ *
+ * The summary carries a one-line answer, so a folded section still says what
+ * is inside it — "No station set" is information; a chevron is not.
+ */
+export function Foldaway({
+  title,
+  summary,
+  defaultOpen = false,
+  children,
+}: {
+  title: string;
+  summary?: string;
+  defaultOpen?: boolean;
+  children: ReactNode;
+}) {
+  return (
+    <details
+      open={defaultOpen}
+      className="group rounded-xl border border-line bg-sunk [&_summary::-webkit-details-marker]:hidden"
+    >
+      <summary className="flex min-h-11 cursor-pointer list-none items-center gap-2 p-4 sm:p-5">
+        <span
+          aria-hidden
+          className="font-display text-ink-faint transition-transform group-open:rotate-90"
+        >
+          ▸
+        </span>
+        <span className="flex-1">
+          <span className="block font-display text-title">{title}</span>
+          {summary ? <span className="block text-sm text-ink-soft">{summary}</span> : null}
+        </span>
+      </summary>
+      <div className="flex flex-col gap-3 px-4 pb-4 sm:px-5 sm:pb-5">{children}</div>
+    </details>
+  );
+}
+
 export function PageTitle({ children }: { children: ReactNode }) {
   return <h1 className="text-display text-ink">{children}</h1>;
 }

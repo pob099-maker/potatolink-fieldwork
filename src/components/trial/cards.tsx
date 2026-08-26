@@ -282,11 +282,13 @@ export function TrialDesignCard({
       <fieldset className="mt-4">
         <legend className="text-sm font-medium">Plot size</legend>
         <p className="mt-1 text-sm text-ink-soft">
-          Optional, and worth it: with a size recorded, a form can ask for the weight off
-          the plot and the app works out the yield per hectare. Otherwise somebody is
-          doing that conversion in a paddock, and a misplaced decimal never shows up
-          again. Strips that differ in length can carry their own area on the form
-          instead — a field measured in ha or m² overrides this.
+          Lets a form ask for the weight off the plot and work out tonnes per hectare
+          itself.{" "}
+          <span className="text-ink-faint">
+            Otherwise somebody does that sum in a paddock, and a misplaced decimal never
+            shows up again. Strips of unequal length can carry their own area on the form
+            instead — a field measured in ha or m² overrides this.
+          </span>
         </p>
         <div className="mt-2 grid gap-3 sm:grid-cols-3">
           <label className="block text-sm font-medium">
@@ -323,8 +325,14 @@ export function TrialDesignCard({
         </div>
       </fieldset>
 
-      <fieldset className="mt-4">
-        <legend className="text-sm font-medium">What this trial calls them</legend>
+      <details className="group mt-4 [&_summary::-webkit-details-marker]:hidden">
+        <summary className="flex min-h-11 cursor-pointer list-none items-center gap-2 text-sm font-medium">
+          <span aria-hidden className="text-ink-faint transition-transform group-open:rotate-90">
+            ▸
+          </span>
+          What this trial calls them —{" "}
+          <span className="font-normal text-ink-soft">{word.many}</span>
+        </summary>
         <p className="mt-1 text-sm text-ink-soft">
           Only the wording changes, and only on this trial. The exported data uses one
           fixed column name either way, so two trials still pool together.
@@ -357,7 +365,7 @@ export function TrialDesignCard({
             );
           })}
         </div>
-      </fieldset>
+      </details>
     </Card>
   );
 }
