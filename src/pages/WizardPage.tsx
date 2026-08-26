@@ -11,6 +11,7 @@
 // list of complaints and no way to act on them.
 
 import { useState, type ReactNode } from "react";
+import { MeasurementPicker } from "../components/MeasurementPicker";
 import { useNavigate } from "react-router-dom";
 import { publishParsedTrial } from "../services/templatePublish";
 import {
@@ -298,6 +299,7 @@ function WhereStep({ answers, set }: { answers: WizardAnswers; set: Setter }) {
 }
 
 function RecordStep({ answers, set }: { answers: WizardAnswers; set: Setter }) {
+  const [picking, setPicking] = useState(false);
   const update = (index: number, changes: Partial<Question>) =>
     set(
       "questions",
@@ -322,6 +324,35 @@ function RecordStep({ answers, set }: { answers: WizardAnswers; set: Setter }) {
         counts or a disease score says so here rather than settling for the nearest
         offered word.
       </p>
+
+      {picking ? (
+        <div className="mt-3">
+          <MeasurementPicker
+            onCancel={() => setPicking(false)}
+            onFreeText={() => {
+              setPicking(false);
+              set("questions", [
+                ...answers.questions,
+                { label: "", type: "number", unit: "", required: false },
+              ]);
+            }}
+            onPick={(entry) => {
+              setPicking(false);
+              // Everything the entry knows comes across, so nobody decides
+              // again whether yield is kilograms or tonnes per hectare.
+              set("questions", [
+                ...answers.questions,
+                {
+                  label: entry.label,
+                  type: entry.type,
+                  unit: entry.unit,
+                  required: false,
+                },
+              ]);
+            }}
+          />
+        </div>
+      ) : null}
 
       <ul className="mt-3 space-y-3">
         {answers.questions.map((question, index) => {
@@ -414,12 +445,7 @@ function RecordStep({ answers, set }: { answers: WizardAnswers; set: Setter }) {
       <div className="mt-3 flex flex-wrap gap-2">
         <button
           type="button"
-          onClick={() =>
-            set("questions", [
-              ...answers.questions,
-              { label: "", type: "number", unit: "", required: false },
-            ])
-          }
+          onClick={() => setPicking(true)}
           className="min-h-11 rounded-lg border border-line-strong px-4 py-2.5 font-medium"
         >
           + Add something to record

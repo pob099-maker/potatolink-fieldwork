@@ -1,6 +1,8 @@
 import { describe, expect, it } from "vitest";
 import {
   BUILT_IN_MEASUREMENTS,
+  isBuiltIn,
+  libraryEntries,
   codeFor,
   findExisting,
   fromFormField,
@@ -188,5 +190,46 @@ describe("fromFormField", () => {
   it("gives it a code that does not collide", () => {
     const candidate = fromFormField(typed, [entry({ code: "stemCount" })]);
     expect(candidate?.code).toBe("stemCount2");
+  });
+});
+
+describe("libraryEntries", () => {
+  it("shows the shipped list even with nothing stored", () => {
+    // Built-ins are not rows. If they were, a pull would delete them the first
+    // time a device synced — the same way the demo forms vanished before their
+    // rows were added to seed.sql.
+    expect(libraryEntries([])).toHaveLength(BUILT_IN_MEASUREMENTS.length);
+  });
+
+  it("keeps built-ins and added ones apart", () => {
+    const merged = libraryEntries([entry({ entryId: "x", code: "stemCount", label: "Stem count", source: "added" })]);
+    const added = merged.find((e) => e.label === "Stem count");
+    expect(isBuiltIn(added as never)).toBe(false);
+    expect(isBuiltIn(merged[0])).toBe(true);
+  });
+
+  it("lets somebody's own version win over a shipped one of the same name", () => {
+    // Theirs carries their wording and their usage; two entries meaning the
+    // same thing is the failure this library exists to prevent.
+    const merged = libraryEntries([
+      entry({ entryId: "mine", code: "myYield", label: "Marketable yield", source: "added", usageCount: 9 }),
+    ]);
+    const matches = merged.filter((e) => normaliseName(e.label) === normaliseName("Marketable yield"));
+    expect(matches).toHaveLength(1);
+    expect(matches[0].entryId).toBe("mine");
+  });
+
+  it("keeps the curated order rather than the alphabet", () => {
+    const ranked = rankEntries(libraryEntries([]));
+    // Yield leads because somebody decided it should, not because of a Y.
+    expect(ranked[0].code).toBe("marketableYield");
+    expect(ranked[ranked.length - 1].code).toBe("notes");
+  });
+
+  it("floats a well-used addition above the shipped list", () => {
+    const ranked = rankEntries(
+      libraryEntries([entry({ entryId: "x", code: "stemCount", label: "Stem count", source: "added", usageCount: 7 })]),
+    );
+    expect(ranked[0].label).toBe("Stem count");
   });
 });

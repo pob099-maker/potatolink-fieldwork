@@ -18,6 +18,7 @@ export const COLLECTIONS = [
   "weatherObservations",
   "soilSamples",
   "soilResults",
+  "measurementLibrary",
   "media",
   "meta",
 ] as const;
@@ -27,7 +28,7 @@ export type CollectionName = (typeof COLLECTIONS)[number];
 const DB_NAME = "potatolink-fieldwork";
 // Bumped for the weather and soil stores; onupgradeneeded creates any
 // object store the list has gained.
-const DB_VERSION = 3;
+const DB_VERSION = 4;
 
 const KEY_FIELDS: Record<string, string> = {
   projects: "projectId",
@@ -46,6 +47,7 @@ const KEY_FIELDS: Record<string, string> = {
   weatherObservations: "observationId",
   soilSamples: "sampleId",
   soilResults: "resultId",
+  measurementLibrary: "entryId",
   media: "mediaId",
   meta: "key",
 };

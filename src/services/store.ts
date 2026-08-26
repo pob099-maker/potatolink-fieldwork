@@ -19,6 +19,7 @@ import {
   weatherObservationSchema,
   soilSampleSchema,
   soilResultSchema,
+  libraryEntrySchema,
 } from "../schemas";
 import type {
   FormAudience,
@@ -41,12 +42,14 @@ import type {
   WeatherObservation,
   SoilSample,
   SoilResult,
+  LibraryEntry,
 } from "../types";
 import { newId, nowIso } from "../lib/id";
 import { dbDelete, dbGet, dbGetAll, dbPut, dbPutMany, type CollectionName } from "../lib/localdb";
 import { fromRow, isBackendConfigured, supabase, toColumn, toRow } from "../lib/supabase";
 import { fileExtension, getMedia, isMediaPointer, markUploaded, mediaIdFromPointer } from "./media";
 import { makeFieldName } from "./templates";
+import { findExisting, fromFormField, isBuiltIn, libraryEntries } from "./measurementLibrary";
 
 const TABLE_NAMES: Partial<Record<CollectionName, string>> = {
   projects: "projects",
@@ -64,6 +67,7 @@ const TABLE_NAMES: Partial<Record<CollectionName, string>> = {
   weatherObservations: "weather_observations",
   soilSamples: "soil_samples",
   soilResults: "soil_results",
+  measurementLibrary: "measurement_library",
 };
 
 type Listener = () => void;
@@ -99,6 +103,8 @@ export const listWeather = (): Promise<WeatherObservation[]> =>
   dbGetAll<WeatherObservation>("weatherObservations");
 export const listSoilSamples = (): Promise<SoilSample[]> => dbGetAll<SoilSample>("soilSamples");
 export const listSoilResults = (): Promise<SoilResult[]> => dbGetAll<SoilResult>("soilResults");
+export const listLibrary = (): Promise<LibraryEntry[]> =>
+  dbGetAll<LibraryEntry>("measurementLibrary");
 
 /**
  * Save locally, then mirror to Supabase. The cloud write is awaited rather
@@ -150,6 +156,7 @@ const PRIMARY_KEY: Record<CollectionName, string> = {
   weatherObservations: "observationId",
   soilSamples: "sampleId",
   soilResults: "resultId",
+  measurementLibrary: "entryId",
   media: "mediaId",
   meta: "key",
 };
@@ -876,6 +883,54 @@ export async function saveSoil(
   return { success: true, data: results.length };
 }
 
+
+/**
+ * Remember a measurement somebody typed, so the next person can pick it.
+ *
+ * Called after a form is saved rather than while it is being edited: a
+ * half-typed label is not a measurement, and a library that collects every
+ * keystroke fills with "Marketa", "Marketab" and "Marketabl".
+ *
+ * Adding is idempotent by name. Using an existing measurement bumps how often
+ * it has been used instead of forking it — a library of near-duplicates
+ * cannot pool anything, which is the only reason it exists.
+ */
+export async function rememberMeasurements(fields: FormField[]): Promise<Result<number>> {
+  const stored = await dbGetAll<LibraryEntry>("measurementLibrary");
+  const merged = libraryEntries(stored);
+  const toWrite: LibraryEntry[] = [];
+  const bumped: LibraryEntry[] = [];
+
+  for (const field of fields) {
+    const already = findExisting(merged, field.label);
+    if (already) {
+      // Built-ins are not rows, so there is nothing to bump; their ranking
+      // comes from the curated order instead.
+      if (!isBuiltIn(already)) {
+        bumped.push({ ...already, usageCount: already.usageCount + 1 });
+      }
+      continue;
+    }
+    const candidate = fromFormField(field, [...merged, ...toWrite]);
+    if (!candidate) continue;
+    toWrite.push({ ...candidate, entryId: newId(), createdAt: nowIso() });
+  }
+
+  const all = [...toWrite, ...bumped];
+  if (all.length === 0) return { success: true, data: 0 };
+
+  try {
+    await dbPutMany(all.map((value) => ({ collection: "measurementLibrary" as const, value })));
+  } catch {
+    return { success: false, error: "Could not save to the measurement list." };
+  }
+  if (supabase) {
+    void supabase.from("measurement_library").upsert(all.map((row) => toRow(row))).then();
+  }
+  notify();
+  return { success: true, data: toWrite.length };
+}
+
 /** Persist trial changes, including its design mode. */
 export async function saveTrial(trial: Trial): Promise<Result<Trial>> {
   const next = { ...trial, updatedAt: nowIso() };
@@ -1122,6 +1177,10 @@ export async function saveTemplate(template: FormTemplate): Promise<Result<FormT
   if (new Set(names).size !== names.length) {
     return { success: false, error: "Two fields ended up with the same internal name." };
   }
+  // Offer whatever was typed to the next person. Fire and forget: the form is
+  // what somebody is trying to save, and a library that cannot be written is
+  // no reason to refuse them.
+  void rememberMeasurements(template.fields);
   return saveRecord("formTemplates", template, "Could not save the form on this device.");
 }
 
@@ -1289,6 +1348,7 @@ const PULL_SPECS: Array<{ collection: CollectionName; table: string; schema: Zod
   { collection: "weatherObservations", table: "weather_observations", schema: weatherObservationSchema },
   { collection: "soilSamples", table: "soil_samples", schema: soilSampleSchema },
   { collection: "soilResults", table: "soil_results", schema: soilResultSchema },
+  { collection: "measurementLibrary", table: "measurement_library", schema: libraryEntrySchema },
 ];
 
 /** Fetch every synced table from Supabase into the local store. */

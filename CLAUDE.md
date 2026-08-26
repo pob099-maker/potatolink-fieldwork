@@ -116,7 +116,14 @@ src/
 27. MUST NOT gate rendering on IndexedDB. `main.tsx` mounts whether or not seeding
     worked, and a database that will not open shows a plain-DOM message with a retry.
     An unsettled promise in that chain is a blank page with nothing in the console.
-28. MUST NOT add a `dark:` class for anything the tokens already flip. The palette
+28. MUST offer the measurement library before a blank box when somebody adds something
+    to record. Two trials that pick `marketableYield` in kg can be pooled next season;
+    two that type "Yield" and "Marketable wt" never can, and nobody finds out until
+    they try. Anything typed by hand is offered back to the next person.
+29. MUST NOT store the shipped measurement list as rows. A pull removes local records
+    the cloud does not have, so seeded built-ins vanish on first sync — that is what
+    happened to the demo forms. Built-ins live in code; only additions are stored.
+30. MUST NOT add a `dark:` class for anything the tokens already flip. The palette
     swaps under `html.dark` in one block; a per-element override is how one colour
     gets left behind on the wrong ground.
 

@@ -40,6 +40,8 @@ export interface LibraryEntry {
   source: "builtin" | "added";
   /** How many forms use it, for putting the well-worn ones near the top. */
   usageCount: number;
+  /** Position in the shipped list; absent for anything somebody added. */
+  curatedOrder?: number;
   createdAt: string;
 }
 
@@ -187,6 +189,38 @@ export const BUILT_IN_MEASUREMENTS: Array<Omit<LibraryEntry, "entryId" | "create
 ];
 
 /**
+ * The whole list: what ships with the app, plus what people have added.
+ *
+ * Built-ins are not rows. Storing them would mean seeding them into every
+ * deployment, and a pull removes local records the cloud does not have — so
+ * the shipped list would vanish the first time somebody synced, exactly as the
+ * demo forms did. Keeping them in code also means they improve with the app
+ * rather than being frozen at whatever was seeded a year ago.
+ *
+ * Only what somebody adds is stored, which is the part that has to outlive
+ * them.
+ */
+export function libraryEntries(stored: LibraryEntry[]): LibraryEntry[] {
+  const takenNames = new Set(stored.map((entry) => normaliseName(entry.label)));
+  const builtins: LibraryEntry[] = BUILT_IN_MEASUREMENTS
+    // If somebody has added their own version of a built-in, theirs wins —
+    // it carries their wording and their usage.
+    .filter((entry) => !takenNames.has(normaliseName(entry.label)))
+    .map((entry, index) => ({
+      ...entry,
+      entryId: `builtin:${entry.code}`,
+      usageCount: 0,
+      // Position in the curated list, so an untouched library still reads in
+      // the order somebody thought about rather than alphabetically.
+      curatedOrder: index,
+      createdAt: "",
+    })) as LibraryEntry[];
+  return [...builtins, ...stored];
+}
+
+export const isBuiltIn = (entry: LibraryEntry): boolean => entry.entryId.startsWith("builtin:");
+
+/**
  * A name reduced to what makes two of them the same thing.
  *
  * "Marketable yield", "marketable yield" and "Marketable Yield  " are one
@@ -240,6 +274,11 @@ export function rankEntries(entries: LibraryEntry[], search = ""): LibraryEntry[
   return [...matches].sort((a, b) => {
     if (b.usageCount !== a.usageCount) return b.usageCount - a.usageCount;
     if (a.source !== b.source) return a.source === "builtin" ? -1 : 1;
+    // Within the shipped list, the order somebody curated beats the alphabet:
+    // "Anything worth noting?" should not lead a list of measurements.
+    if (a.curatedOrder !== undefined && b.curatedOrder !== undefined) {
+      return a.curatedOrder - b.curatedOrder;
+    }
     return a.label.localeCompare(b.label);
   });
 }
