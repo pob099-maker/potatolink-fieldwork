@@ -181,7 +181,7 @@ export const BUILT_IN_MEASUREMENTS: Array<Omit<LibraryEntry, "entryId" | "create
     min: null,
     max: null,
     options: null,
-    guidance: "Keep this last. A free-text box above a specific question gets used instead of it.",
+    guidance: "Keep this last. A free-text box above a specific one gets used instead of it.",
     source: "builtin",
   },
 ];

@@ -65,7 +65,7 @@ export function SetupChecklist({
         templates.length > 0
           ? `${templates.length} form${templates.length === 1 ? "" : "s"}`
           : "Add a form",
-      hint: "The questions people answer in the field.",
+      hint: "What people record in the field.",
       blocking: true,
     },
   ];

@@ -270,7 +270,7 @@ export function TemplateEditorPage() {
             ...draft,
             fields: [
               ...draft.fields,
-              blankField("New question", takenNames, draft.fields.length),
+              blankField("New item", takenNames, draft.fields.length),
             ],
           })
         }
