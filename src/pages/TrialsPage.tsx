@@ -39,7 +39,7 @@ export function TrialsPage() {
             type="button"
             aria-pressed={showArchived}
             onClick={() => setShowArchived(!showArchived)}
-            className="min-h-11 rounded-lg border border-ink/20 px-4 py-2.5 font-medium dark:border-ink-dark/20"
+            className="min-h-11 rounded-lg border border-line-strong px-4 py-2.5 font-medium"
           >
             {showArchived
               ? "Hide archived"
@@ -61,15 +61,15 @@ export function TrialsPage() {
           <Card key={trial.trialId}>
             <Link
               to={`/trials/${trial.trialId}`}
-              className="font-display text-lg font-bold text-primary hover:underline dark:text-primary-soft"
+              className="font-display text-title text-primary hover:underline dark:text-primary-soft"
             >
               {trial.name}
             </Link>
-            <p className="mt-1 text-sm text-ink/70 dark:text-ink-dark/70">{trial.objective}</p>
+            <p className="mt-1 text-sm text-ink-soft">{trial.objective}</p>
             <p className="mt-2 flex flex-wrap items-center gap-2 text-sm">
               <StatusPill status={trial.status} />
               {isSeedTrial(trial.trialId) ? <ExamplePill /> : null}
-              <span className="text-ink/60 dark:text-ink-dark/60">
+              <span className="text-ink-soft">
                 {(() => {
                   const count = (sites.data ?? []).filter(
                     (site) => site.trialId === trial.trialId,

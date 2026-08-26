@@ -218,7 +218,7 @@ export function EntryPage() {
           🗑️
         </p>
         <PageTitle>Entry removed</PageTitle>
-        <p className="mt-2 text-ink/60 dark:text-ink-dark/60">
+        <p className="mt-2 text-ink-soft">
           It is gone from this device and is being removed everywhere else.
         </p>
         <Link
@@ -238,8 +238,8 @@ export function EntryPage() {
     return (
       <Card className="mx-auto max-w-md">
         <PageTitle>{trial.name}</PageTitle>
-        <p className="mt-2 text-ink/60 dark:text-ink-dark/60">{closedReason(trial)}</p>
-        <p className="mt-2 text-sm text-ink/50 dark:text-ink-dark/50">
+        <p className="mt-2 text-ink-soft">{closedReason(trial)}</p>
+        <p className="mt-2 text-sm text-ink-faint">
           If that is wrong, a staff member can reopen it on the trial page.
         </p>
       </Card>
@@ -395,7 +395,7 @@ function ContextChooser({
       <Card className="mx-auto max-w-md">
         {preview ? <PreviewBanner /> : null}
         <PageTitle>Not ready for entries yet</PageTitle>
-        <p className="mt-2 text-ink/60 dark:text-ink-dark/60">
+        <p className="mt-2 text-ink-soft">
           {trialName} still needs {missing} before anything can be recorded. A staff member
           can add it on the trial page.
         </p>
@@ -430,7 +430,7 @@ function ContextChooser({
     <Card className="mx-auto max-w-md">
       {preview ? <PreviewBanner /> : null}
       <PageTitle>{title}</PageTitle>
-      <p className="mt-1 text-ink/60 dark:text-ink-dark/60">
+      <p className="mt-1 text-ink-soft">
         {trialName}. {help}
       </p>
       <div className={step === "plot" ? "mt-4" : "mt-4 space-y-2"}>
@@ -442,10 +442,10 @@ function ContextChooser({
                 key={candidate.siteId}
                 type="button"
                 onClick={() => onPickSite(candidate.siteId)}
-                className="min-h-11 w-full rounded-lg border border-ink/20 px-4 py-3 text-left font-medium hover:border-primary dark:border-ink-dark/20"
+                className="min-h-11 w-full rounded-lg border border-line-strong px-4 py-3 text-left font-medium hover:border-primary"
               >
                 📍 {candidate.location}
-                <span className="block text-sm font-normal text-ink/60 dark:text-ink-dark/60">
+                <span className="block text-sm font-normal text-ink-soft">
                   {candidate.region}
                 </span>
               </button>
@@ -456,10 +456,10 @@ function ContextChooser({
                 key={candidate.armId}
                 type="button"
                 onClick={() => onPickArm(candidate.armId)}
-                className="min-h-11 w-full rounded-lg border border-ink/20 px-4 py-3 text-left font-medium hover:border-primary dark:border-ink-dark/20"
+                className="min-h-11 w-full rounded-lg border border-line-strong px-4 py-3 text-left font-medium hover:border-primary"
               >
                 {candidate.name}
-                <span className="block text-sm font-normal text-ink/60 dark:text-ink-dark/60">
+                <span className="block text-sm font-normal text-ink-soft">
                   {candidate.description}
                 </span>
               </button>
@@ -469,14 +469,14 @@ function ContextChooser({
                 key={rep}
                 type="button"
                 onClick={() => onPickReplicate(rep)}
-                className="min-h-11 w-full rounded-lg border border-ink/20 px-4 py-3 text-left font-medium hover:border-primary dark:border-ink-dark/20"
+                className="min-h-11 w-full rounded-lg border border-line-strong px-4 py-3 text-left font-medium hover:border-primary"
               >
                 Replicate {rep}
               </button>
             ))}
       </div>
       {site ? (
-        <p className="mt-3 text-sm text-ink/50 dark:text-ink-dark/50">
+        <p className="mt-3 text-sm text-ink-faint">
           Recording at {site.location}.
         </p>
       ) : null}
@@ -515,7 +515,7 @@ function PlotPicker({
       {blocks.map((block) => (
         <div key={block}>
           {blocked ? (
-            <h2 className="text-sm font-semibold uppercase tracking-wide text-ink/50 dark:text-ink-dark/50">
+            <h2 className="text-sm font-semibold uppercase tracking-wide text-ink-faint">
               Block {block}
             </h2>
           ) : null}
@@ -527,12 +527,12 @@ function PlotPicker({
                   <button
                     type="button"
                     onClick={() => onPick(plot.plotNumber)}
-                    className="min-h-16 w-full rounded-lg border border-ink/20 px-2 py-2 hover:border-primary dark:border-ink-dark/20"
+                    className="min-h-16 w-full rounded-lg border border-line-strong px-2 py-2 hover:border-primary"
                   >
                     <span className="block font-display text-xl font-bold">
                       {plot.plotNumber}
                     </span>
-                    <span className="block truncate text-xs text-ink/50 dark:text-ink-dark/50">
+                    <span className="block truncate text-meta text-ink-faint">
                       {armName(plot.armId)}
                     </span>
                   </button>
@@ -548,7 +548,7 @@ function PlotPicker({
 /** Says which mode you are in, on every screen of the grower flow. */
 function PreviewBanner() {
   return (
-    <p className="mb-3 rounded-lg bg-accent/20 p-3 text-sm font-medium text-ink dark:text-ink-dark">
+    <p className="mb-3 rounded-lg bg-accent/20 p-3 text-sm font-medium text-ink">
       Preview of the form as it appears on site. Nothing here is saved.
     </p>
   );
@@ -578,9 +578,9 @@ function AccessGate({
       <PageTitle>Record an observation</PageTitle>
       <p className="mt-1 font-medium">{trialName}</p>
       {siteName ? (
-        <p className="text-sm text-ink/60 dark:text-ink-dark/60">📍 {siteName}</p>
+        <p className="text-sm text-ink-soft">📍 {siteName}</p>
       ) : null}
-      <p className="mt-2 text-ink/60 dark:text-ink-dark/60">
+      <p className="mt-2 text-ink-soft">
         Enter the access code you were given to continue. This device will
         remember it.
       </p>
@@ -603,7 +603,7 @@ function AccessGate({
             setCode(changeEvent.target.value);
             setFailed(false);
           }}
-          className="w-full min-h-11 rounded-lg border border-ink/20 bg-surface px-3 py-2.5 dark:border-ink-dark/20 dark:bg-surface-dark"
+          className="w-full min-h-11 rounded-lg border border-line-strong bg-surface px-3 py-2.5"
         />
         {failed ? (
           <p role="alert" className="text-sm text-danger">
@@ -818,7 +818,7 @@ function EntryForm({
         <p className="mt-2">
           <SavedSyncBadge eventId={saved.eventId} />
         </p>
-        <p className="mt-2 text-ink/60 dark:text-ink-dark/60">
+        <p className="mt-2 text-ink-soft">
           {isBackendConfigured()
             ? editing
               ? "The correction is safe on this device and syncs automatically."
@@ -859,7 +859,7 @@ function EntryForm({
     <form onSubmit={onSubmit} className="mx-auto max-w-md space-y-4">
       {preview ? <PreviewBanner /> : null}
       {editing ? (
-        <p className="rounded-lg bg-accent/20 p-3 text-sm text-ink dark:text-ink-dark">
+        <p className="rounded-lg bg-accent/20 p-3 text-sm text-ink">
           <span className="font-medium">Correcting the entry from </span>
           {format(new Date(editing.eventDate), "d MMM yyyy, h:mm a")}. Saving replaces what
           was recorded — it does not add a second entry.
@@ -867,11 +867,13 @@ function EntryForm({
       ) : null}
       <div>
         <PageTitle>{formName}</PageTitle>
-        <p className="mt-1 text-sm text-ink/60 dark:text-ink-dark/60">
+        <p className="mt-1 text-sm text-ink-soft">
           {trialName}
           {frequency ? ` · ${frequency}` : ""}
         </p>
-        <p className="mt-2 flex flex-wrap gap-2 text-sm">
+        {/* items-center, or the 44px tap target on "Change plot" stretches
+            every pill on the line to match it and "Plot 1" comes out a circle. */}
+        <p className="mt-2 flex flex-wrap items-center gap-2 text-sm">
           {siteLabel ? (
             <span className="rounded-full bg-primary/10 px-2.5 py-0.5 font-medium text-primary dark:bg-primary-soft/20 dark:text-primary-soft">
               📍 {siteLabel}
@@ -883,7 +885,7 @@ function EntryForm({
             </span>
           ) : null}
           {replicateLabel ? (
-            <span className="rounded-full bg-accent/20 px-2.5 py-0.5 font-medium text-ink dark:text-ink-dark">
+            <span className="rounded-full bg-accent/20 px-2.5 py-0.5 font-medium text-ink">
               {replicateLabel}
             </span>
           ) : null}
@@ -908,7 +910,7 @@ function EntryForm({
         />
       )}
 
-      <p className="text-sm text-ink/50 dark:text-ink-dark/50" aria-live="polite">
+      <p className="text-sm text-ink-faint" aria-live="polite">
         Step {screenIndex + 1} of {screens.length}
       </p>
 
@@ -944,7 +946,7 @@ function EntryForm({
           <button
             type="button"
             onClick={() => setScreenIndex((index) => index - 1)}
-            className="min-h-11 flex-1 rounded-lg border border-ink/20 px-4 py-2.5 font-medium dark:border-ink-dark/20"
+            className="min-h-11 flex-1 rounded-lg border border-line-strong px-4 py-2.5 font-medium"
           >
             Back
           </button>
@@ -986,7 +988,7 @@ function EntryForm({
                 <button
                   type="button"
                   onClick={() => setRemoving(false)}
-                  className="min-h-11 flex-1 rounded-lg border border-ink/20 px-4 py-2.5 font-medium dark:border-ink-dark/20"
+                  className="min-h-11 flex-1 rounded-lg border border-line-strong px-4 py-2.5 font-medium"
                 >
                   Keep it
                 </button>

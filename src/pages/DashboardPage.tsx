@@ -16,9 +16,10 @@ import { hiddenCount, visibleTrials } from "../services/lifecycle";
 import { useOnline } from "../hooks/useOnline";
 import {
   Card,
+  CardTitle,
   EmptyState,
-  ExamplePill,
   ErrorState,
+  ExamplePill,
   PageTitle,
   Skeleton,
   StatusPill,
@@ -57,13 +58,13 @@ function StartHere({ presence }: { presence: SeedPresence }) {
 
   return (
     <Card className="border-accent/50">
-      <h2 className="font-display text-lg font-bold">Start here</h2>
-      <p className="mt-1 text-ink/70 dark:text-ink-dark/70">
+      <CardTitle>Start here</CardTitle>
+      <p className="mt-1 text-ink-soft">
         Fieldwork records what happens in a field trial and turns it into data you can
         analyse. Nothing in it is specific to one crop — trials, sites, what is being
         compared and the questions asked are all set up in the app.
       </p>
-      <ul className="mt-3 divide-y divide-ink/10 dark:divide-ink-dark/10">
+      <ul className="mt-3 divide-y divide-line">
         {routes.map((route) => (
           <li key={route.role} className="py-2">
             <Link
@@ -72,7 +73,7 @@ function StartHere({ presence }: { presence: SeedPresence }) {
             >
               {route.role}
             </Link>
-            <p className="text-sm text-ink/60 dark:text-ink-dark/60">{route.what}</p>
+            <p className="text-sm text-ink-soft">{route.what}</p>
           </li>
         ))}
       </ul>
@@ -81,7 +82,7 @@ function StartHere({ presence }: { presence: SeedPresence }) {
           one is created, and a warning that is wrong about your own data
           teaches you to ignore warnings. */}
       {presence === "none" ? null : (
-        <p className="mt-3 border-t border-ink/10 pt-3 text-sm text-ink/60 dark:border-ink-dark/10 dark:text-ink-dark/60">
+        <p className="mt-3 border-t border-line pt-3 text-sm text-ink-soft">
           <span className="font-medium text-warning">
             {presence === "all"
               ? "The trials below are examples."
@@ -159,12 +160,12 @@ export function DashboardPage() {
         {waiting.isPending ? (
           <Skeleton lines={1} />
         ) : (waiting.data ?? 0) > 0 ? (
-          <p className="mt-1 text-sm text-ink/70 dark:text-ink-dark/70">
+          <p className="mt-1 text-sm text-ink-soft">
             {waiting.data} {waiting.data === 1 ? "record is" : "records are"} waiting to
             leave this device.
           </p>
         ) : (
-          <p className="mt-1 text-sm text-ink/60 dark:text-ink-dark/60">
+          <p className="mt-1 text-sm text-ink-soft">
             Everything on this device has reached the cloud.
           </p>
         )}
@@ -173,7 +174,7 @@ export function DashboardPage() {
             <p className="font-medium text-warning">
               The last attempt to send was refused.
             </p>
-            <p className="mt-1 text-ink/70 dark:text-ink-dark/70">
+            <p className="mt-1 text-ink-soft">
               Nothing has been lost — it is all saved on this device and will go up once
               the cause is fixed. The cloud said:{" "}
               <span className="font-mono">{trouble.data.message}</span>
@@ -187,7 +188,7 @@ export function DashboardPage() {
         {/* The dashboard is a starting point, not an archive: archived trials
             are listed on the Trials page, which has the control to show them. */}
         {hiddenCount(trials.data ?? []) > 0 ? (
-          <p className="mb-2 text-sm text-ink/60 dark:text-ink-dark/60">
+          <p className="mb-2 text-sm text-ink-soft">
             {hiddenCount(trials.data ?? [])} archived, on the{" "}
             <Link to="/trials" className="underline">
               Trials page
@@ -200,7 +201,7 @@ export function DashboardPage() {
         ) : (trials.data ?? []).length === 0 ? (
           <EmptyState message="No trials yet. Create the first one to get started." />
         ) : (
-          <ul className="divide-y divide-ink/10 dark:divide-ink-dark/10">
+          <ul className="divide-y divide-line">
             {visibleTrials(trials.data ?? [], false).map((trial) => {
               const siteCount = (sites.data ?? []).filter(
                 (site) => site.trialId === trial.trialId,
@@ -213,7 +214,7 @@ export function DashboardPage() {
                   >
                     {trial.name}
                   </Link>
-                  <p className="mt-1 flex flex-wrap items-center gap-2 text-sm text-ink/60 dark:text-ink-dark/60">
+                  <p className="mt-1 flex flex-wrap items-center gap-2 text-sm text-ink-soft">
                     <StatusPill status={trial.status} />
                     {isSeedTrial(trial.trialId) ? <ExamplePill /> : null}
                     <span>
@@ -244,7 +245,7 @@ export function DashboardPage() {
         ) : recentEvents.length === 0 ? (
           <EmptyState message="No entries recorded yet." />
         ) : (
-          <ul className="divide-y divide-ink/10 dark:divide-ink-dark/10">
+          <ul className="divide-y divide-line">
             {recentEvents.map((event) => {
               const arm = (arms.data ?? []).find((candidate) => candidate.armId === event.armId);
               return (
@@ -252,10 +253,10 @@ export function DashboardPage() {
                   <span className="font-medium">
                     {describeEventScope(event, sites.data ?? [])}
                   </span>
-                  <span className="text-ink/60 dark:text-ink-dark/60">
+                  <span className="text-ink-soft">
                     {arm?.name ?? describeEvent(event, templates.data ?? [])}
                   </span>
-                  <span className="text-ink/50 dark:text-ink-dark/50">
+                  <span className="text-ink-faint">
                     {formatDistanceToNow(new Date(event.createdAt), { addSuffix: true })}
                   </span>
                   <SyncBadge status={event.syncStatus} />

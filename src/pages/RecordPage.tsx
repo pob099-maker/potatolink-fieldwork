@@ -81,7 +81,7 @@ export function RecordPage() {
     <div className="space-y-4">
       <div>
         <PageTitle>Record an observation</PageTitle>
-        <p className="mt-1 text-ink/70 dark:text-ink-dark/70">
+        <p className="mt-1 text-ink-soft">
           Pick where you are. Somewhere you have recorded before comes first.
         </p>
       </div>
@@ -90,7 +90,7 @@ export function RecordPage() {
         <EmptyState message="No trial is ready for entries yet. Whoever set it up needs to add a site and the practices being compared." />
       ) : (
         <Card>
-          <ul className="divide-y divide-ink/10 dark:divide-ink-dark/10">
+          <ul className="divide-y divide-line">
             {options.map((option) => (
               <li key={`${option.trial.trialId}-${option.site.siteId}`}>
                 <Link
@@ -103,15 +103,15 @@ export function RecordPage() {
                     📍
                   </span>
                   <span className="flex-1">
-                    <span className="block font-display text-lg font-bold text-primary dark:text-primary-soft">
+                    <span className="block font-display text-title text-primary dark:text-primary-soft">
                       {option.site.location}
                     </span>
-                    <span className="block text-sm text-ink/60 dark:text-ink-dark/60">
+                    <span className="block text-sm text-ink-soft">
                       {option.trial.name}
                       {option.recent ? " · recorded here before" : ""}
                     </span>
                   </span>
-                  <span aria-hidden className="text-xl text-ink/40 dark:text-ink-dark/40">
+                  <span aria-hidden className="text-xl text-ink-faint">
                     ›
                   </span>
                 </Link>
@@ -124,7 +124,7 @@ export function RecordPage() {
       {/* The way out, and the way this device stops opening here. */}
       <Card>
         <h2 className="font-semibold">Setting up trials instead?</h2>
-        <p className="mt-1 text-sm text-ink/60 dark:text-ink-dark/60">
+        <p className="mt-1 text-sm text-ink-soft">
           This device opens on recording because that is what it was last used for. Follow
           this and it will open on the dashboard again.
         </p>

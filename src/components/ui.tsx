@@ -1,27 +1,106 @@
-import type { ReactNode } from "react";
+import { createContext, useContext, useEffect, useState, type ReactNode } from "react";
 import type { SyncTally } from "../services/events";
 import { Link } from "react-router-dom";
+import { applyUpdate, onUpdateReady } from "../services/appUpdate";
 import type { SyncStatus } from "../types";
 
-export function Card({ children, className = "" }: { children: ReactNode; className?: string }) {
+/**
+ * How much of the page's attention a card is asking for.
+ *
+ * There used to be one card, so a trial page was fourteen identical boxes and
+ * nothing on it could say "start here" or "this one is dangerous". Weight is
+ * information: a reader should be able to tell what matters without reading
+ * every heading in order, and "Remove this trial" should not look like
+ * "Response summary".
+ */
+export type CardTone = "default" | "feature" | "quiet" | "danger";
+
+const TONE_STYLES: Record<CardTone, string> = {
+  // The ordinary case: a raised panel on the page ground.
+  default: "border-line bg-surface shadow-sm",
+  // The one thing to act on. A gold rail rather than a gold fill, so it draws
+  // the eye without turning the brand accent into a background nobody can read
+  // text on.
+  feature: "border-line border-l-4 border-l-accent bg-surface shadow-sm",
+  // Reference material — settings, provenance, design that is already decided.
+  // Recessed instead of raised: present, clearly not the point.
+  quiet: "border-line bg-sunk",
+  danger: "border-danger/40 bg-surface",
+};
+
+export function Card({
+  children,
+  tone = "default",
+  className = "",
+}: {
+  children: ReactNode;
+  tone?: CardTone;
+  className?: string;
+}) {
   return (
-    <section
-      className={`rounded-xl border border-ink/10 bg-surface p-4 shadow-sm dark:border-ink-dark/10 dark:bg-surface-dark ${className}`}
-    >
+    <section className={`rounded-xl border p-4 sm:p-5 ${TONE_STYLES[tone]} ${className}`}>
       {children}
     </section>
   );
 }
 
+/* Heading level, tracked rather than hard-coded.
+ *
+ * A card's title is an h2 on a page that is a flat list of cards, and an h3
+ * once those cards are grouped under section headings. Getting that wrong is
+ * invisible on screen and obvious to anybody navigating by headings, so the
+ * grouping component says which it is and the cards inside follow. */
+const SectionDepth = createContext(false);
+
+export function CardTitle({ children }: { children: ReactNode }) {
+  const nested = useContext(SectionDepth);
+  const className = "font-display text-title";
+  return nested ? <h3 className={className}>{children}</h3> : <h2 className={className}>{children}</h2>;
+}
+
+/** A small tracked label. Uppercase lives here and in the page title, nowhere else. */
+export function Eyebrow({ children }: { children: ReactNode }) {
+  return <p className="font-display text-eyebrow uppercase text-ink-faint">{children}</p>;
+}
+
+/**
+ * A named group of cards.
+ *
+ * The point is ordering by job rather than by data model: what is happening,
+ * how to collect, how to read it, how to change it. A reader looking for the
+ * entry links should be able to skip three quarters of the page.
+ */
+export function Section({
+  title,
+  description,
+  children,
+}: {
+  title: string;
+  description?: string;
+  children: ReactNode;
+}) {
+  return (
+    <SectionDepth.Provider value={true}>
+      <section className="flex flex-col gap-3">
+        <div className="flex flex-col gap-0.5 border-b-2 border-accent/50 pb-1.5">
+          <h2 className="font-display text-title text-primary dark:text-primary-soft">{title}</h2>
+          {description ? <p className="text-sm text-ink-soft">{description}</p> : null}
+        </div>
+        {children}
+      </section>
+    </SectionDepth.Provider>
+  );
+}
+
 export function PageTitle({ children }: { children: ReactNode }) {
-  return <h1 className="text-2xl font-bold text-ink dark:text-ink-dark">{children}</h1>;
+  return <h1 className="text-display text-ink">{children}</h1>;
 }
 
 export function Skeleton({ lines = 3 }: { lines?: number }) {
   return (
     <div aria-hidden className="animate-pulse space-y-2">
       {Array.from({ length: lines }, (_, index) => (
-        <div key={index} className="h-4 rounded bg-ink/10 dark:bg-ink-dark/10" />
+        <div key={index} className="h-4 rounded bg-ink/10" />
       ))}
     </div>
   );
@@ -35,7 +114,7 @@ export function EmptyState({
   action?: { label: string; to: string };
 }) {
   return (
-    <div className="rounded-xl border border-dashed border-ink/20 p-6 text-center text-ink/60 dark:border-ink-dark/20 dark:text-ink-dark/60">
+    <div className="rounded-xl border border-dashed border-line-strong p-6 text-center text-ink-soft">
       <p>{message}</p>
       {action ? (
         <Link
@@ -51,10 +130,7 @@ export function EmptyState({
 
 export function ErrorState({ message, onRetry }: { message: string; onRetry?: () => void }) {
   return (
-    <div
-      role="alert"
-      className="rounded-xl border border-danger/40 bg-danger/10 p-4 text-danger"
-    >
+    <div role="alert" className="rounded-xl border border-danger/40 bg-danger/10 p-4 text-danger">
       <p>{message}</p>
       {onRetry ? (
         <button
@@ -65,6 +141,42 @@ export function ErrorState({ message, onRetry }: { message: string; onRetry?: ()
           Try again
         </button>
       ) : null}
+    </div>
+  );
+}
+
+/**
+ * Offered, never forced.
+ *
+ * A new version installs in the background and then waits. Reloading the page
+ * out from under somebody could throw away a half-finished entry form, and the
+ * person holding the phone may have walked to the plot to fill it in. So they
+ * are told, and they choose when.
+ */
+export function UpdateBanner() {
+  const [ready, setReady] = useState(false);
+
+  useEffect(() => {
+    onUpdateReady(() => setReady(true));
+  }, []);
+
+  if (!ready) return null;
+
+  return (
+    <div
+      role="status"
+      className="border-b border-line bg-accent/20 px-4 py-2.5 text-sm text-ink"
+    >
+      <div className="mx-auto flex max-w-4xl flex-wrap items-center justify-between gap-2">
+        <span>A newer version of Fieldwork is ready.</span>
+        <button
+          type="button"
+          onClick={applyUpdate}
+          className="min-h-11 rounded-lg bg-primary px-4 font-medium text-white"
+        >
+          Reload to update
+        </button>
+      </div>
     </div>
   );
 }
@@ -84,7 +196,7 @@ const SYNC_STYLES: Record<SyncStatus, string> = {
 export function SyncBadge({ status }: { status: SyncStatus }) {
   return (
     <span
-      className={`inline-block rounded-full px-2.5 py-0.5 text-xs font-medium ${SYNC_STYLES[status]}`}
+      className={`inline-block rounded-full px-2.5 py-0.5 text-meta font-medium ${SYNC_STYLES[status]}`}
     >
       {SYNC_LABELS[status]}
     </span>
@@ -93,7 +205,7 @@ export function SyncBadge({ status }: { status: SyncStatus }) {
 
 export function StatusPill({ status }: { status: string }) {
   return (
-    <span className="inline-block rounded-full bg-primary/10 px-2.5 py-0.5 text-xs font-medium capitalize text-primary dark:bg-primary-soft/20 dark:text-primary-soft">
+    <span className="inline-block rounded-full bg-primary/10 px-2.5 py-0.5 text-meta font-medium capitalize text-primary dark:bg-primary-soft/20 dark:text-primary-soft">
       {status}
     </span>
   );
@@ -106,13 +218,11 @@ export function StatusPill({ status }: { status: string }) {
  */
 export function SyncTallyLine({ tally }: { tally: SyncTally }) {
   if (tally.total === 0) {
-    return (
-      <span className="text-ink/60 dark:text-ink-dark/60">No entries yet</span>
-    );
+    return <span className="text-ink-soft">No entries yet</span>;
   }
   return (
-    <span className="inline-flex flex-wrap items-center gap-2">
-      <span className="text-ink/60 dark:text-ink-dark/60">
+    <span className="tabular inline-flex flex-wrap items-center gap-2">
+      <span className="text-ink-soft">
         {tally.total} {tally.total === 1 ? "entry" : "entries"}
       </span>
       {tally.pending > 0 ? (
@@ -139,7 +249,7 @@ export function SyncTallyLine({ tally }: { tally: SyncTally }) {
  */
 export function ExamplePill() {
   return (
-    <span className="rounded-full bg-accent/30 px-2 py-0.5 text-xs font-medium text-ink dark:text-ink-dark">
+    <span className="rounded-full bg-accent/30 px-2 py-0.5 text-meta font-medium text-ink">
       Example
     </span>
   );

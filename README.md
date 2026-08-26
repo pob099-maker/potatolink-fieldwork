@@ -51,8 +51,18 @@ each reading separately would understate the error.
 combined with cost assumptions you can change, with unconfirmed figures flagged
 until they are replaced with real ones.
 
-**Offline first.** Entries save to the device and sync when there is signal. A
-queued save that will never go through says so rather than retrying silently.
+**Offline first, app and all.** Entries save to the device and sync when there
+is signal, and a queued save that will never go through says so rather than
+retrying silently. The app itself is cached too — typefaces, styles and code
+are bundled and precached, so it opens in a paddock with no signal rather than
+depending on whatever the browser happened to keep. Verified by serving a
+build, installing the worker, shutting the server down and reloading: nothing
+served, page renders.
+
+**Installable.** Add to home screen on a phone and it opens like an app, from
+its own icon, without the browser furniture. When a new version is deployed the
+app says so and waits — it never reloads out from under a half-finished entry
+form.
 
 **A lifecycle.** A finished trial can be closed and archived — out of the lists,
 still fully readable, back with one tap.

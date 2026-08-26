@@ -52,7 +52,7 @@ export function ImportTrialPage() {
     <div className="mx-auto max-w-2xl space-y-4">
       <div>
         <PageTitle>Import a trial from CSV</PageTitle>
-        <p className="mt-1 text-ink/60 dark:text-ink-dark/60">
+        <p className="mt-1 text-ink-soft">
           Upload a Fieldwork Template CSV and get a working trial — forms, screens, and
           validation — without any coding. New to the format? Start from the blank
           template: it opens in Excel or Google Sheets, one row per question.
@@ -98,13 +98,13 @@ export function ImportTrialPage() {
                 : " — observational"}
             </p>
             {parsed.objective ? (
-              <p className="text-sm text-ink/60 dark:text-ink-dark/60">{parsed.objective}</p>
+              <p className="text-sm text-ink-soft">{parsed.objective}</p>
             ) : null}
-            <p className="mt-2 flex flex-wrap gap-1 text-xs">
+            <p className="mt-2 flex flex-wrap gap-1 text-meta">
               {parsed.sites.map((site) => (
                 <span
                   key={site.location}
-                  className="rounded-full bg-accent/20 px-2 py-0.5 text-ink dark:text-ink-dark"
+                  className="rounded-full bg-accent/20 px-2 py-0.5 text-ink"
                 >
                   📍 {site.location}
                 </span>
@@ -119,11 +119,11 @@ export function ImportTrialPage() {
                 </span>
               ))}
             </p>
-            <ul className="mt-3 divide-y divide-ink/10 dark:divide-ink-dark/10">
+            <ul className="mt-3 divide-y divide-line">
               {parsed.forms.map((form) => (
                 <li key={form.name} className="py-2">
                   <span className="font-medium">{form.name}</span>
-                  <span className="block text-xs text-ink/60 dark:text-ink-dark/60">
+                  <span className="block text-meta text-ink-soft">
                     {form.fields.length} {form.fields.length === 1 ? "question" : "questions"} ·
                     filled in by {form.audience}
                     {form.frequency ? ` · ${form.frequency}` : ""}
@@ -136,7 +136,7 @@ export function ImportTrialPage() {
                     {form.fields.map((field) => (
                       <li
                         key={field.fieldName}
-                        className="rounded-full bg-primary/10 px-2 py-0.5 text-xs text-primary dark:bg-primary-soft/20 dark:text-primary-soft"
+                        className="rounded-full bg-primary/10 px-2 py-0.5 text-meta text-primary dark:bg-primary-soft/20 dark:text-primary-soft"
                       >
                         {field.label}
                         {field.isResponse ? " ★" : ""}
@@ -180,7 +180,7 @@ export function ImportTrialPage() {
           <div className="flex gap-2">
             <Link
               to="/"
-              className="min-h-11 flex-1 rounded-lg border border-ink/20 px-4 py-2.5 text-center font-medium dark:border-ink-dark/20"
+              className="min-h-11 flex-1 rounded-lg border border-line-strong px-4 py-2.5 text-center font-medium"
             >
               Cancel
             </Link>
