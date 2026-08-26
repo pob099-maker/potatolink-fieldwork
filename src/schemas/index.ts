@@ -59,6 +59,29 @@ export const trialSchema = z.object({
   updatedAt: isoDate,
 });
 
+/**
+ * A plain calendar day, not a timestamp.
+ *
+ * A planting date is a day somebody remembers, not an instant — storing it as
+ * a timestamp invites a timezone to shift it across midnight and move every
+ * window that hangs off it by a day.
+ */
+const plainDate = z
+  .string()
+  .regex(/^\d{4}-\d{2}-\d{2}$/, "Use a date like 2026-09-01");
+
+/** Day counts are whole days, and cannot run backwards. */
+const timingSchema = z
+  .object({
+    stage: z.string().nullable().default(null),
+    dapFrom: z.number().int().nullable().default(null),
+    dapTo: z.number().int().nullable().default(null),
+  })
+  .refine(
+    (value) => value.dapFrom === null || value.dapTo === null || value.dapTo >= value.dapFrom,
+    { message: "The window has to end on or after it starts.", path: ["dapTo"] },
+  );
+
 export const siteSchema = z.object({
   siteId: id,
   trialId: id,
@@ -67,6 +90,11 @@ export const siteSchema = z.object({
   region: z.string(),
   soilType: z.string(),
   coordinates: z.object({ lat: z.number(), lng: z.number() }).nullable(),
+  // Both default rather than being required, so every site written before
+  // observation timing existed still parses. A site with no planting date is
+  // simply one the app will not schedule against.
+  plantingDate: plainDate.nullable().default(null),
+  stageDates: z.record(z.string(), plainDate).default({}),
   createdAt: isoDate,
 });
 
@@ -204,6 +232,7 @@ export const formTemplateSchema = z.object({
   eventType: z.string().min(1).default("field_record"),
   audience: z.enum(["grower", "staff"]).default("grower"),
   frequency: z.string().default(""),
+  timing: timingSchema.nullable().default(null),
   requiresSite: z.boolean().default(true),
   requiresArm: z.boolean().default(true),
   fields: z.array(formFieldSchema).min(1),

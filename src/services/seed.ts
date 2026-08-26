@@ -19,6 +19,18 @@ import { dbGet, dbPut, dbPutMany } from "../lib/localdb";
 
 const T0 = "2026-08-01T00:00:00.000Z";
 
+/**
+ * A plain date this many days before today.
+ *
+ * The demo trials anchor their planting dates to whenever the app is first
+ * opened, so the timing example always shows something worth looking at — one
+ * observation due, one coming up, one late. Hard-coded dates would have made
+ * the whole feature look broken a season later.
+ */
+const daysBeforeToday = (days: number): string =>
+  new Date(Date.now() - days * 86_400_000).toISOString().slice(0, 10);
+
+
 export const SEED_IDS = {
   project: "5f0a6c1e-0001-4000-8000-000000000001",
   trial: "5f0a6c1e-0002-4000-8000-000000000001",
@@ -104,6 +116,8 @@ const sites: Site[] = [
     region: "South Australia",
     soilType: "Sandy loam",
     coordinates: null,
+    plantingDate: daysBeforeToday(40),
+    stageDates: {},
     createdAt: T0,
   },
   {
@@ -114,6 +128,8 @@ const sites: Site[] = [
     region: "Tasmania",
     soilType: "Ferrosol",
     coordinates: null,
+    plantingDate: daysBeforeToday(18),
+    stageDates: {},
     createdAt: T0,
   },
 ];
@@ -169,6 +185,7 @@ const template: FormTemplate = {
   eventType: "field_record",
   audience: "grower",
   frequency: "Each run",
+  timing: { stage: "harvest", dapFrom: 0, dapTo: 21 },
   requiresSite: true,
   requiresArm: true,
   fields: [
@@ -327,6 +344,8 @@ const heSite: Site = {
   region: "North Queensland",
   soilType: "Red ferrosol",
   coordinates: null,
+  plantingDate: daysBeforeToday(132),
+  stageDates: { harvest: daysBeforeToday(6) },
   createdAt: T0,
 };
 
@@ -361,6 +380,7 @@ const heTemplate: FormTemplate = {
   eventType: "field_record",
   audience: "grower",
   frequency: "Each pass",
+  timing: { stage: "harvest", dapFrom: 0, dapTo: 14 },
   requiresSite: true,
   requiresArm: true,
   fields: [
@@ -551,6 +571,9 @@ function staffForm(
     eventType,
     audience: "staff",
     frequency,
+    // Staff forms are event-driven — a calibration happens when the machine is
+    // calibrated. Nothing to schedule, so nothing claimed.
+    timing: null,
     requiresSite: scope.requiresSite,
     requiresArm: scope.requiresArm,
     fields: fields.map(([fieldName, label, type, required = false, extra], index) => ({
@@ -807,6 +830,8 @@ const ntSite: Site = {
   region: "South Australia",
   soilType: "Sandy loam",
   coordinates: null,
+  plantingDate: daysBeforeToday(44),
+  stageDates: { emergence: daysBeforeToday(20) },
   createdAt: T0,
 };
 
@@ -851,6 +876,7 @@ const ntTemplate: FormTemplate = {
   eventType: "field_record",
   audience: "grower",
   frequency: "Once per plot at harvest",
+  timing: { stage: "tuberInitiation", dapFrom: null, dapTo: null },
   requiresSite: true,
   requiresArm: true,
   // No "plot number" question here: the trial has a layout, so the form asks
@@ -964,7 +990,7 @@ export function seedPresence(trialIds: string[]): SeedPresence {
 
 // Bumped so devices that already ran v11 re-seed, restoring the demonstration
 // entries the sync-status lie caused to be removed.
-const SEED_FLAG = { key: "seeded", version: 12 };
+const SEED_FLAG = { key: "seeded", version: 14 };
 
 export async function seedIfNeeded(): Promise<void> {
   const existing = await dbGet<{ key: string; version: number }>("meta", "seeded");

@@ -40,6 +40,8 @@ const sites: Site[] = [
     region: "SA",
     soilType: "",
     coordinates: null,
+    plantingDate: null,
+    stageDates: {},
     createdAt: T0,
   },
 ];
@@ -66,6 +68,7 @@ const templates: FormTemplate[] = [
     eventType: "field_record",
     audience: "grower",
     frequency: "",
+    timing: null,
     requiresSite: true,
     requiresArm: true,
     fields: [],

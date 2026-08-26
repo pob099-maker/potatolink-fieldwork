@@ -658,6 +658,8 @@ export async function addTrial(input: {
     eventType: "field_record",
     audience: "grower",
     frequency: "",
+    // A brand-new form is unscheduled until somebody says when it is wanted.
+    timing: null,
     requiresSite: true,
     requiresArm: true,
     fields: starterFields,
@@ -746,6 +748,8 @@ export async function addSite(input: {
     region: input.region ?? "",
     soilType: input.soilType ?? "",
     coordinates: null,
+    plantingDate: null,
+    stageDates: {},
     createdAt: nowIso(),
   };
   const check = siteSchema.safeParse(site);
@@ -1168,6 +1172,41 @@ export async function reconcileForTest(
   return reconcileDeleted(collection, cloudIds, await readOutbox(), await readDeletions());
 }
 
+
+/**
+ * Keep local values for columns the backend has never heard of.
+ *
+ * A pull parses each cloud row through its Zod schema, and any field the
+ * schema has a default for gets filled in when the column is missing. That is
+ * right for a genuinely empty value and badly wrong for a column that does not
+ * exist yet: a backend one migration behind sends no `planting_date` at all,
+ * the schema helpfully supplies `null`, and the pull writes that over a real
+ * planting date. The device loses data it had, because the server is old.
+ *
+ * The distinction that matters is absent versus null. Supabase returns every
+ * column it has, nulls included — so a key that is simply not in the row means
+ * the column is not there, not that somebody cleared it. In that one case the
+ * local value stands.
+ *
+ * Nothing here rescues a value the cloud actually cleared, and nothing applies
+ * to a record this device has never seen.
+ */
+export function keepColumnsTheCloudLacks(
+  parsed: Record<string, unknown>,
+  raw: Record<string, unknown>,
+  local: Record<string, unknown> | undefined,
+): Record<string, unknown> {
+  if (!local) return parsed;
+  let merged: Record<string, unknown> | null = null;
+  for (const key of Object.keys(parsed)) {
+    if (key in raw) continue;
+    if (local[key] === undefined) continue;
+    merged ??= { ...parsed };
+    merged[key] = local[key];
+  }
+  return merged ?? parsed;
+}
+
 async function pullTables(): Promise<Result<string>> {
   if (!supabase) return { success: false, error: "No Supabase project configured." };
   {
@@ -1181,11 +1220,20 @@ async function pullTables(): Promise<Result<string>> {
       if (error) {
         return { success: false, error: `Could not fetch ${spec.table}: ${error.message}` };
       }
+      const localRows = await dbGetAll<Record<string, unknown>>(spec.collection);
+      const localById = new Map(
+        localRows.map((row) => [recordId(spec.collection, row), row]),
+      );
+
       const valid: Record<string, unknown>[] = [];
       for (const row of data ?? []) {
-        const check = spec.schema.safeParse(fromRow(row as Record<string, unknown>));
+        const camel = fromRow(row as Record<string, unknown>);
+        const check = spec.schema.safeParse(camel);
         if (check.success) {
-          valid.push(check.data as Record<string, unknown>);
+          const parsed = check.data as Record<string, unknown>;
+          valid.push(
+            keepColumnsTheCloudLacks(parsed, camel, localById.get(recordId(spec.collection, parsed))),
+          );
         } else {
           // A row the app can't read is a real problem — a schema drift or a
           // bad write. It used to vanish silently, so the device just showed
@@ -1209,8 +1257,6 @@ async function pullTables(): Promise<Result<string>> {
       // For editable records, never overwrite a newer or still-queued local
       // edit — that is the silent-loss the timestamp guard prevents (S-1).
       if (EDITABLE[spec.collection]) {
-        const local = await dbGetAll<Record<string, unknown>>(spec.collection);
-        const localById = new Map(local.map((row) => [recordId(spec.collection, row), row]));
         const queued = new Set(
           outbox.filter((item) => item.collection === spec.collection).map((item) => item.id),
         );
