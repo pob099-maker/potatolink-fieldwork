@@ -18,6 +18,7 @@ import {
   trialSchema,
 } from "../schemas";
 import type {
+  FormAudience,
   ArmAssumption,
   Contact,
   DataEntryLog,
@@ -39,6 +40,7 @@ import { newId, nowIso } from "../lib/id";
 import { dbDelete, dbGet, dbGetAll, dbPut, dbPutMany, type CollectionName } from "../lib/localdb";
 import { fromRow, isBackendConfigured, supabase, toColumn, toRow } from "../lib/supabase";
 import { fileExtension, getMedia, isMediaPointer, markUploaded, mediaIdFromPointer } from "./media";
+import { makeFieldName } from "./templates";
 
 const TABLE_NAMES: Partial<Record<CollectionName, string>> = {
   projects: "projects",
@@ -692,6 +694,83 @@ export async function addTrial(input: {
   }
   notify();
   return { success: true, data: trial };
+}
+
+/**
+ * Add another form to a trial that already exists.
+ *
+ * A trial used to get exactly one form, created with it, and nothing in the
+ * app could make a second. That is wrong for almost any real protocol: an
+ * emergence count at 30 days, a mid-season disease score and a harvest weight
+ * are three different visits with three different question sets, and cramming
+ * them into one form means whoever is standing in the paddock at emergence is
+ * scrolling past harvest questions. It also capped observation timing at one
+ * schedule per trial, since a timing belongs to a form.
+ *
+ * The eventType is what makes them distinguishable, so it is generated unique
+ * within the trial rather than defaulted. Records carry the eventType, not the
+ * template id — two forms sharing one would look like the same visit to the
+ * due list, to "already recorded here", and to anybody reading the export.
+ */
+export async function addTemplate(input: {
+  trialId: string;
+  name: string;
+  audience?: FormAudience;
+}): Promise<Result<FormTemplate>> {
+  const name = input.name.trim();
+  if (!name) return { success: false, error: "Give the form a name." };
+
+  const existing = (await dbGetAll<FormTemplate>("formTemplates")).filter(
+    (template) => template.trialId === input.trialId,
+  );
+  if (existing.some((template) => template.name.trim().toLowerCase() === name.toLowerCase())) {
+    return { success: false, error: `This trial already has a form called “${name}”.` };
+  }
+
+  const createdAt = nowIso();
+  const template: FormTemplate = {
+    templateId: newId(),
+    trialId: input.trialId,
+    armId: null,
+    name,
+    eventType: makeFieldName(
+      name,
+      existing.map((other) => other.eventType),
+    ),
+    audience: input.audience ?? "grower",
+    frequency: "",
+    timing: null,
+    requiresSite: true,
+    requiresArm: true,
+    // One field, because a form with none cannot be saved or filled in. It is
+    // the first thing to rename in the editor.
+    fields: [
+      {
+        fieldName: "notes",
+        label: "What did you observe?",
+        type: "text",
+        required: true,
+        options: null,
+        min: null,
+        max: null,
+        unit: null,
+        displayOrder: 0,
+      },
+    ],
+    createdAt,
+  };
+
+  const check = formTemplateSchema.safeParse(template);
+  if (!check.success) return { success: false, error: "That form isn't valid." };
+
+  try {
+    await dbPut("formTemplates", template);
+  } catch {
+    return { success: false, error: "Could not save the form on this device." };
+  }
+  if (supabase) void supabase.from("form_templates").upsert(toRow(template)).then();
+  notify();
+  return { success: true, data: template };
 }
 
 /** Persist trial changes, including its design mode. */

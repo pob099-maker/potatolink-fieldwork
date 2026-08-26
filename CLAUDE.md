@@ -85,7 +85,14 @@ src/
     Absent means the column does not exist yet (a migration behind); null means
     somebody cleared it. `keepColumnsTheCloudLacks` in `services/store.ts` holds the
     line — without it, shipping a feature before its migration silently deletes data.
-20. MUST NOT add a `dark:` class for anything the tokens already flip. The palette
+20. MUST NOT reach for a PDF library. The trial report prints through the browser,
+    which every device already has: it costs the bundle nothing, embeds photos without
+    re-encoding, and uses the reader's paper size. jsPDF is ~350 KB and pdfmake over a
+    megabyte, against a whole bundle of ~780 KB that has to reach a paddock.
+21. MUST give every form its own `eventType`, unique within the trial. Records carry
+    the event type, not the template id — two forms sharing one look like the same
+    visit to the due list, to "already recorded here", and to anybody reading the export.
+22. MUST NOT add a `dark:` class for anything the tokens already flip. The palette
     swaps under `html.dark` in one block; a per-element override is how one colour
     gets left behind on the wrong ground.
 

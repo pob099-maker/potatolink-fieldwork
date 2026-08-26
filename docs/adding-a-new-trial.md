@@ -251,13 +251,41 @@ Every exported row names the sources covering it. Under variable-rate irrigation
 a flow meter belongs to one plot, because the point of the machine is that each
 zone gets its own rate.
 
-## 12. Export
+## 12. Add a form for each visit
+
+**Trial forms → + Add a form.**
+
+The trial starts with one form. Most protocols need more than one, because an
+emergence count, a mid-season disease score and a harvest weight are three
+different visits asking three different things. Cramming them into one form
+means whoever is standing in the crop at emergence scrolls past harvest
+questions to reach the two that apply.
+
+Name the form after the *visit*, not the trial — it is what somebody picks from
+a list in a paddock. Each form gets its own timing, so "at emergence" and "at
+harvest" can both be scheduled on the same trial.
+
+## 13. Print the report
+
+**Trial report**, on the trial page. It pulls together the design, the sites,
+the mean per treatment, the variation between blocks, what is still outstanding
+by plot number, and a photo log captioned with the plot each picture came from.
+
+**Print / Save as PDF** goes through your browser's own print dialog — choose
+*Save as PDF* as the destination. There is no upload, so it works with no
+signal.
+
+It is descriptive. There is no significance test in it and the last paragraph
+says so, because the report is the thing most likely to be read by somebody who
+was not there when the trial was designed.
+
+## 14. Export
 
 **Export data (CSV)** — long format, one row per recorded value, with the plot,
 the treatment, the derived `yield_t_ha`, the `plot_area_m2` it used, and the
 data sources covering that row.
 
-## 13. Close it when it is done
+## 15. Close it when it is done
 
 **Stage**, on the trial page.
 

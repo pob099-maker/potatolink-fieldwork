@@ -42,6 +42,19 @@ weight in kg or t shows tonnes per hectare as it is typed. A strip's area can
 be measured by walking it — the width is the machine's, so only the length is
 measured. Strips of unequal length carry their own area.
 
+**A form per visit.** A protocol is usually several visits — an emergence
+count, a mid-season disease score, a harvest weight — so a trial can carry as
+many forms as it needs, each with its own questions, its own audience and its
+own place in the season. Each gets an event type of its own, because records
+carry the type rather than the form's id.
+
+**A trial report.** Design, sites, means per treatment, variation between
+blocks, what is still outstanding, and a photo log with the plot each picture
+came from — printable, and saved as a PDF through the browser's own print
+dialog rather than a bundled PDF library. That keeps the bundle small enough to
+carry to a paddock and works with no signal. It reports; it does not infer, and
+says so on the page.
+
 **Honest statistics.** Descriptive means and standard errors per treatment,
 never a significance test. Several readings in one plot are averaged before
 treatments are compared, because randomisation was applied to plots — counting
