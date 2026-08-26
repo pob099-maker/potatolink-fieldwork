@@ -153,6 +153,20 @@ not be able to answer and an invitation to guess.
 The form works with no signal and says so. Entries save to the device and go up
 when a connection returns.
 
+### Say this when you send the link
+
+**Open it once where there is signal, then add it to the home screen** — the
+Share menu on an iPhone, the ⋮ menu on Android.
+
+That first visit is what puts the app on the phone: the code, the styling and
+the typefaces are all stored on the device, so it opens out of range instead of
+depending on the link still being findable and the network still being there.
+After that it is an icon next to the camera rather than a message somebody has
+to scroll back to.
+
+Worth doing before anybody drives out. A phone that has never opened the link
+has nothing to fall back on, and the paddock is the wrong place to discover it.
+
 ---
 
 ## 9. Read the results honestly
