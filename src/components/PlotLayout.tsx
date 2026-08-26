@@ -25,7 +25,7 @@ import {
 } from "../services/layout";
 import { downloadCsv } from "../services/export";
 import { words } from "../services/vocabulary";
-import { Card, ErrorState } from "./ui";
+import { Card, CardTitle, ErrorState } from "./ui";
 import type { Words } from "../services/vocabulary";
 import type { PracticeArm, Site, Trial } from "../types";
 
@@ -39,7 +39,7 @@ const TREATMENT_TINTS = [
   "border-accent bg-accent/25",
   "border-warning bg-warning/20 dark:bg-warning/30",
   "border-danger bg-danger/15 dark:bg-danger/30",
-  "border-ink/40 bg-ink/10 dark:border-ink-dark/40 dark:bg-ink-dark/15",
+  "border-ink/40 bg-ink/10",
 ];
 
 export function PlotLayout({
@@ -108,8 +108,8 @@ export function PlotLayout({
 
   return (
     <Card>
-      <h2 className="font-display text-lg font-bold">Plot layout</h2>
-      <p className="mt-1 text-sm text-ink/60 dark:text-ink-dark/60">
+      <CardTitle>Plot layout</CardTitle>
+      <p className="mt-1 text-sm text-ink-soft">
         Which {word.one} sits in which plot, decided by chance rather than by whoever holds
         the clipboard — and written down before anyone walks the paddock.
       </p>
@@ -147,7 +147,7 @@ export function PlotLayout({
         </p>
       ) : trial.layoutSeed ? (
         <div className="mt-3 space-y-4">
-          <p className="text-sm text-ink/60 dark:text-ink-dark/60">
+          <p className="text-sm text-ink-soft">
             {totalPlots} plots across {sites.length}{" "}
             {sites.length === 1 ? "site" : "sites"} · seed{" "}
             <span className="font-mono font-medium">{seed}</span>
@@ -191,7 +191,7 @@ export function PlotLayout({
                 type="button"
                 onClick={() => void generate()}
                 disabled={busy}
-                className="min-h-11 rounded-lg border border-ink/20 px-4 py-2.5 font-medium disabled:opacity-60 dark:border-ink-dark/20"
+                className="min-h-11 rounded-lg border border-line-strong px-4 py-2.5 font-medium disabled:opacity-60"
               >
                 Randomise again
               </button>
@@ -206,7 +206,7 @@ export function PlotLayout({
             </p>
           ) : null}
 
-          <p className="text-sm text-ink/50 dark:text-ink-dark/50">
+          <p className="text-sm text-ink-faint">
             Keep the seed with the trial records. It regenerates every site's arrangement
             exactly, which is how anyone else can check it. Randomising again, or changing
             the {word.many}, produces a different one — so do it before the trial goes in,
@@ -245,7 +245,7 @@ function DesignChoice({
   return (
     <label
       className={`flex cursor-pointer gap-3 rounded-lg border p-3 ${
-        checked ? "border-primary bg-primary/5" : "border-ink/15 dark:border-ink-dark/15"
+        checked ? "border-primary bg-primary/5" : "border-line"
       }`}
     >
       <input
@@ -258,7 +258,7 @@ function DesignChoice({
       />
       <span>
         <span className="block font-medium">{title}</span>
-        <span className="block text-sm text-ink/60 dark:text-ink-dark/60">{detail}</span>
+        <span className="block text-sm text-ink-soft">{detail}</span>
       </span>
     </label>
   );
@@ -298,7 +298,7 @@ function SiteLayout({
       {blocks.map((block) => (
         <div key={block} className="mt-1">
           {design === "rcb" ? (
-            <h4 className="text-sm font-semibold uppercase tracking-wide text-ink/50 dark:text-ink-dark/50">
+            <h4 className="text-sm font-semibold uppercase tracking-wide text-ink-faint">
               Block {block}
             </h4>
           ) : null}
@@ -308,9 +308,9 @@ function SiteLayout({
               .map((plot) => (
                 <li
                   key={plot.plotNumber}
-                  className={`min-w-24 rounded-lg border-l-4 px-3 py-2 text-sm text-ink dark:text-ink-dark ${tint(plot.armId)}`}
+                  className={`min-w-24 rounded-lg border-l-4 px-3 py-2 text-sm text-ink ${tint(plot.armId)}`}
                 >
-                  <span className="block text-xs opacity-70">Plot {plot.plotNumber}</span>
+                  <span className="block text-meta opacity-70">Plot {plot.plotNumber}</span>
                   <span className="block font-medium">{armName(plot.armId)}</span>
                 </li>
               ))}

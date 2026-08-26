@@ -50,8 +50,8 @@ export function StaffSignIn() {
           📬
         </p>
         <PageTitle>Check your email</PageTitle>
-        <p className="mt-2 text-ink/70 dark:text-ink-dark/70">{sent}</p>
-        <p className="mt-2 text-sm text-ink/60 dark:text-ink-dark/60">
+        <p className="mt-2 text-ink-soft">{sent}</p>
+        <p className="mt-2 text-sm text-ink-soft">
           Open it on this device and you will land back here, signed in. The link works
           once and expires after an hour.
         </p>
@@ -62,7 +62,7 @@ export function StaffSignIn() {
   return (
     <Card className="mx-auto max-w-md">
       <PageTitle>Staff sign-in</PageTitle>
-      <p className="mt-2 text-ink/70 dark:text-ink-dark/70">
+      <p className="mt-2 text-ink-soft">
         Setting up trials, editing forms and reading the economics are for the people
         running the project. We will email you a link — there is no password to set.
       </p>
@@ -85,7 +85,7 @@ export function StaffSignIn() {
             value={email}
             onChange={(changeEvent) => setEmail(changeEvent.target.value)}
             placeholder="you@example.org"
-            className="min-h-11 w-full rounded-lg border border-ink/20 bg-surface px-3 dark:border-ink-dark/20 dark:bg-surface-dark"
+            className="min-h-11 w-full rounded-lg border border-line-strong bg-surface px-3"
           />
         </div>
         {error ? <ErrorState message={error} /> : null}
@@ -97,7 +97,7 @@ export function StaffSignIn() {
           {sending ? "Sending…" : "Email me a sign-in link"}
         </button>
       </form>
-      <p className="mt-4 border-t border-ink/10 pt-3 text-sm text-ink/60 dark:border-ink-dark/10 dark:text-ink-dark/60">
+      <p className="mt-4 border-t border-line pt-3 text-sm text-ink-soft">
         Recording in the field does not need an account — whoever is on site uses the
         link and code they were given, and is unaffected by this.
       </p>

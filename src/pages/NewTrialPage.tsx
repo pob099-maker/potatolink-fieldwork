@@ -9,22 +9,22 @@
 
 import { Link } from "react-router-dom";
 import { downloadReferenceTemplate } from "../services/templateImport";
-import { Card, PageTitle } from "../components/ui";
+import { Card, CardTitle, PageTitle } from "../components/ui";
 
 export function NewTrialPage() {
   return (
     <div className="mx-auto max-w-2xl space-y-4">
       <div>
         <PageTitle>Start a new trial</PageTitle>
-        <p className="mt-1 text-ink/60 dark:text-ink-dark/60">
+        <p className="mt-1 text-ink-soft">
           Two ways in, both landing on the same trial page with a checklist of anything
           still to set up.
         </p>
       </div>
 
       <Card className="border-accent/50">
-        <h2 className="font-display text-lg font-bold">Answer a few questions</h2>
-        <p className="mt-1 text-sm text-ink/60 dark:text-ink-dark/60">
+        <CardTitle>Answer a few questions</CardTitle>
+        <p className="mt-1 text-sm text-ink-soft">
           Suits both ends. A grower comparing two practices is finished in four short
           screens; anybody who already has the brief can show every question at once and
           fill them in one pass. You end up with a trial you can record against — the
@@ -39,8 +39,8 @@ export function NewTrialPage() {
       </Card>
 
       <Card>
-        <h2 className="font-display text-lg font-bold">Import a template</h2>
-        <p className="mt-1 text-sm text-ink/60 dark:text-ink-dark/60">
+        <CardTitle>Import a template</CardTitle>
+        <p className="mt-1 text-sm text-ink-soft">
           For a protocol that already lives in a spreadsheet, or a trial with more
           questions than you would want to type one at a time. The template covers the
           whole trial in one file — every site, practice and question — and is checked

@@ -14,7 +14,7 @@
 
 import { useState } from "react";
 import { saveTrial } from "../services/store";
-import { Card, ErrorState } from "./ui";
+import { Card, CardTitle, ErrorState } from "./ui";
 import { describeScope, scopeProblem } from "../services/dataSourceScope";
 import { words } from "../services/vocabulary";
 import type { DataSource, DataSourceKind, PracticeArm, Site, Trial } from "../types";
@@ -44,8 +44,7 @@ const KINDS: Array<{ value: DataSourceKind; label: string; hint: string }> = [
 ];
 
 const inputClass =
-  "mt-1 min-h-11 w-full rounded-lg border border-ink/20 bg-surface px-3 py-2 " +
-  "dark:border-ink-dark/20 dark:bg-surface-dark";
+  "mt-1 min-h-11 w-full rounded-lg border border-line-strong bg-surface px-3 py-2";
 
 /** A link is worth making clickable; a file path is not. */
 function isLink(reference: string): boolean {
@@ -109,16 +108,16 @@ export function DataSources({
   }
 
   return (
-    <Card>
-      <h2 className="font-display text-lg font-bold">Where the data comes from</h2>
-      <p className="mt-1 text-sm text-ink/60 dark:text-ink-dark/60">
+    <Card tone="quiet">
+      <CardTitle>Where the data comes from</CardTitle>
+      <p className="mt-1 text-sm text-ink-soft">
         Anything feeding this trial that the app does not collect itself — a sensor
         datastream, a machinery export, the written protocol. These are recorded so the
         data can be traced, not fetched: nothing here is read or imported.
       </p>
 
       {sources.length > 0 ? (
-        <ul className="mt-3 divide-y divide-ink/10 dark:divide-ink-dark/10">
+        <ul className="mt-3 divide-y divide-line">
           {sources.map((source, index) => {
             const kind = KINDS.find((entry) => entry.value === source.kind);
             const where = describeScope(source, sites, arms, word.One);
@@ -126,7 +125,7 @@ export function DataSources({
               <li key={`${source.reference}-${index}`} className="flex flex-wrap gap-2 py-3">
                 <span className="flex-1">
                   <span className="block font-medium">{source.label}</span>
-                  <span className="block text-sm text-ink/60 dark:text-ink-dark/60">
+                  <span className="block text-sm text-ink-soft">
                     {kind?.label ?? source.kind} · {where}
                   </span>
                   {isLink(source.reference) ? (
@@ -139,12 +138,12 @@ export function DataSources({
                       {source.reference}
                     </a>
                   ) : (
-                    <span className="block break-all font-mono text-sm text-ink/60 dark:text-ink-dark/60">
+                    <span className="block break-all font-mono text-sm text-ink-soft">
                       {source.reference}
                     </span>
                   )}
                   {source.note ? (
-                    <span className="block text-sm text-ink/60 dark:text-ink-dark/60">
+                    <span className="block text-sm text-ink-soft">
                       {source.note}
                     </span>
                   ) : null}
@@ -163,7 +162,7 @@ export function DataSources({
           })}
         </ul>
       ) : (
-        <p className="mt-3 text-sm text-ink/50 dark:text-ink-dark/50">
+        <p className="mt-3 text-sm text-ink-faint">
           None recorded yet.
         </p>
       )}
@@ -172,7 +171,7 @@ export function DataSources({
 
       {open ? (
         <form
-          className="mt-3 space-y-3 rounded-lg border border-ink/15 p-3 dark:border-ink-dark/15"
+          className="mt-3 space-y-3 rounded-lg border border-line p-3"
           onSubmit={(submitEvent) => {
             submitEvent.preventDefault();
             void add();
@@ -203,7 +202,7 @@ export function DataSources({
                 </option>
               ))}
             </select>
-            <span className="mt-1 block text-sm font-normal text-ink/60 dark:text-ink-dark/60">
+            <span className="mt-1 block text-sm font-normal text-ink-soft">
               {KINDS.find((entry) => entry.value === draft.kind)?.hint}
             </span>
           </label>
@@ -219,7 +218,7 @@ export function DataSources({
           </label>
           <fieldset>
             <legend className="text-sm font-medium">What does it measure?</legend>
-            <span className="mt-1 block text-sm text-ink/60 dark:text-ink-dark/60">
+            <span className="mt-1 block text-sm text-ink-soft">
               A probe covers a paddock; a flow meter under a variable-rate pivot covers
               one plot, because each zone gets its own rate.
             </span>
@@ -271,7 +270,7 @@ export function DataSources({
                 placeholder="Leave blank for the whole site"
                 className={inputClass}
               />
-              <span className="mt-1 block text-sm font-normal text-ink/60 dark:text-ink-dark/60">
+              <span className="mt-1 block text-sm font-normal text-ink-soft">
                 The number painted on the peg at this site.
               </span>
             </label>
@@ -297,7 +296,7 @@ export function DataSources({
             <button
               type="button"
               onClick={() => setOpen(false)}
-              className="min-h-11 rounded-lg border border-ink/20 px-4 py-2.5 font-medium dark:border-ink-dark/20"
+              className="min-h-11 rounded-lg border border-line-strong px-4 py-2.5 font-medium"
             >
               Cancel
             </button>

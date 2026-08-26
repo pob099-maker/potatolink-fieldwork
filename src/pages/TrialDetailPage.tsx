@@ -1,4 +1,4 @@
-import { useMemo, useState, type ReactNode } from "react";
+import { useMemo, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import { format } from "date-fns";
 import {
@@ -21,10 +21,12 @@ import { replicationStatus, responseSummary, type Completeness, type TreatmentSt
 import { saveTrial } from "../services/store";
 import {
   Card,
+  CardTitle,
   EmptyState,
   ExamplePill,
   ErrorState,
   PageTitle,
+  Section,
   Skeleton,
   StatusPill,
   SyncBadge,
@@ -143,7 +145,7 @@ export function TrialDetailPage() {
     <div className="space-y-4">
       <div>
         <PageTitle>{trial.name}</PageTitle>
-        <p className="mt-1 text-ink/70 dark:text-ink-dark/70">{trial.objective}</p>
+        <p className="mt-1 text-ink-soft">{trial.objective}</p>
         <p className="mt-2 flex flex-wrap items-center gap-2 text-sm">
           <StatusPill status={trial.status} />
           {isSeedTrial(trial.trialId) ? <ExamplePill /> : null}
@@ -168,7 +170,7 @@ export function TrialDetailPage() {
               className={`min-h-11 rounded-full border px-4 py-2 font-medium ${
                 selectedSiteId === null
                   ? "border-primary bg-primary text-white"
-                  : "border-ink/20 dark:border-ink-dark/20"
+                  : "border-line-strong"
               }`}
             >
               All sites
@@ -182,7 +184,7 @@ export function TrialDetailPage() {
                 className={`min-h-11 rounded-full border px-4 py-2 font-medium ${
                   selectedSiteId === site.siteId
                     ? "border-primary bg-primary text-white"
-                    : "border-ink/20 dark:border-ink-dark/20"
+                    : "border-line-strong"
                 }`}
               >
                 📍 {site.location}
@@ -190,7 +192,7 @@ export function TrialDetailPage() {
             ))}
           </div>
           {selectedSite ? (
-            <p className="mt-2 text-sm text-ink/60 dark:text-ink-dark/60">
+            <p className="mt-2 text-sm text-ink-soft">
               Showing {selectedSite.location} only — {selectedSite.region}, {selectedSite.soilType}.
             </p>
           ) : null}
@@ -211,7 +213,7 @@ export function TrialDetailPage() {
         {growerForm && trialSites.length > 0 && activeArms.length > 0 ? (
           <Link
             to={`/trials/${trial.trialId}/entry?form=${growerForm.templateId}&site=${trialSites[0].siteId}&arm=${activeArms[0].armId}&preview=1`}
-            className="min-h-11 rounded-lg border border-ink/20 px-4 py-2.5 font-medium dark:border-ink-dark/20"
+            className="min-h-11 rounded-lg border border-line-strong px-4 py-2.5 font-medium"
           >
             Preview the observation form
           </Link>
@@ -244,16 +246,16 @@ export function TrialDetailPage() {
               ),
             )
           }
-          className="min-h-11 rounded-lg border border-ink/20 px-4 py-2.5 font-medium disabled:opacity-40 dark:border-ink-dark/20"
+          className="min-h-11 rounded-lg border border-line-strong px-4 py-2.5 font-medium disabled:opacity-40"
         >
           Export data (CSV)
         </button>
       </div>
 
 
-      <RoleSection
+      <Section
         title="Setting up the trial"
-        who={`For whoever designs the trial — the sites it runs at, the ${word.many} being compared, and the questions asked in the field.`}
+        description={`For whoever designs the trial — the sites it runs at, the ${word.many} being compared, and the questions asked in the field.`}
       >
       <SetupChecklist
         trial={trial}
@@ -267,18 +269,18 @@ export function TrialDetailPage() {
       <PlotLayout trial={trial} arms={activeArms} sites={trialSites} recorded={plotRecords} />
       <TrialForms trial={trial} templates={trialTemplates} word={word} />
       <RemoveTrial trial={trial} />
-      </RoleSection>
+      </Section>
 
-      <RoleSection
+      <Section
         title="Collecting observations"
-        who={`For whoever is in the paddock — a contractor, a staff member or the grower. One link per site and ${word.one}, and the form works with no signal.`}
+        description={`For whoever is in the paddock — a contractor, a staff member or the grower. One link per site and ${word.one}, and the form works with no signal.`}
       >
       <DataSources trial={trial} sites={trialSites} arms={activeArms} />
 
       {closedReason(trial) ? (
         <Card>
-          <h2 className="font-display text-lg font-bold">Recording has stopped</h2>
-          <p className="mt-1 text-sm text-ink/60 dark:text-ink-dark/60">
+          <CardTitle>Recording has stopped</CardTitle>
+          <p className="mt-1 text-sm text-ink-soft">
             {closedReason(trial)} Move the trial back to Active under Stage if it needs to
             take entries again.
           </p>
@@ -286,16 +288,16 @@ export function TrialDetailPage() {
       ) : (
         <EntryLinks trial={trial} sites={trialSites} arms={activeArms} selectedSiteId={selectedSiteId} word={word} />
       )}
-      </RoleSection>
+      </Section>
 
-      <RoleSection
+      <Section
         title="Managing and reviewing"
-        who="For whoever runs the trial — what has come back, whether the design is filled in, and getting the data out."
+        description="For whoever runs the trial — what has come back, whether the design is filled in, and getting the data out."
       >
       <TrialStage trial={trial} />
 
       <Card>
-        <h2 className="font-display text-lg font-bold">This trial's entries</h2>
+        <CardTitle>This trial's entries</CardTitle>
         {/* This trial's, not the device's. What is queued on a phone is a
             property of the phone and is shown on the dashboard; what is
             outstanding here is what whoever runs this trial needs. */}
@@ -316,8 +318,8 @@ export function TrialDetailPage() {
           which reads as a broken app rather than an unfinished setup. */}
       {trial.design === "replicated" && trial.responseMetric === null ? (
         <Card>
-          <h2 className="font-display text-lg font-bold">Response summary</h2>
-          <p className="mt-1 text-sm text-ink/60 dark:text-ink-dark/60">
+          <CardTitle>Response summary</CardTitle>
+          <p className="mt-1 text-sm text-ink-soft">
             Choose the response variable under Trial design — the one number this trial
             exists to compare, usually yield. Until then there is nothing to summarise.
           </p>
@@ -386,24 +388,24 @@ export function TrialDetailPage() {
           return (
             <Card key={arm.armId}>
               <div className="flex flex-wrap items-center justify-between gap-2">
-                <h2 className="font-display text-lg font-bold">{arm.name}</h2>
+                <CardTitle>{arm.name}</CardTitle>
                 <StatusPill status={arm.type} />
               </div>
-              <p className="mt-1 text-sm text-ink/60 dark:text-ink-dark/60">{arm.description}</p>
+              <p className="mt-1 text-sm text-ink-soft">{arm.description}</p>
 
               <dl className="mt-3 grid grid-cols-3 gap-2 text-center">
-                <div className="rounded-lg bg-paper p-2 dark:bg-paper-dark">
-                  <dt className="text-xs text-ink/60 dark:text-ink-dark/60">Entries</dt>
+                <div className="rounded-lg bg-sunk p-2">
+                  <dt className="text-meta text-ink-soft">Entries</dt>
                   <dd className="font-display text-xl font-bold">{summary.entryCount}</dd>
                 </div>
-                <div className="rounded-lg bg-paper p-2 dark:bg-paper-dark">
-                  <dt className="text-xs text-ink/60 dark:text-ink-dark/60">Total tonnes</dt>
+                <div className="rounded-lg bg-sunk p-2">
+                  <dt className="text-meta text-ink-soft">Total tonnes</dt>
                   <dd className="font-display text-xl font-bold">
                     {summary.totalTonnes > 0 ? summary.totalTonnes.toFixed(1) : "–"}
                   </dd>
                 </div>
-                <div className="rounded-lg bg-paper p-2 dark:bg-paper-dark">
-                  <dt className="text-xs text-ink/60 dark:text-ink-dark/60">Avg t/hr</dt>
+                <div className="rounded-lg bg-sunk p-2">
+                  <dt className="text-meta text-ink-soft">Avg t/hr</dt>
                   <dd className="font-display text-xl font-bold">
                     {summary.throughput === null ? "–" : summary.throughput.toFixed(1)}
                   </dd>
@@ -411,7 +413,7 @@ export function TrialDetailPage() {
               </dl>
 
               {trialSites.length > 1 && selectedSiteId === null && summary.entryCount > 0 ? (
-                <ul className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-xs text-ink/60 dark:text-ink-dark/60">
+                <ul className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-meta text-ink-soft">
                   {trialSites.map((site) => {
                     const perSite = summariseArm(
                       events.data ?? [],
@@ -434,7 +436,7 @@ export function TrialDetailPage() {
               ) : null}
 
               {armEvents.length > 0 ? (
-                <ul className="mt-3 divide-y divide-ink/10 text-sm dark:divide-ink-dark/10">
+                <ul className="mt-3 divide-y divide-line text-sm">
                   {armEvents
                     .sort((a, b) => b.eventDate.localeCompare(a.eventDate))
                     .map((event) => {
@@ -449,7 +451,7 @@ export function TrialDetailPage() {
                       return (
                         <li key={event.eventId} className="flex flex-wrap items-center gap-2 py-2">
                           <span>{format(new Date(event.eventDate), "d MMM yyyy")}</span>
-                          <span className="text-ink/60 dark:text-ink-dark/60">
+                          <span className="text-ink-soft">
                             {site?.location ?? "Unknown site"}
                           </span>
                           <SyncBadge status={event.syncStatus} />
@@ -474,7 +476,7 @@ export function TrialDetailPage() {
                     })}
                 </ul>
               ) : (
-                <p className="mt-3 text-sm text-ink/50 dark:text-ink-dark/50">
+                <p className="mt-3 text-sm text-ink-faint">
                   {selectedSite
                     ? `No entries for this ${word.one} at ${selectedSite.location} yet.`
                     : "No measurement events for this arm yet."}
@@ -484,7 +486,7 @@ export function TrialDetailPage() {
           );
         })
       )}
-      </RoleSection>
+      </Section>
     </div>
   );
 }
@@ -507,9 +509,9 @@ function RemoveTrial({ trial }: { trial: Trial }) {
   }
 
   return (
-    <Card>
-      <h2 className="font-display text-lg font-bold">Remove this trial</h2>
-      <p className="mt-1 text-sm text-ink/60 dark:text-ink-dark/60">
+    <Card tone="danger">
+      <CardTitle>Remove this trial</CardTitle>
+      <p className="mt-1 text-sm text-ink-soft">
         For a trial set up by mistake. Its sites, {words(trial).many} and forms go with
         it. A trial
         with anything recorded against it cannot be removed — archive it instead, so the
@@ -523,7 +525,7 @@ function RemoveTrial({ trial }: { trial: Trial }) {
             <button
               type="button"
               onClick={() => setConfirming(false)}
-              className="min-h-11 flex-1 rounded-lg border border-ink/20 px-4 py-2.5 font-medium dark:border-ink-dark/20"
+              className="min-h-11 flex-1 rounded-lg border border-line-strong px-4 py-2.5 font-medium"
             >
               Keep it
             </button>
@@ -546,32 +548,6 @@ function RemoveTrial({ trial }: { trial: Trial }) {
         </button>
       )}
     </Card>
-  );
-}
-
-/**
- * A trial page serves three different people and they were interleaved: trial
- * design, then completeness, then records, then back to sites and practices.
- * Grouping by whose job it is means each of them can find their part without
- * reading the others.
- */
-function RoleSection({
-  title,
-  who,
-  children,
-}: {
-  title: string;
-  who: string;
-  children: ReactNode;
-}) {
-  return (
-    <section className="space-y-4">
-      <div className="border-b-2 border-accent/50 pb-2 dark:border-accent/30">
-        <h2 className="font-display text-lg font-bold">{title}</h2>
-        <p className="mt-0.5 text-sm text-ink/60 dark:text-ink-dark/60">{who}</p>
-      </div>
-      {children}
-    </section>
   );
 }
 
@@ -622,9 +598,9 @@ function StaffRecords({
   if (shown.length === 0) return null;
 
   return (
-    <Card>
-      <h2 className="font-display text-lg font-bold">Staff records</h2>
-      <ul className="mt-2 divide-y divide-ink/10 text-sm dark:divide-ink-dark/10">
+    <Card tone="quiet">
+      <CardTitle>Staff records</CardTitle>
+      <ul className="mt-2 divide-y divide-line text-sm">
         {shown.map((event) => {
           const values = metrics.filter((metric) => metric.eventId === event.eventId);
           const media = values.filter((metric) => metric.photoUrl?.startsWith("http"));
@@ -637,7 +613,7 @@ function StaffRecords({
             <li key={event.eventId} className="py-2">
               <div className="flex flex-wrap items-center gap-2">
                 <span className="font-medium">{describeEvent(event, templates)}</span>
-                <span className="text-ink/60 dark:text-ink-dark/60">
+                <span className="text-ink-soft">
                   {format(new Date(event.eventDate), "d MMM yyyy")} ·{" "}
                   {describeEventScope(event, sites)}
                 </span>
@@ -656,7 +632,7 @@ function StaffRecords({
                 ))}
               </div>
               {readable ? (
-                <p className="text-xs text-ink/60 dark:text-ink-dark/60">{readable}</p>
+                <p className="text-meta text-ink-soft">{readable}</p>
               ) : null}
             </li>
           );
@@ -688,9 +664,9 @@ function TrialDesignCard({
   }
 
   return (
-    <Card>
-      <h2 className="font-display text-lg font-bold">Trial design</h2>
-      <p className="mt-1 text-sm text-ink/60 dark:text-ink-dark/60">
+    <Card tone="quiet">
+      <CardTitle>Trial design</CardTitle>
+      <p className="mt-1 text-sm text-ink-soft">
         Observational trials record what happened. A replicated trial adds replicate
         plots and a response variable so the data can be analysed statistically.
       </p>
@@ -714,7 +690,7 @@ function TrialDesignCard({
                 ...(starting && trial.replicates < 2 ? { replicates: 3 } : {}),
               });
             }}
-            className="mt-1 min-h-11 w-full rounded-lg border border-ink/20 bg-surface px-3 dark:border-ink-dark/20 dark:bg-surface-dark"
+            className="mt-1 min-h-11 w-full rounded-lg border border-line-strong bg-surface px-3"
           >
             <option value="observational">Observational</option>
             <option value="replicated">Replicated experiment</option>
@@ -735,7 +711,7 @@ function TrialDesignCard({
                 onChange={(changeEvent) =>
                   void update({ replicates: Math.max(0, Number(changeEvent.target.value) || 0) })
                 }
-                className="mt-1 min-h-11 w-full rounded-lg border border-ink/20 bg-surface px-3 dark:border-ink-dark/20 dark:bg-surface-dark"
+                className="mt-1 min-h-11 w-full rounded-lg border border-line-strong bg-surface px-3"
               />
             </label>
             <label className="block text-sm font-medium">
@@ -746,7 +722,7 @@ function TrialDesignCard({
                 onChange={(changeEvent) =>
                   void update({ responseMetric: changeEvent.target.value || null })
                 }
-                className="mt-1 min-h-11 w-full rounded-lg border border-ink/20 bg-surface px-3 dark:border-ink-dark/20 dark:bg-surface-dark"
+                className="mt-1 min-h-11 w-full rounded-lg border border-line-strong bg-surface px-3"
               >
                 <option value="">Choose…</option>
                 {numericFields.map((field) => (
@@ -762,7 +738,7 @@ function TrialDesignCard({
 
       <fieldset className="mt-4">
         <legend className="text-sm font-medium">Plot size</legend>
-        <p className="mt-1 text-sm text-ink/60 dark:text-ink-dark/60">
+        <p className="mt-1 text-sm text-ink-soft">
           Optional, and worth it: with a size recorded, a form can ask for the weight off
           the plot and the app works out the yield per hectare. Otherwise somebody is
           doing that conversion in a paddock, and a misplaced decimal never shows up
@@ -781,7 +757,7 @@ function TrialDesignCard({
               onChange={(changeEvent) =>
                 void update({ plotWidthM: Number(changeEvent.target.value) || null })
               }
-              className="mt-1 min-h-11 w-full rounded-lg border border-ink/20 bg-surface px-3 dark:border-ink-dark/20 dark:bg-surface-dark"
+              className="mt-1 min-h-11 w-full rounded-lg border border-line-strong bg-surface px-3"
             />
           </label>
           <label className="block text-sm font-medium">
@@ -795,10 +771,10 @@ function TrialDesignCard({
               onChange={(changeEvent) =>
                 void update({ plotLengthM: Number(changeEvent.target.value) || null })
               }
-              className="mt-1 min-h-11 w-full rounded-lg border border-ink/20 bg-surface px-3 dark:border-ink-dark/20 dark:bg-surface-dark"
+              className="mt-1 min-h-11 w-full rounded-lg border border-line-strong bg-surface px-3"
             />
           </label>
-          <p className="self-end text-sm text-ink/60 dark:text-ink-dark/60">
+          <p className="self-end text-sm text-ink-soft">
             {describePlot(trial) ?? "Both sides needed before an area."}
           </p>
         </div>
@@ -806,7 +782,7 @@ function TrialDesignCard({
 
       <fieldset className="mt-4">
         <legend className="text-sm font-medium">What this trial calls them</legend>
-        <p className="mt-1 text-sm text-ink/60 dark:text-ink-dark/60">
+        <p className="mt-1 text-sm text-ink-soft">
           Only the wording changes, and only on this trial. The exported data uses one
           fixed column name either way, so two trials still pool together.
         </p>
@@ -817,7 +793,7 @@ function TrialDesignCard({
               <label
                 key={choice.value}
                 className={`flex max-w-xs flex-1 cursor-pointer gap-2 rounded-lg border p-3 ${
-                  chosen ? "border-primary bg-primary/5" : "border-ink/15 dark:border-ink-dark/15"
+                  chosen ? "border-primary bg-primary/5" : "border-line"
                 }`}
               >
                 <input
@@ -830,7 +806,7 @@ function TrialDesignCard({
                 />
                 <span>
                   <span className="block font-medium">{choice.label}</span>
-                  <span className="block text-sm text-ink/60 dark:text-ink-dark/60">
+                  <span className="block text-sm text-ink-soft">
                     {choice.detail}
                   </span>
                 </span>
@@ -864,9 +840,9 @@ function TrialStage({ trial }: { trial: Trial }) {
   }
 
   return (
-    <Card>
-      <h2 className="font-display text-lg font-bold">Stage</h2>
-      <p className="mt-1 text-sm text-ink/60 dark:text-ink-dark/60">
+    <Card tone="quiet">
+      <CardTitle>Stage</CardTitle>
+      <p className="mt-1 text-sm text-ink-soft">
         Nothing is ever deleted by this. Archiving takes a finished trial out of the lists
         and no more; its results, economics and CSV export all keep working, and it comes
         back with one tap.
@@ -878,7 +854,7 @@ function TrialStage({ trial }: { trial: Trial }) {
             className={`flex cursor-pointer gap-3 rounded-lg border p-3 ${
               trial.status === state.value
                 ? "border-primary bg-primary/5"
-                : "border-ink/15 dark:border-ink-dark/15"
+                : "border-line"
             }`}
           >
             <input
@@ -891,7 +867,7 @@ function TrialStage({ trial }: { trial: Trial }) {
             />
             <span>
               <span className="block font-medium">{state.label}</span>
-              <span className="block text-sm text-ink/60 dark:text-ink-dark/60">
+              <span className="block text-sm text-ink-soft">
                 {state.detail}
               </span>
             </span>
@@ -914,7 +890,7 @@ function ReplicationStatusCard({
   return (
     <Card>
       <div className="flex flex-wrap items-center justify-between gap-2">
-        <h2 className="font-display text-lg font-bold">Replication status</h2>
+        <CardTitle>Replication status</CardTitle>
         <span
           className={`rounded-full px-2.5 py-0.5 text-sm font-medium ${
             complete ? "bg-success/15 text-success" : "bg-warning/15 text-warning"
@@ -923,7 +899,7 @@ function ReplicationStatusCard({
           {status.recorded} of {status.expected} plots recorded
         </span>
       </div>
-      <p className="mt-1 text-sm text-ink/60 dark:text-ink-dark/60">
+      <p className="mt-1 text-sm text-ink-soft">
         One cell per plot. Amber cells are outstanding — the number is the plot to
         walk to.
       </p>
@@ -983,9 +959,9 @@ function ResponseSummaryCard({
 }) {
   const subSampled = stats.some((stat) => stat.records > stat.n);
   return (
-    <Card>
-      <h2 className="font-display text-lg font-bold">Response summary — {responseLabel}</h2>
-      <p className="mt-1 text-sm text-ink/60 dark:text-ink-dark/60">
+    <Card tone="feature">
+      <CardTitle>Response summary — {responseLabel}</CardTitle>
+      <p className="mt-1 text-sm text-ink-soft">
         Descriptive means ± standard error per {word.one}. This is not a significance test —
         export the tidy data for statistical analysis.
       </p>
@@ -1004,7 +980,7 @@ function ResponseSummaryCard({
       <div className="mt-3 overflow-x-auto">
         <table className="w-full text-sm">
           <thead>
-            <tr className="text-left text-ink/60 dark:text-ink-dark/60">
+            <tr className="text-left text-ink-soft">
               <th className="py-1">{word.One}</th>
               <th className="py-1" title="Independent plots, not records">
                 n
@@ -1015,12 +991,12 @@ function ResponseSummaryCard({
           </thead>
           <tbody>
             {stats.map((stat) => (
-              <tr key={stat.armId} className="border-t border-ink/10 dark:border-ink-dark/10">
+              <tr key={stat.armId} className="border-t border-line">
                 <td className="py-1 font-medium">{stat.armName}</td>
                 <td className="py-1">
                   {stat.n}
                   {stat.records > stat.n ? (
-                    <span className="text-ink/50 dark:text-ink-dark/50">
+                    <span className="text-ink-faint">
                       {" "}
                       ({stat.records} readings)
                     </span>
@@ -1098,8 +1074,8 @@ function ArmManager({
 
   return (
     <Card>
-      <h2 className="font-display text-lg font-bold">{word.Many}</h2>
-      <p className="mt-1 text-sm text-ink/60 dark:text-ink-dark/60">
+      <CardTitle>{word.Many}</CardTitle>
+      <p className="mt-1 text-sm text-ink-soft">
         The {word.many} this trial compares. Every trial keeps one control; the rest are
         the alternatives being tested against it.
       </p>
@@ -1111,7 +1087,7 @@ function ArmManager({
         </p>
       ) : null}
 
-      <ul className="mt-3 divide-y divide-ink/10 dark:divide-ink-dark/10">
+      <ul className="mt-3 divide-y divide-line">
         {active.map((arm, index) => (
           <li key={arm.armId} className="flex flex-wrap items-center gap-2 py-2">
             <input
@@ -1121,7 +1097,7 @@ function ArmManager({
                 const name = changeEvent.target.value.trim();
                 if (name && name !== arm.name) void saveArm({ ...arm, name });
               }}
-              className="min-h-11 flex-1 rounded-lg border border-ink/20 bg-surface px-3 dark:border-ink-dark/20 dark:bg-surface-dark"
+              className="min-h-11 flex-1 rounded-lg border border-line-strong bg-surface px-3"
             />
             <StatusPill status={arm.type} />
             <button
@@ -1129,7 +1105,7 @@ function ArmManager({
               aria-label={`Move ${arm.name} up`}
               disabled={index === 0 || layoutLocked}
               onClick={() => void reorder(index, -1)}
-              className="min-h-11 min-w-11 rounded-lg border border-ink/15 disabled:opacity-30 dark:border-ink-dark/15"
+              className="min-h-11 min-w-11 rounded-lg border border-line disabled:opacity-30"
             >
               ↑
             </button>
@@ -1138,7 +1114,7 @@ function ArmManager({
               aria-label={`Move ${arm.name} down`}
               disabled={index === active.length - 1 || layoutLocked}
               onClick={() => void reorder(index, 1)}
-              className="min-h-11 min-w-11 rounded-lg border border-ink/15 disabled:opacity-30 dark:border-ink-dark/15"
+              className="min-h-11 min-w-11 rounded-lg border border-line disabled:opacity-30"
             >
               ↓
             </button>
@@ -1158,11 +1134,11 @@ function ArmManager({
 
       {archived.length > 0 ? (
         <div className="mt-3">
-          <h3 className="text-sm font-semibold text-ink/60 dark:text-ink-dark/60">Archived</h3>
-          <ul className="divide-y divide-ink/10 text-sm dark:divide-ink-dark/10">
+          <h3 className="text-sm font-semibold text-ink-soft">Archived</h3>
+          <ul className="divide-y divide-line text-sm">
             {archived.map((arm) => (
               <li key={arm.armId} className="flex flex-wrap items-center gap-2 py-2">
-                <span className="flex-1 text-ink/60 dark:text-ink-dark/60">{arm.name}</span>
+                <span className="flex-1 text-ink-soft">{arm.name}</span>
                 <button
                   type="button"
                   onClick={() => void saveArm({ ...arm, archived: false })}
@@ -1189,13 +1165,13 @@ function ArmManager({
           value={newName}
           onChange={(changeEvent) => setNewName(changeEvent.target.value)}
           required
-          className="min-h-11 flex-1 rounded-lg border border-ink/20 bg-surface px-3 dark:border-ink-dark/20 dark:bg-surface-dark"
+          className="min-h-11 flex-1 rounded-lg border border-line-strong bg-surface px-3"
         />
         <select
           aria-label={`${word.One} type`}
           value={newType}
           onChange={(changeEvent) => setNewType(changeEvent.target.value as PracticeArm["type"])}
-          className="min-h-11 rounded-lg border border-ink/20 bg-surface px-3 dark:border-ink-dark/20 dark:bg-surface-dark"
+          className="min-h-11 rounded-lg border border-line-strong bg-surface px-3"
         >
           <option value="alternative">Alternative</option>
           <option value="control">Control</option>
@@ -1242,7 +1218,7 @@ function TrialForms({
       <span className="flex-1">
         <span className="font-medium">{template.name}</span>
         {template.frequency ? (
-          <span className="block text-xs text-ink/60 dark:text-ink-dark/60">
+          <span className="block text-meta text-ink-soft">
             {template.frequency}
             {template.requiresSite ? " · per site" : " · whole trial"}
             {template.requiresArm ? ` · per ${word.one}` : ""}
@@ -1257,7 +1233,7 @@ function TrialForms({
       </Link>
       <Link
         to={`/trials/${trial.trialId}/template?form=${template.templateId}`}
-        className="min-h-11 rounded-lg border border-ink/20 px-3 py-2 font-medium dark:border-ink-dark/20"
+        className="min-h-11 rounded-lg border border-line-strong px-3 py-2 font-medium"
       >
         Edit
       </Link>
@@ -1265,24 +1241,24 @@ function TrialForms({
   );
 
   return (
-    <Card>
-      <h2 className="font-display text-lg font-bold">Trial forms</h2>
+    <Card tone="quiet">
+      <CardTitle>Trial forms</CardTitle>
       {growerForms.length > 0 ? (
         <>
-          <h3 className="mt-2 text-sm font-semibold text-ink/60 dark:text-ink-dark/60">
+          <h3 className="mt-2 text-sm font-semibold text-ink-soft">
             Filled in on site
           </h3>
-          <ul className="divide-y divide-ink/10 dark:divide-ink-dark/10">
+          <ul className="divide-y divide-line">
             {growerForms.map(row)}
           </ul>
         </>
       ) : null}
       {staffForms.length > 0 ? (
         <>
-          <h3 className="mt-3 text-sm font-semibold text-ink/60 dark:text-ink-dark/60">
+          <h3 className="mt-3 text-sm font-semibold text-ink-soft">
             Filled in by staff
           </h3>
-          <ul className="divide-y divide-ink/10 dark:divide-ink-dark/10">
+          <ul className="divide-y divide-line">
             {staffForms.map(row)}
           </ul>
         </>
@@ -1323,7 +1299,7 @@ function EntryLinks({
       <button
         type="button"
         onClick={() => setOpen(true)}
-        className="min-h-11 w-full rounded-lg border border-dashed border-ink/30 px-4 py-2.5 font-medium text-ink/70 dark:border-ink-dark/30 dark:text-ink-dark/70"
+        className="min-h-11 w-full rounded-lg border border-dashed border-line-strong px-4 py-2.5 font-medium text-ink-soft"
       >
         🔗 Show the links for recording in the field
       </button>
@@ -1331,30 +1307,30 @@ function EntryLinks({
   }
 
   return (
-    <Card>
+    <Card tone="feature">
       <div className="flex flex-wrap items-center justify-between gap-2">
-        <h2 className="font-display text-lg font-bold">Entry links</h2>
+        <CardTitle>Entry links</CardTitle>
         <button
           type="button"
           onClick={() => setOpen(false)}
-          className="min-h-11 rounded-lg border border-ink/20 px-3 font-medium dark:border-ink-dark/20"
+          className="min-h-11 rounded-lg border border-line-strong px-3 font-medium"
         >
           Hide
         </button>
       </div>
-      <p className="mt-1 text-sm text-ink/60 dark:text-ink-dark/60">
+      <p className="mt-1 text-sm text-ink-soft">
         {laidOut
           ? `One link per site. The form asks which plot, and works out the ${word.one} from the layout — so there is nothing to match up and nothing to send twice.`
           : `Send the link that matches where the grower is and which ${word.one} they are using. Each link fills in the site and ${word.one} automatically.`}
       </p>
-      <p className="mt-1 text-sm text-ink/50 dark:text-ink-dark/50">
+      <p className="mt-1 text-sm text-ink-faint">
         These links carry the entry code, so whoever you send one to taps it and starts
         recording. Treat a link like the code itself — anyone who has it can add entries.
       </p>
       {shown.map((site) => (
         <div key={site.siteId} className="mt-3">
           <h3 className="font-semibold">📍 {site.location}</h3>
-          <ul className="mt-1 divide-y divide-ink/10 text-sm dark:divide-ink-dark/10">
+          <ul className="mt-1 divide-y divide-line text-sm">
             {(laidOut ? [null] : arms).map((arm) => {
               const url = buildEntryUrl(
                 window.location.origin,
