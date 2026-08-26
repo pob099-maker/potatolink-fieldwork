@@ -6,10 +6,17 @@
 // the lifecycle, which is a new version arriving while somebody is using the
 // old one.
 //
-// Swapping the code under a running app is not an option here. Somebody may be
-// halfway through an entry form with unsaved answers on screen, possibly
-// standing in a plot they walked to. So a new worker installs, then waits, and
-// the person is asked. Nothing reloads until they say so.
+// A new worker now activates as soon as it has cached the shell, and the page
+// is told rather than asked. The page itself keeps running the code it already
+// loaded — a single bundle, nothing further fetched — so nobody loses a
+// half-finished entry form; the new version takes effect when they reload.
+//
+// It used to wait to be asked. That protected an unsaved form and created a
+// worse problem: the control that activates the replacement lives inside the
+// app, so a release that stopped the app rendering could never be superseded.
+// The fix would download, sit in `waiting`, and stay there. Recovering meant
+// sending SKIP_WAITING by hand from a console, which is not a thing to ask of
+// somebody in a paddock.
 
 /** How the page hears that a newer version is installed and waiting. */
 type UpdateListener = () => void;
@@ -29,11 +36,11 @@ function announce(worker: ServiceWorker): void {
 }
 
 /**
- * Hand over to the waiting version and reload.
+ * Reload into the version that is already active.
  *
- * The reload is driven by controllerchange rather than called straight after
- * the message, because skipWaiting is asynchronous — reloading immediately can
- * land back on the old worker and look like the update did nothing.
+ * Still driven by controllerchange when there is a worker to wait on, because
+ * skipWaiting is asynchronous and reloading too early can land back on the old
+ * one and look like the update did nothing.
  */
 export function applyUpdate(): void {
   if (!waitingWorker) {
@@ -76,8 +83,14 @@ export function registerServiceWorker(): void {
           if (!installing) return;
           installing.addEventListener("statechange", () => {
             // A controller means this is a replacement rather than the very
-            // first install. Prompting on a first install would be asking
+            // first install. Announcing a first install would be asking
             // somebody to reload into the page they are already looking at.
+            //
+            // "installed" rather than "activated": the worker skips waiting
+            // now, so by the time anybody reads the banner it has usually
+            // taken over already. The banner reports that, it does not cause
+            // it — which is why its wording says the app has updated rather
+            // than asking permission to update it.
             if (installing.state === "installed" && navigator.serviceWorker.controller) {
               announce(installing);
             }

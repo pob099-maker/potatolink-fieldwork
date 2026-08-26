@@ -146,12 +146,13 @@ export function ErrorState({ message, onRetry }: { message: string; onRetry?: ()
 }
 
 /**
- * Offered, never forced.
+ * Reported, not requested.
  *
- * A new version installs in the background and then waits. Reloading the page
- * out from under somebody could throw away a half-finished entry form, and the
- * person holding the phone may have walked to the plot to fill it in. So they
- * are told, and they choose when.
+ * The new version has already taken over by the time this appears — see
+ * sw/service-worker.js for why it no longer waits to be asked. What has not
+ * changed is that nothing reloads on its own: the page keeps running the code
+ * it loaded, so a half-finished entry form survives until somebody chooses to
+ * reload. The banner says what happened and leaves the timing to them.
  */
 export function UpdateBanner() {
   const [ready, setReady] = useState(false);
@@ -168,13 +169,13 @@ export function UpdateBanner() {
       className="border-b border-line bg-accent/20 px-4 py-2.5 text-sm text-ink"
     >
       <div className="mx-auto flex max-w-4xl flex-wrap items-center justify-between gap-2">
-        <span>A newer version of Fieldwork is ready.</span>
+        <span>Fieldwork has updated. Reload when it suits — nothing on this screen will be lost.</span>
         <button
           type="button"
           onClick={applyUpdate}
           className="min-h-11 rounded-lg bg-primary px-4 font-medium text-white"
         >
-          Reload to update
+          Reload
         </button>
       </div>
     </div>

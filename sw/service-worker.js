@@ -44,7 +44,22 @@ self.addEventListener("install", (event) => {
       await cache.addAll(PRECACHE.map((path) => new URL(path, self.registration.scope).toString()));
     })(),
   );
-  // Deliberately no skipWaiting() here. See the message handler.
+  // Take over as soon as the shell is cached, rather than waiting to be asked.
+  //
+  // This used to wait. The reasoning was sound — swapping assets under a
+  // running app could throw away a half-finished entry form — but it produced
+  // a worse failure than the one it prevented. A release that stops the app
+  // rendering also stops the only control that can activate its replacement,
+  // because the "Reload to update" button lives inside the app. The fix
+  // downloads, sits in `waiting`, and stays there forever. It took a
+  // SKIP_WAITING sent by hand from a console to recover.
+  //
+  // Waiting protects against something recoverable; not waiting protects
+  // against something that is not. And the risk it was guarding is small here:
+  // the app is a single bundle with no code splitting, so a page already
+  // running keeps the JavaScript it loaded and fetches nothing more. Nobody's
+  // form is lost by this — the page carries on until they choose to reload.
+  void self.skipWaiting();
 });
 
 self.addEventListener("activate", (event) => {
@@ -60,6 +75,8 @@ self.addEventListener("activate", (event) => {
 });
 
 /** The app asks for this when the person has agreed to reload. */
+// Kept for a page running an older build that still asks, and harmless now
+// that install does it anyway.
 self.addEventListener("message", (event) => {
   if (event.data === "SKIP_WAITING") void self.skipWaiting();
 });
