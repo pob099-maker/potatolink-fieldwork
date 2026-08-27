@@ -361,10 +361,17 @@ function RecordStep({ answers, set }: { answers: WizardAnswers; set: Setter }) {
           const wantsUnit =
             RECORD_TYPES.find((entry) => entry.value === question.type)?.wantsUnit ?? false;
           return (
+            // Recessed onto `sunk` with a real line, because the box was
+            // `border-line` on `bg-surface` inside a card that is also
+            // `bg-surface` — no ground change and the faintest edge in the
+            // palette, so a list of five items read as one undifferentiated
+            // run of fields. The inputs stay `surface` and now sit proud of
+            // their own box, which is what makes each item read as a thing.
             <li
               key={index}
-              className="rounded-lg border border-line p-3"
+              className="rounded-lg border border-line-strong bg-sunk p-3"
             >
+              <p className="mb-2 text-eyebrow text-ink-faint">Item {index + 1}</p>
               <div className="flex items-end gap-2">
                 <label className="flex-1 text-sm font-medium">
                   What are you recording?
@@ -412,7 +419,8 @@ function RecordStep({ answers, set }: { answers: WizardAnswers; set: Setter }) {
                 {wantsUnit ? (
                   <UnitPicker
                     id={`unit-${index}`}
-                    label={`Unit for item ${index + 1}`}
+                    label="Unit"
+                    ariaLabel={`Unit for item ${index + 1}`}
                     value={question.unit}
                     onChange={(unit) => update(index, { unit })}
                   />

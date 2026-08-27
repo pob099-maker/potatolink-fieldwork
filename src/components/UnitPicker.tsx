@@ -20,11 +20,19 @@ export function UnitPicker({
   value,
   onChange,
   label = "Unit",
+  ariaLabel,
   id,
 }: {
   value: string;
   onChange: (unit: string) => void;
   label?: string;
+  /**
+   * What assistive technology hears, when the visible label is short because
+   * something nearby already gives the context. "Unit" is enough to read next
+   * to a heading that says Item 2; it is not enough heard on its own, six
+   * times down a form.
+   */
+  ariaLabel?: string;
   /** Ties the label to the control when this sits outside its own <label>. */
   id?: string;
 }) {
@@ -41,6 +49,7 @@ export function UnitPicker({
         {label}
         <select
           id={id}
+          aria-label={ariaLabel}
           value={custom ? OTHER : value}
           onChange={(event) => {
             if (event.target.value === OTHER) {
@@ -70,7 +79,7 @@ export function UnitPicker({
       {custom ? (
         <input
           value={value}
-          aria-label={`${label} — type your own`}
+          aria-label={`${ariaLabel ?? label} — type your own`}
           placeholder="e.g. brix, bushels/acre"
           // Tidied on the way out, not on every keystroke: correcting a unit
           // while somebody is still typing it fights them for the field.
