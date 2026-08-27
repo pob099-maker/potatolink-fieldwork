@@ -4,6 +4,7 @@ import { App } from "./App";
 import { seedIfNeeded } from "./services/seed";
 import { startSyncLoop } from "./services/store";
 import { registerServiceWorker } from "./services/appUpdate";
+import { requestPersistence } from "./services/storagePersistence";
 import { LocalDatabaseError, openDb } from "./lib/localdb";
 import "./index.css";
 
@@ -11,6 +12,19 @@ import "./index.css";
 // somebody open Fieldwork in a paddock with no signal at all, and it should not
 // wait on IndexedDB to finish or be skipped if seeding fails.
 registerServiceWorker();
+
+// Ask the browser to keep what this app stores, before anything is stored.
+//
+// Everything recorded goes to IndexedDB first and syncs afterwards, which only
+// works if the browser agrees to hold it. By default it does not: storage is
+// best-effort and can be evicted when the device runs low on space. A grower
+// with a full phone and no reception is precisely the person this app exists
+// for, and precisely the one who would lose a day's entries without being told.
+//
+// Deliberately not awaited and deliberately never able to throw. Nothing in
+// the boot path is allowed to gate rendering (rule 27), and a browser that has
+// never heard of the API must load the app exactly as before.
+void requestPersistence(navigator.storage);
 
 const rootElement = document.getElementById("root");
 if (!rootElement) {

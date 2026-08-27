@@ -1,10 +1,16 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useTheme } from "../contexts/ThemeContext";
 import { useAuth } from "../contexts/AuthContext";
 import { isBackendConfigured } from "../lib/supabase";
 import { pullFromCloud, pushBaseData, setDeviceRole, syncPending } from "../services/store";
 import { useDeviceRole } from "../hooks/useCollections";
-import { Card, PageTitle } from "../components/ui";
+import { Card, PageTitle, Skeleton } from "../components/ui";
+import {
+  describePersistence,
+  formatBytes,
+  storageReport,
+  type StorageReport,
+} from "../services/storagePersistence";
 
 export function SettingsPage() {
   const { theme, toggleTheme } = useTheme();
@@ -59,31 +65,43 @@ export function SettingsPage() {
         </button>
       </Card>
 
+      {/* Says where you land and offers the one change — the same shape as the
+          theme card above, which had it right.
+
+          It used to offer two filled buttons for a binary, which reads as two
+          things to do when one of them is already true, above a paragraph that
+          explained the mechanism ("stated rather than left as magic") before
+          you could act on it. That sentence was a note to whoever wrote the
+          code and had no business being on screen. The role follows what was
+          last done here, so this is an override for the rare wrong guess, not
+          a decision to put in front of somebody. */}
       <Card>
-        <h2 className="font-semibold">What this device opens on</h2>
-        <p className="mt-1 text-sm text-ink-soft">
-          Stated rather than left as magic: a device that records observations opens
-          straight on recording, and one that sets trials up opens on the dashboard. It
-          follows whatever was last done here, and can be set either way.
-        </p>
-        <div className="mt-3 flex flex-wrap gap-2">
-          {(["recording", "setup"] as const).map((role) => (
+        <h2 className="font-semibold">Where this device opens</h2>
+        {deviceRole.isPending ? (
+          <Skeleton lines={2} />
+        ) : (
+          <>
+            <p className="mt-1 text-sm text-ink-soft">
+              {deviceRole.data === "recording"
+                ? "Straight on recording an observation. It follows what this device is used for, so a phone that records ends up here on its own."
+                : "On the dashboard. It follows what this device is used for, so a computer that sets trials up ends up here on its own."}
+            </p>
             <button
-              key={role}
               type="button"
-              aria-pressed={deviceRole.data === role}
-              onClick={() => void setDeviceRole(role)}
-              className={`min-h-11 rounded-lg border px-4 py-2.5 font-medium ${
-                deviceRole.data === role
-                  ? "border-primary bg-primary text-white"
-                  : "border-line-strong"
-              }`}
+              onClick={() =>
+                void setDeviceRole(deviceRole.data === "recording" ? "setup" : "recording")
+              }
+              className="mt-3 min-h-11 rounded-lg border border-line-strong px-4 py-2.5 font-medium"
             >
-              {role === "recording" ? "Recording observations" : "Setting up trials"}
+              {deviceRole.data === "recording"
+                ? "Open on the dashboard instead"
+                : "Open straight on recording instead"}
             </button>
-          ))}
-        </div>
+          </>
+        )}
       </Card>
+
+      <StorageCard />
 
       <Card>
         <h2 className="font-semibold">Who can get in</h2>
@@ -166,5 +184,60 @@ export function SettingsPage() {
         )}
       </Card>
     </div>
+  );
+}
+
+/**
+ * Whether the browser has promised to keep what is stored here.
+ *
+ * Worth a card rather than a line, because it is the one thing that decides
+ * whether "saved on this device" means anything. Storage is best-effort by
+ * default and can be evicted when a phone runs low on space — which is the
+ * failure this app is least able to survive and least able to report, since a
+ * record that has been thrown away leaves nothing behind to say so.
+ *
+ * Only reads. The request is made once at startup; looking at a settings page
+ * must not trigger a permission decision.
+ */
+function StorageCard() {
+  const [report, setReport] = useState<StorageReport | null>(null);
+
+  useEffect(() => {
+    let live = true;
+    void storageReport(navigator.storage).then((result) => {
+      if (live) setReport(result);
+    });
+    return () => {
+      live = false;
+    };
+  }, []);
+
+  if (!report) {
+    return (
+      <Card>
+        <h2 className="font-semibold">Storage on this device</h2>
+        <Skeleton lines={2} />
+      </Card>
+    );
+  }
+
+  const described = describePersistence(report.state);
+
+  return (
+    <Card>
+      <h2 className="font-semibold">Storage on this device</h2>
+      <p
+        className={`mt-1 text-sm ${described.reassuring ? "text-success" : "text-warning"}`}
+      >
+        {described.reassuring ? "●" : "◌"} {described.heading}
+      </p>
+      <p className="mt-1 text-sm text-ink-soft">{described.detail}</p>
+      {report.usage !== null ? (
+        <p className="mt-2 text-sm text-ink-faint">
+          Using {formatBytes(report.usage)}
+          {report.quota !== null ? ` of about ${formatBytes(report.quota)} available` : ""}.
+        </p>
+      ) : null}
+    </Card>
   );
 }
