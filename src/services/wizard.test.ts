@@ -218,3 +218,36 @@ describe("a choice from a list", () => {
     expect(validateTemplate(trial).filter((issue) => issue.level === "error")).toEqual([]);
   });
 });
+
+describe("when the recording is expected", () => {
+  // The gap this closes: every trial built here published with timing null,
+  // and dueList skips a form without timing — so the due list, the Due Now
+  // banner and the calendar export all existed and nothing created through
+  // the front door ever reached them.
+  it("puts the chosen stage on the form", () => {
+    const trial = toParsedTrial(filled({ recordAtStage: "tuberInitiation" }));
+    expect(trial.forms[0].timing).toEqual({
+      stage: "tuberInitiation",
+      dapFrom: null,
+      dapTo: null,
+    });
+  });
+
+  it("leaves the day counts alone so the stage keeps its own window", () => {
+    // Freezing the numbers here would stop a revised stage list from revising
+    // the trials that hang off it.
+    const trial = toParsedTrial(filled({ recordAtStage: "harvest" }));
+    expect(trial.forms[0].timing?.dapFrom).toBeNull();
+    expect(trial.forms[0].timing?.dapTo).toBeNull();
+  });
+
+  it("means it when nobody picks one", () => {
+    // Null is a real answer, not an unfilled field. A schedule nobody asked
+    // for is a banner nagging about a visit that was never planned.
+    expect(toParsedTrial(filled()).forms[0].timing).toBeNull();
+  });
+
+  it("does not make a schedule a condition of finishing", () => {
+    expect(wizardProblems(filled({ recordAtStage: null }))).toEqual([]);
+  });
+});

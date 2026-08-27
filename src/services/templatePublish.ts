@@ -75,7 +75,7 @@ export async function publishParsedTrial(parsed: ParsedTrial): Promise<Result<Tr
       frequency: form.frequency,
       // Imported protocols carry prose, not a schedule. Timing is set on the
       // trial page once somebody decides what the form hangs off.
-      timing: null,
+      timing: form.timing ?? null,
       requiresSite: form.requiresSite,
       requiresArm: form.requiresArm,
       fields: form.fields.map((field, index) => ({

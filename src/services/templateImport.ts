@@ -5,6 +5,7 @@
 // This module is pure: text in, ParsedTrial or errors out. Publishing is in
 // templatePublish.ts; rule-level checks are in templateValidate.ts.
 
+import type { Timing } from "./timing";
 import type { FieldType, FormAudience, Result, TrialDesign } from "../types";
 import { makeFieldName } from "./templates";
 
@@ -30,6 +31,17 @@ export interface ParsedForm {
   frequency: string;
   requiresSite: boolean;
   requiresArm: boolean;
+  /**
+   * When this visit is expected, relative to the crop.
+   *
+   * Optional, and absent means genuinely unscheduled rather than "not filled
+   * in yet" — plenty of forms are recorded whenever something happens and
+   * should never nag. But it had no way of being set at all before: every
+   * trial built here or imported from a CSV published with timing null, and
+   * dueList skips a form without timing, so nothing created through the front
+   * door ever reached the due list, the banner, or the calendar.
+   */
+  timing?: Timing | null;
   fields: ParsedField[];
 }
 
