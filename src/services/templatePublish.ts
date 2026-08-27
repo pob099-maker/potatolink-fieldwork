@@ -87,6 +87,7 @@ export async function publishParsedTrial(parsed: ParsedTrial): Promise<Result<Tr
         min: field.min,
         max: field.max,
         unit: field.unit,
+        guidance: field.guidance,
         displayOrder: index,
       })),
       createdAt,

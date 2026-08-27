@@ -48,6 +48,13 @@ export function EntryField<T extends FieldValues>({
 }: FieldProps<T>) {
   const labelId = `label-${field.fieldName}`;
   const errorId = `${field.fieldName}-error`;
+  const guidanceId = `${field.fieldName}-guidance`;
+  // Both, when both exist. A note read out as part of the field is the whole
+  // point of writing it — guidance that is only visible helps everybody except
+  // the person who cannot see it.
+  const describedBy =
+    [field.guidance ? guidanceId : null, error ? errorId : null].filter(Boolean).join(" ") ||
+    undefined;
 
   return (
     <div>
@@ -60,6 +67,16 @@ export function EntryField<T extends FieldValues>({
             validation error they had no way to see coming. */}
         {field.required ? <span aria-hidden className="text-danger"> *</span> : null}
       </label>
+      {/* Under the label, above the control, and always visible.
+          Behind a tap it would be hidden from exactly the person it was
+          written for — somebody who does not yet know they need it. A hover
+          tooltip is worse still: a phone has no hover, so it degrades to
+          tap-to-reveal on the one device this app is built for. */}
+      {field.guidance ? (
+        <p id={guidanceId} className="mb-1 text-sm text-ink-soft">
+          {field.guidance}
+        </p>
+      ) : null}
       <FieldInput
         field={field}
         register={register}
@@ -67,7 +84,7 @@ export function EntryField<T extends FieldValues>({
         labelId={labelId}
         required={field.required}
         invalid={Boolean(error)}
-        describedBy={error ? errorId : undefined}
+        describedBy={describedBy}
       />
       <StripMeasure field={field} widthM={plotWidthM} setValue={setValue} />
       <YieldHint field={field} control={control} plotAreaM2={plotAreaM2} />

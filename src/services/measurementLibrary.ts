@@ -294,6 +294,9 @@ export function toFormField(entry: LibraryEntry, displayOrder: number, required 
     min: entry.min,
     max: entry.max,
     unit: entry.unit || null,
+    // Written for exactly this moment and shown, until now, only to the person
+    // choosing the measurement rather than the one taking it.
+    guidance: entry.guidance,
     displayOrder,
   };
 }
@@ -318,7 +321,7 @@ export function fromFormField(
     min: field.min,
     max: field.max,
     options: field.options,
-    guidance: "",
+    guidance: field.guidance ?? "",
     source: "added",
     usageCount: 1,
   };

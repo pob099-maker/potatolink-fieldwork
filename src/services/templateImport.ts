@@ -20,6 +20,14 @@ export interface ParsedField {
   min: number | null;
   max: number | null;
   options: string[] | null;
+  /**
+   * What the person recording is told, under the label.
+   *
+   * The "help" column has been in the template this app offers for download
+   * since v1, and the parser never read it — so anybody who followed the
+   * format and filled it in lost their text without being told.
+   */
+  guidance: string;
   isResponse: boolean;
   row: number;
 }
@@ -256,6 +264,7 @@ export function parseTemplateCsv(text: string): Result<ParsedTrial> {
       min: numberOrNull(col("min", row)),
       max: numberOrNull(col("max", row)),
       options: options.length > 0 ? options : null,
+      guidance: (col("help", row) ?? "").trim(),
       isResponse: truthy(col("response", row)),
       row: rowNumber,
     });

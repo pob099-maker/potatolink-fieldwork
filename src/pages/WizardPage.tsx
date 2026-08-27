@@ -350,6 +350,7 @@ function RecordStep({ answers, set }: { answers: WizardAnswers; set: Setter }) {
                   unit: entry.unit,
                   required: false,
                   options: entry.options ?? undefined,
+                  guidance: entry.guidance,
                 },
               ]);
             }}
@@ -477,6 +478,23 @@ function RecordStep({ answers, set }: { answers: WizardAnswers; set: Setter }) {
                   </button>
                 </fieldset>
               ) : null}
+
+              {/* The designer's note to whoever records this. Optional, and
+                  offered rather than demanded — most fields need nothing, and
+                  a box that must be filled in gets filled in with noise. */}
+              <label className="mt-2 block text-sm font-medium">
+                Note for whoever records this
+                <input
+                  value={question.guidance ?? ""}
+                  aria-label={`Note for whoever records item ${index + 1}`}
+                  placeholder="Optional — e.g. weigh before grading"
+                  onChange={(event) => update(index, { guidance: event.target.value })}
+                  className={inputClass}
+                />
+                <span className="mt-1 block text-sm font-normal text-ink-soft">
+                  Shown under the question in the field, always — not hidden behind a tap.
+                </span>
+              </label>
 
               <label className="mt-2 flex items-center gap-2 text-sm">
                 <input
