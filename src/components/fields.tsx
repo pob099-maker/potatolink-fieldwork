@@ -297,6 +297,35 @@ function FieldInput<T extends FieldValues>({
           {...register(name)}
         />
       );
+    case "link":
+      return (
+        <div>
+          {/* inputMode gives the phone keyboard its slash and .com; type stays
+              "text" on purpose. type="url" hands validation to the browser,
+              which intercepts the submit with its own vague popup ("Please
+              enter a URL"), never runs the Zod rule, and sets no aria-invalid
+              — so the message is worse, it is not in the page like every other
+              error in this app, and a screen reader hears nothing at all.
+
+              Nothing here fetches anything: a link is text until somebody taps
+              it, so this works with no signal like the rest of the form. */}
+          <input
+            id={field.fieldName}
+            type="text"
+            inputMode="url"
+            autoComplete="off"
+            spellCheck={false}
+            placeholder="https://"
+            className={inputClass}
+            {...aria}
+            {...register(name)}
+          />
+          <p className="mt-1 text-meta text-ink-faint">
+            A lab result, a contractor&apos;s report, a shared folder. Paste the whole
+            address.
+          </p>
+        </div>
+      );
     case "select":
       return (
         <select

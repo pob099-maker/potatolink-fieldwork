@@ -34,8 +34,9 @@ import { words } from "../services/vocabulary";
 import { plotAreaM2 } from "../services/plotArea";
 import { generateLayout, layoutProblem } from "../services/layout";
 import { getMedia, isMediaPointer, mediaIdFromPointer } from "../services/media";
+import { isLinkValue } from "../services/metricValue";
 import { EmptyState, ErrorState, Skeleton } from "../components/ui";
-import type { MeasurementEvent, Metric } from "../types";
+import type { FormTemplate, MeasurementEvent, Metric } from "../types";
 
 const dash = "—";
 const n2 = (value: number | null | undefined) =>
@@ -304,6 +305,13 @@ export function ReportPage() {
 
       <PhotoLog events={trialEvents} metrics={trialMetrics} sites={trialSites} />
 
+      <LinkLog
+        events={trialEvents}
+        metrics={trialMetrics}
+        sites={trialSites}
+        templates={trialTemplates}
+      />
+
       {(trial.dataSources ?? []).length > 0 ? (
         <Section title="Where the data came from">
           <ul className="flex flex-col gap-1 text-sm">
@@ -356,6 +364,69 @@ function Fact({ label, children }: { label: string; children: React.ReactNode })
  * A picture with no caption is decoration; the point of a disease photo is
  * which plot it was taken in, so the caption carries plot, treatment and date.
  */
+/**
+ * Links recorded against observations.
+ *
+ * They need somewhere to be, and the tables above are statistics — a lab
+ * result URL recorded against one plot would otherwise be captured, exported,
+ * and never seen again by anybody reading the trial. Given its own section for
+ * the same reason photographs get one: it is evidence, not a measurement, and
+ * it does not average.
+ *
+ * The address is printed as well as linked, because this page is meant to be
+ * printed and a bare anchor on paper is a dead end.
+ */
+function LinkLog({
+  events,
+  metrics,
+  sites,
+  templates,
+}: {
+  events: MeasurementEvent[];
+  metrics: Metric[];
+  sites: Array<{ siteId: string; location: string }>;
+  templates: FormTemplate[];
+}) {
+  // The metric carries the machine name, so a report would otherwise announce
+  // "labResult" to somebody reading it on paper. The label is what the person
+  // filling the form in was asked, and it is what belongs here.
+  const labelFor = (fieldName: string): string => {
+    for (const template of templates) {
+      const field = template.fields.find((candidate) => candidate.fieldName === fieldName);
+      if (field) return field.label;
+    }
+    return fieldName;
+  };
+  const links = metrics
+    .filter((metric) => isLinkValue(metric.value))
+    .map((metric) => ({ metric, event: events.find((e) => e.eventId === metric.eventId) }))
+    .filter((entry) => entry.event);
+
+  if (links.length === 0) return null;
+
+  return (
+    <Section title="Links recorded">
+      <ul className="flex flex-col gap-2 text-sm">
+        {links.map(({ metric, event }) => {
+          const site = sites.find((candidate) => candidate.siteId === event?.siteId);
+          const href = String(metric.value).trim();
+          return (
+            <li key={metric.metricId}>
+              <strong>{labelFor(metric.metricName)}</strong>
+              {site ? ` — ${site.location}` : ""}
+              {event ? ` · ${format(new Date(event.eventDate), "d MMM yyyy")}` : ""}
+              <br />
+              <a href={href} className="break-all underline">
+                {href}
+              </a>
+            </li>
+          );
+        })}
+      </ul>
+    </Section>
+  );
+}
+
 function PhotoLog({
   events,
   metrics,

@@ -224,6 +224,7 @@ export const fieldTypeSchema = z.enum([
   "photo",
   "video",
   "file",
+  "link",
   "gps",
   "date",
   "boolean",
@@ -324,6 +325,17 @@ export function buildEntryFormSchema(
         value = z
           .string()
           .regex(/^-?\d+(\.\d+)?,\s*-?\d+(\.\d+)?$/, "Capture a location first");
+        break;
+      case "link":
+        // Checked, but not strictly. A link that will not resolve is somebody
+        // else's problem — this catches the case worth catching, which is a
+        // paste that lost its scheme or picked up a stray word, because
+        // "www.lab.com/result" typed into a notes field is indistinguishable
+        // from a typo and nobody finds out until they try to open it.
+        value = z
+          .string()
+          .trim()
+          .regex(/^https?:\/\/\S+\.\S+/, "Paste a full web address, starting http:// or https://");
         break;
       case "text":
         value = z.string();

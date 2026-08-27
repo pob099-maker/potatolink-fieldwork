@@ -28,6 +28,7 @@ export type FieldType =
   | "photo"
   | "video"
   | "file"
+  | "link"
   | "gps"
   | "date"
   | "boolean";

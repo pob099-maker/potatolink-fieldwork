@@ -50,6 +50,19 @@ export function metricNumber(value: MetricValue): number | null {
   return null;
 }
 
+/**
+ * True when a recorded answer is a web address.
+ *
+ * Matched on the value rather than looked up against the form, because the
+ * places that read answers back — a report, an export, a summary line — have
+ * the metric and not always the field that produced it. Deliberately the same
+ * shape the entry form validates, so a value that was accepted as a link is
+ * recognised as one afterwards.
+ */
+export function isLinkValue(value: MetricValue): value is string {
+  return typeof value === "string" && /^https?:\/\/\S+\.\S+/.test(value.trim());
+}
+
 /** True when the metric points at an uploaded or on-device file. */
 export function isMediaMetric(metric: Metric): boolean {
   return metric.photoUrl !== null && metric.photoUrl !== "";
