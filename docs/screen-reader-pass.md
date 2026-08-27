@@ -25,6 +25,18 @@ turns it on and off; you will want that.
 - Double-tap: activate what is selected
 - Two-finger swipe down: read from here
 
+**Android** — at least as important as the iPhone for growers, and worth doing
+as well rather than instead: TalkBack and VoiceOver disagree often enough that
+passing on one does not mean passing on the other.
+
+Settings → Accessibility → TalkBack. Turn the shortcut on first — holding both
+volume keys for three seconds toggles it, and you will want that.
+
+- Swipe right: next item
+- Swipe left: previous item
+- Double-tap: activate what is selected
+- Two-finger swipe down: read from here
+
 **Windows** — NVDA, free from nvaccess.org.
 
 - `Tab`: next control
@@ -32,8 +44,8 @@ turns it on and off; you will want that.
 - `Insert + F7`: list every heading and link on the page
 - `Ctrl`: stop talking (learn this one first)
 
-**A warning worth having.** With VoiceOver on, a single tap no longer presses
-things — it selects them, and you double-tap to press. The first minute is
+**A warning worth having.** With VoiceOver or TalkBack on, a single tap no
+longer presses things — it selects them, and you double-tap to press. The first minute is
 disorientating for everybody. That is normal and it is not the app's fault.
 
 ---
@@ -101,6 +113,12 @@ Should say what they do — "Take or choose a photo, button". If you hear only
 that is not always worth fixing — but note what you hear. A yield unit
 announced as gibberish in a field where somebody is entering a number matters
 more than one in a report.
+
+### The storage line in Settings
+
+Settings says whether the browser has promised to keep entries on this device.
+It is the one place the app admits to a risk it cannot otherwise show, so check
+it reads sensibly rather than as jargon.
 
 ### Where you are
 

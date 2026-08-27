@@ -1,10 +1,16 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useTheme } from "../contexts/ThemeContext";
 import { useAuth } from "../contexts/AuthContext";
 import { isBackendConfigured } from "../lib/supabase";
 import { pullFromCloud, pushBaseData, setDeviceRole, syncPending } from "../services/store";
 import { useDeviceRole } from "../hooks/useCollections";
-import { Card, PageTitle } from "../components/ui";
+import { Card, PageTitle, Skeleton } from "../components/ui";
+import {
+  describePersistence,
+  formatBytes,
+  storageReport,
+  type StorageReport,
+} from "../services/storagePersistence";
 
 export function SettingsPage() {
   const { theme, toggleTheme } = useTheme();
@@ -84,6 +90,8 @@ export function SettingsPage() {
           ))}
         </div>
       </Card>
+
+      <StorageCard />
 
       <Card>
         <h2 className="font-semibold">Who can get in</h2>
@@ -166,5 +174,60 @@ export function SettingsPage() {
         )}
       </Card>
     </div>
+  );
+}
+
+/**
+ * Whether the browser has promised to keep what is stored here.
+ *
+ * Worth a card rather than a line, because it is the one thing that decides
+ * whether "saved on this device" means anything. Storage is best-effort by
+ * default and can be evicted when a phone runs low on space — which is the
+ * failure this app is least able to survive and least able to report, since a
+ * record that has been thrown away leaves nothing behind to say so.
+ *
+ * Only reads. The request is made once at startup; looking at a settings page
+ * must not trigger a permission decision.
+ */
+function StorageCard() {
+  const [report, setReport] = useState<StorageReport | null>(null);
+
+  useEffect(() => {
+    let live = true;
+    void storageReport(navigator.storage).then((result) => {
+      if (live) setReport(result);
+    });
+    return () => {
+      live = false;
+    };
+  }, []);
+
+  if (!report) {
+    return (
+      <Card>
+        <h2 className="font-semibold">Storage on this device</h2>
+        <Skeleton lines={2} />
+      </Card>
+    );
+  }
+
+  const described = describePersistence(report.state);
+
+  return (
+    <Card>
+      <h2 className="font-semibold">Storage on this device</h2>
+      <p
+        className={`mt-1 text-sm ${described.reassuring ? "text-success" : "text-warning"}`}
+      >
+        {described.reassuring ? "●" : "◌"} {described.heading}
+      </p>
+      <p className="mt-1 text-sm text-ink-soft">{described.detail}</p>
+      {report.usage !== null ? (
+        <p className="mt-2 text-sm text-ink-faint">
+          Using {formatBytes(report.usage)}
+          {report.quota !== null ? ` of about ${formatBytes(report.quota)} available` : ""}.
+        </p>
+      ) : null}
+    </Card>
   );
 }
