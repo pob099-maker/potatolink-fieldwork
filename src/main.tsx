@@ -4,7 +4,7 @@ import { App } from "./App";
 import { seedIfNeeded } from "./services/seed";
 import { startSyncLoop } from "./services/store";
 import { registerServiceWorker } from "./services/appUpdate";
-import { LocalDatabaseError } from "./lib/localdb";
+import { LocalDatabaseError, openDb } from "./lib/localdb";
 import "./index.css";
 
 // Before the seed, and outside the promise: caching the app shell is what lets
@@ -63,8 +63,27 @@ function reportUnavailable(message: string): void {
     "min-height:2.75rem;padding:0 1.25rem;border-radius:0.5rem;border:0;background:#6e4320;color:#fff;font:inherit;font-weight:600;cursor:pointer";
   retry.addEventListener("click", () => window.location.reload());
 
-  wrap.append(heading, detail, reassure, retry);
+  const keepTrying = document.createElement("p");
+  keepTrying.textContent = "Still trying — this usually clears by itself.";
+  keepTrying.style.cssText = "margin:1.25rem 0 0;color:#555;font-size:0.9rem";
+
+  wrap.append(heading, detail, reassure, retry, keepTrying);
   root.append(wrap);
+
+  // Keep trying on its own rather than waiting to be asked.
+  //
+  // The blocking connection is usually another copy of the app that is about
+  // to be suspended or evicted — on a phone, quite possibly one the person
+  // cannot even see, because the app may be installed *and* open in a browser
+  // tab. Telling somebody standing in a paddock to go and close tabs is asking
+  // them to debug; reloading every few seconds gets there without them.
+  window.setInterval(() => {
+    void openDb()
+      .then(() => window.location.reload())
+      .catch(() => {
+        // Still blocked. The next tick will try again.
+      });
+  }, 4000);
 }
 
 // Seeding is a convenience — it puts demonstration trials on a new device. The
