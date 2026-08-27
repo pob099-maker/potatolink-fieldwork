@@ -42,7 +42,7 @@ export const TRIAL_STATES: TrialState[] = [
     value: "archived",
     label: "Archived",
     detail:
-      "Out of the way. Hidden from the lists unless you ask for it, and still fully readable when you do — results, economics and the CSV export all keep working.",
+      "Out of the way. Hidden from the lists unless you ask for it, and still fully readable when you do — results and the CSV export both keep working.",
   },
 ];
 

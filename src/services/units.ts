@@ -18,7 +18,7 @@
 // by a list — but it is the second choice, not the only one.
 
 /** What choosing this unit makes the app able to do. */
-export type UnitPower = "yield" | "area" | null;
+export type UnitPower = "yield" | "area" | "rate" | null;
 
 export interface UnitOption {
   value: string;
@@ -36,6 +36,12 @@ export const UNIT_OPTIONS: UnitOption[] = [
   { value: "kg", label: "kg — kilograms", group: "Weight", power: "yield" },
   { value: "t", label: "t — tonnes", group: "Weight", power: "yield" },
   { value: "g", label: "g — grams", group: "Weight", power: null },
+
+  // Already a rate, so nothing needs converting — it is passed straight
+  // through to the costing export. The seeded nitrogen trial records in t/ha,
+  // and until now the list did not offer the unit its own demo data uses.
+  { value: "t/ha", label: "t/ha — tonnes per hectare", group: "Yield rate", power: "rate" },
+  { value: "kg/ha", label: "kg/ha — kilograms per hectare", group: "Yield rate", power: "rate" },
 
   { value: "m2", label: "m² — square metres", group: "Area", power: "area" },
   { value: "ha", label: "ha — hectares", group: "Area", power: "area" },
@@ -92,6 +98,7 @@ export function describePower(unit: string): string | null {
   const power = findUnit(unit)?.power ?? null;
   if (power === "yield") return "Lets the app work out tonnes per hectare.";
   if (power === "area") return "Lets a record carry its own plot size.";
+  if (power === "rate") return "Already per hectare — carried straight into the costing export.";
   return null;
 }
 
@@ -129,6 +136,11 @@ export function canonicalUnit(unit: string): string {
     percent: "%",
     "per cent": "%",
     pct: "%",
+    "t/ha": "t/ha",
+    tha: "t/ha",
+    "tonnes/ha": "t/ha",
+    "t per ha": "t/ha",
+    "kg/ha": "kg/ha",
     number: "count",
     num: "count",
     day: "days",

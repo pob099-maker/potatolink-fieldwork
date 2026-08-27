@@ -395,8 +395,8 @@ export function TrialStage({ trial }: { trial: Trial }) {
       <CardTitle>Stage</CardTitle>
       <p className="mt-1 text-sm text-ink-soft">
         Nothing is ever deleted by this. Archiving takes a finished trial out of the lists
-        and no more; its results, economics and CSV export all keep working, and it comes
-        back with one tap.
+        and no more; its results and CSV export all keep working, and it comes back with
+        one tap.
       </p>
       <div className="mt-3 space-y-2">
         {TRIAL_STATES.map((state) => (

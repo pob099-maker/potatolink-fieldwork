@@ -1290,7 +1290,7 @@ export async function saveArm(arm: PracticeArm): Promise<Result<PracticeArm>> {
   return saveRecord("practiceArms", arm, "Could not save the practice.");
 }
 
-/** Whether an arm has any records or economics against it. */
+/** Whether an arm has any records against it. */
 export async function armHasData(armId: string): Promise<boolean> {
   const [events, assumptions, results] = await Promise.all([
     listEvents(),
@@ -1577,11 +1577,9 @@ const PULL_SPECS: Array<{ collection: CollectionName; table: string; schema: Zod
   { collection: "trials", table: "trials", schema: trialSchema },
   { collection: "sites", table: "sites", schema: siteSchema },
   { collection: "practiceArms", table: "practice_arms", schema: practiceArmSchema },
-  { collection: "armAssumptions", table: "arm_assumptions", schema: armAssumptionSchema },
   { collection: "formTemplates", table: "form_templates", schema: formTemplateSchema },
   { collection: "measurementEvents", table: "measurement_events", schema: measurementEventSchema },
   { collection: "metrics", table: "metrics", schema: metricSchema },
-  { collection: "economicScenarios", table: "economic_scenarios", schema: economicScenarioSchema },
   { collection: "resultSets", table: "result_sets", schema: resultSetSchema },
   { collection: "dataEntryLogs", table: "data_entry_logs", schema: dataEntryLogSchema },
   { collection: "weatherObservations", table: "weather_observations", schema: weatherObservationSchema },
@@ -1713,6 +1711,11 @@ export async function involvementForTrial(trialId: string) {
   const [sites, members] = await Promise.all([listSites(), listTrialMembers()]);
   return involvementFor(trialId, sites, members);
 }
+
+// arm_assumptions and economic_scenarios are deliberately absent. Economics
+// left this app; the tables and everything in them are untouched in Supabase,
+// but nothing here displays them, and pulling rows no screen reads spends a
+// paddock connection on nothing.
 
 /** Fetch every synced table from Supabase into the local store. */
 export async function pullFromCloud(): Promise<Result<string>> {

@@ -3,7 +3,7 @@
 // Two different questions need two different answers. A grower in a paddock
 // gets a shared code (see AccessContext) because handing out accounts to
 // growers is a barrier that stops data being collected at all. Staff — the
-// people who create trials, edit the forms and read the economics — sign in
+// people who create trials, edit the forms and read the results — sign in
 // properly, because those pages change what everybody else sees.
 //
 // Sign-in is by emailed link: no password to set, forget, or type on a phone
