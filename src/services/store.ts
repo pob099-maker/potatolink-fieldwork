@@ -1593,6 +1593,62 @@ const PULL_SPECS: Array<{ collection: CollectionName; table: string; schema: Zod
   { collection: "trialMembers", table: "trial_members", schema: trialMemberSchema },
 ];
 
+/**
+ * Add a person the programme knows about.
+ *
+ * Until now contacts arrived two ways only: seeded, or minted as a "Site host
+ * (to be confirmed)" placeholder when somebody added a site. There was no way
+ * to name a real person anywhere in the app — which made a panel offering to
+ * put people on a trial an offer of four fixed names.
+ *
+ * Email is optional and is not a login. Nothing is sent when somebody is added
+ * here; it is an address to reach them at, and the column that will one day be
+ * matched to an account is auth_user_id, set deliberately and separately.
+ */
+export async function addContact(input: {
+  name: string;
+  business?: string;
+  role: Contact["role"];
+  email?: string;
+  phone?: string;
+  region?: string;
+}): Promise<Result<Contact>> {
+  const contact: Contact = {
+    contactId: newId(),
+    name: input.name.trim(),
+    business: input.business?.trim() ?? "",
+    role: input.role,
+    region: input.region?.trim() ?? "",
+    email: input.email?.trim() ?? "",
+    phone: input.phone?.trim() ?? "",
+    tags: [],
+    // Deliberately not set. The field is optional, and writing an explicit
+    // null would put auth_user_id in the insert — which fails outright on a
+    // backend that has not run migration 0023 yet, taking a perfectly good
+    // person down with it. Nobody has an account at the moment this row is
+    // created, so there is nothing to say.
+    createdAt: nowIso(),
+  };
+
+  const parsed = contactSchema.safeParse(contact);
+  if (!parsed.success) {
+    return { success: false, error: parsed.error.issues[0]?.message ?? "Invalid person." };
+  }
+
+  // The email column is unique where it is non-empty, so a duplicate would be
+  // refused by the database after the row had already been written locally.
+  if (contact.email) {
+    const clash = (await listContacts()).find(
+      (candidate) => candidate.email.toLowerCase() === contact.email.toLowerCase(),
+    );
+    if (clash) {
+      return { success: false, error: `${clash.name} already uses that email address.` };
+    }
+  }
+
+  return saveRecord("contacts", contact, "Could not save this person on this device.");
+}
+
 export const listTrialMembers = (): Promise<TrialMember[]> =>
   dbGetAll<TrialMember>("trialMembers");
 

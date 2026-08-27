@@ -18,7 +18,7 @@
 
 import { useState } from "react";
 import { useContacts, useSites, useTrialMembers } from "../hooks/useCollections";
-import { addTrialMember, removeTrialMember } from "../services/store";
+import { addContact, addTrialMember, removeTrialMember } from "../services/store";
 import { involvementFor, type InvolvementReason } from "../services/involvement";
 import { Card, CardTitle, ErrorState } from "./ui";
 import type { Contact, TrialMember } from "../types";
@@ -36,6 +36,8 @@ const REASON_LABELS: Record<InvolvementReason, string> = {
 
 const inputClass = "min-h-11 w-full rounded-lg border border-line-strong bg-surface px-3 py-2";
 
+const NEW_PERSON = "__new__";
+
 export function TrialPeople({ trialId }: { trialId: string }) {
   const contacts = useContacts();
   const sites = useSites();
@@ -46,6 +48,12 @@ export function TrialPeople({ trialId }: { trialId: string }) {
   const [role, setRole] = useState<TrialMember["role"]>("collaborator");
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  // Somebody who is not in contacts yet. Until now there was no way to name a
+  // real person anywhere in the app, so this panel could only ever offer the
+  // handful that were seeded or minted as site-host placeholders.
+  const [newName, setNewName] = useState("");
+  const [newBusiness, setNewBusiness] = useState("");
+  const [newEmail, setNewEmail] = useState("");
 
   const allSites = sites.data ?? [];
   const allMembers = members.data ?? [];
@@ -68,11 +76,38 @@ export function TrialPeople({ trialId }: { trialId: string }) {
       ),
   );
 
+  const creatingNew = contactId === NEW_PERSON;
+
   async function add(): Promise<void> {
     if (!contactId) return;
     setBusy(true);
     setError(null);
-    const result = await addTrialMember({ trialId, contactId, role });
+
+    let id = contactId;
+    if (creatingNew) {
+      if (!newName.trim()) {
+        setBusy(false);
+        setError("Give the person a name.");
+        return;
+      }
+      const created = await addContact({
+        name: newName,
+        business: newBusiness,
+        email: newEmail,
+        // The trial role is recorded on the membership row; this is what they
+        // are in general, and "cooperator" is the honest default for somebody
+        // being added to one trial by name.
+        role: "cooperator",
+      });
+      if (!created.success) {
+        setBusy(false);
+        setError(created.error);
+        return;
+      }
+      id = created.data.contactId;
+    }
+
+    const result = await addTrialMember({ trialId, contactId: id, role });
     setBusy(false);
     if (!result.success) {
       setError(result.error);
@@ -80,6 +115,9 @@ export function TrialPeople({ trialId }: { trialId: string }) {
     }
     setContactId("");
     setRole("collaborator");
+    setNewName("");
+    setNewBusiness("");
+    setNewEmail("");
     setAdding(false);
   }
 
@@ -161,8 +199,48 @@ export function TrialPeople({ trialId }: { trialId: string }) {
                   {contact.business ? ` — ${contact.business}` : ""}
                 </option>
               ))}
+              <option value={NEW_PERSON}>Somebody not on this list…</option>
             </select>
           </label>
+
+          {creatingNew ? (
+            <div className="mt-3 flex flex-col gap-3 rounded-lg bg-sunk p-3">
+              <label className="text-sm font-medium">
+                Their name
+                <input
+                  value={newName}
+                  onChange={(event) => setNewName(event.target.value)}
+                  placeholder="e.g. Jo Brown"
+                  className={inputClass}
+                />
+              </label>
+              <label className="text-sm font-medium">
+                Business
+                <input
+                  value={newBusiness}
+                  onChange={(event) => setNewBusiness(event.target.value)}
+                  placeholder="Optional"
+                  className={inputClass}
+                />
+              </label>
+              <label className="text-sm font-medium">
+                Email
+                <input
+                  type="email"
+                  inputMode="email"
+                  value={newEmail}
+                  onChange={(event) => setNewEmail(event.target.value)}
+                  placeholder="Optional"
+                  className={inputClass}
+                />
+                {/* Said here because it is the thing everybody assumes. */}
+                <span className="mt-1 block text-sm font-normal text-ink-soft">
+                  An address to reach them at. Adding somebody sends them nothing — pass
+                  on their entry link yourself.
+                </span>
+              </label>
+            </div>
+          ) : null}
           <label className="mt-3 block text-sm font-medium">
             What they do on it
             <select
