@@ -278,7 +278,7 @@ export const REFERENCE_TEMPLATE_CSV = [
   "Run record,run_record,grower,Each run,yes,yes,Photo of the result (optional),,photo,no,,,,,,Visual evidence",
   "Run record,run_record,grower,Each run,yes,yes,Anything else worth noting?,notes,text,no,,,,,,Catch-all; keep it last",
   "Daily weather,weather,staff,Daily during the trial,yes,no,Temperature,,number,yes,°C,,,,,Confounding factor",
-  "Cost log,cost_log,staff,Once per trial,no,no,Lease or subscription cost,,number,yes,$,0,,,,Feeds the economics",
+  "Cost log,cost_log,staff,Once per trial,no,no,Lease or subscription cost,,number,yes,$,0,,,,For costing elsewhere",
 ].join("\r\n");
 
 export function downloadReferenceTemplate(): void {

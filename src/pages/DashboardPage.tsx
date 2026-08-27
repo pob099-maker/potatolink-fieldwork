@@ -90,9 +90,8 @@ function StartHere({ presence }: { presence: SeedPresence }) {
               ? "The trials below are examples."
               : "Trials marked Example are demonstration data."}
           </span>{" "}
-          Their costs and returns are stand-in figures, not any grower's real numbers. The
-          Economics page tracks that per figure, and stops saying it once each one is
-          marked confirmed.
+          Their sites, yields and photographs are invented, not any grower's real
+          numbers.
         </p>
       )}
     </Card>

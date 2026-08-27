@@ -9,6 +9,7 @@ import {
   normaliseField,
 } from "../services/templates";
 import { useTemplates, useTrials } from "../hooks/useCollections";
+import { UnitPicker } from "../components/UnitPicker";
 import { Card, EmptyState, ErrorState, PageTitle, Skeleton } from "../components/ui";
 import type { FieldType, FormField, FormTemplate } from "../types";
 
@@ -215,20 +216,12 @@ export function TemplateEditorPage() {
 
           {field.type === "number" ? (
             <div className="grid gap-3 sm:grid-cols-3">
-              <div>
-                <label htmlFor={`unit-${index}`} className="mb-1 block text-sm font-medium">
-                  Unit (optional)
-                </label>
-                <input
-                  id={`unit-${index}`}
-                  className={inputClass}
-                  placeholder="t, hours, km/h…"
-                  value={field.unit ?? ""}
-                  onChange={(changeEvent) =>
-                    updateField(index, { unit: changeEvent.target.value || null })
-                  }
-                />
-              </div>
+              <UnitPicker
+                id={`unit-${index}`}
+                label="Unit (optional)"
+                value={field.unit ?? ""}
+                onChange={(unit) => updateField(index, { unit: unit || null })}
+              />
               <MinMaxInput field={field} index={index} updateField={updateField} />
             </div>
           ) : null}

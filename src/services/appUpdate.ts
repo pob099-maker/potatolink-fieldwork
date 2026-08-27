@@ -36,25 +36,60 @@ function announce(worker: ServiceWorker): void {
 }
 
 /**
+ * Test seam. The announcement normally comes from the registration, which
+ * needs a real service worker container to exist at all — and the rule worth
+ * pinning down is what a click does afterwards, which does not.
+ */
+export function __setWaitingForTest(worker: ServiceWorker | null): void {
+  waitingWorker = worker;
+}
+
+/**
+ * How long to let a worker that really is still waiting take over before
+ * reloading anyway. Only reached when controllerchange never arrives.
+ */
+const HANDOVER_GRACE_MS = 1000;
+
+/**
  * Reload into the version that is already active.
  *
- * Still driven by controllerchange when there is a worker to wait on, because
- * skipWaiting is asynchronous and reloading too early can land back on the old
- * one and look like the update did nothing.
+ * This used to wait for controllerchange in every case, which was right when
+ * the worker waited to be asked and became a dead button the moment it stopped.
+ * The worker now calls skipWaiting during install, so by the time anybody has
+ * read the banner it has usually activated and controllerchange has already
+ * fired. Clicking then registered a listener for an event that was never
+ * coming again and posted SKIP_WAITING to a worker that was no longer waiting.
+ * Nothing happened — and it failed hardest exactly when the update had gone
+ * most smoothly.
+ *
+ * So the handover is treated as something that may already have happened.
+ * A worker still sitting in "installed" gets nudged and a moment to take over;
+ * anything else reloads straight away. Either way a reload happens, because
+ * reloading is never the wrong outcome here — only waiting forever is.
  */
 export function applyUpdate(): void {
-  if (!waitingWorker) {
-    window.location.reload();
-    return;
-  }
   let reloading = false;
-  navigator.serviceWorker.addEventListener("controllerchange", () => {
-    // Chrome can fire this more than once; reloading twice is a visible flash.
+  const reload = (): void => {
+    // Chrome can fire controllerchange more than once; reloading twice is a
+    // visible flash.
     if (reloading) return;
     reloading = true;
     window.location.reload();
-  });
+  };
+
+  // "installed" is the only state that means a worker is genuinely still
+  // waiting for permission. Activated, activating, or gone all mean the
+  // handover is done or under way, and the page just needs to pick it up.
+  if (waitingWorker?.state !== "installed") {
+    reload();
+    return;
+  }
+
+  if ("serviceWorker" in navigator) {
+    navigator.serviceWorker.addEventListener("controllerchange", reload, { once: true });
+  }
   waitingWorker.postMessage("SKIP_WAITING");
+  window.setTimeout(reload, HANDOVER_GRACE_MS);
 }
 
 /**

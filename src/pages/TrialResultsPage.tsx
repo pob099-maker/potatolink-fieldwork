@@ -14,6 +14,7 @@ import { Link, useParams } from "react-router-dom";
 import { format } from "date-fns";
 import { useTrialData } from "../hooks/useTrialData";
 import { summariseArm } from "../services/entryLinks";
+import { buildHandoff, handoffCsv, handoffFileName } from "../services/resultsHandoff";
 import { tallySync } from "../services/events";
 import { replicationStatus, responseSummary } from "../services/replication";
 import { buildTrialCsv, csvFileName, downloadCsv } from "../services/export";
@@ -125,12 +126,32 @@ export function TrialResultsPage() {
         >
           Trial report
         </Link>
-        <Link
-          to={`/trials/${trial.trialId}/economics`}
-          className="min-h-11 rounded-lg border border-primary px-4 py-2.5 font-medium text-primary dark:text-primary-soft"
+        {/* What a result is worth is a different kind of claim, made from
+            prices and rates nobody observed in a paddock. It leaves here as
+            numbers and gets costed somewhere built for costing. */}
+        <button
+          type="button"
+          disabled={events.length === 0}
+          onClick={() =>
+            downloadCsv(
+              handoffFileName(trial),
+              handoffCsv(
+                buildHandoff(
+                  trial,
+                  sites,
+                  activeArms,
+                  events,
+                  metrics,
+                  responseLabel ?? "",
+                  responseField?.unit ?? "",
+                ),
+              ),
+            )
+          }
+          className="min-h-11 rounded-lg border border-primary px-4 py-2.5 font-medium text-primary disabled:opacity-60 dark:text-primary-soft"
         >
-          Economics
-        </Link>
+          Results for costing (CSV)
+        </button>
         <button
           type="button"
           disabled={events.length === 0}

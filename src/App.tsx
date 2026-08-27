@@ -16,7 +16,6 @@ import { ReportPage } from "./pages/ReportPage";
 import { TrialSetupPage } from "./pages/TrialSetupPage";
 import { TrialResultsPage } from "./pages/TrialResultsPage";
 import { TemplateEditorPage } from "./pages/TemplateEditorPage";
-import { EconomicsPage } from "./pages/EconomicsPage";
 import { SettingsPage } from "./pages/SettingsPage";
 import { TrialDetailPage } from "./pages/TrialDetailPage";
 import { TrialsPage } from "./pages/TrialsPage";
@@ -24,13 +23,22 @@ import { TrialsPage } from "./pages/TrialsPage";
 const queryClient = new QueryClient();
 
 /**
- * The economics page used to be called "results". These routes are flat rather
- * than nested, so a relative redirect pops the whole path and loses the trial
- * — the id has to be carried across explicitly.
+ * Economics has moved out of Fieldwork.
+ *
+ * This app records what happened in a paddock. What that is worth is a
+ * different kind of claim, made from prices, season tonnages and labour rates
+ * that nobody observed here and that change without anybody walking a trial —
+ * so it is costed in a tool built for costing, from the CSV on the results
+ * page. Keeping both under one roof meant stating a projection in the same
+ * voice as a measurement.
+ *
+ * The route survives its page so a bookmark lands somewhere sensible. These
+ * routes are flat rather than nested, so a relative redirect would pop the
+ * whole path and lose the trial — the id has to be carried across explicitly.
  */
-function LegacyResultsRedirect() {
+function LegacyEconomicsRedirect() {
   const { trialId } = useParams<{ trialId: string }>();
-  return <Navigate to={`/trials/${trialId}/economics`} replace />;
+  return <Navigate to={`/trials/${trialId}/results`} replace />;
 }
 
 /**
@@ -59,7 +67,7 @@ function AppRoutes() {
         {/*
           Recording data is the one thing that must never need an account: a
           grower opens their link and fills the form. Everything that changes
-          what a trial *is* — its sites, practices, forms and economics — sits
+          what a trial *is* — its sites, practices and forms — sits
           behind staff sign-in.
         */}
         <Route path="/trials/:trialId/entry" element={<EntryPage />} />
@@ -78,11 +86,11 @@ function AppRoutes() {
                 <Route path="/trials/:trialId/setup" element={<TrialSetupPage />} />
                 <Route path="/trials/:trialId/results" element={<TrialResultsPage />} />
                 <Route path="/trials/:trialId/template" element={<TemplateEditorPage />} />
-                <Route path="/trials/:trialId/economics" element={<EconomicsPage />} />
+                <Route
+                  path="/trials/:trialId/economics"
+                  element={<LegacyEconomicsRedirect />}
+                />
                 <Route path="/trials/:trialId/report" element={<ReportPage />} />
-                {/* The page was called "results" while it only ever held the
-                    economics. Old links keep working. */}
-                <Route path="/trials/:trialId/results" element={<LegacyResultsRedirect />} />
                 <Route path="/settings" element={<SettingsPage />} />
               </Routes>
             </RequireStaff>

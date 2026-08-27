@@ -7,6 +7,7 @@ import { summariseSync, type SyncState } from "./syncHealth";
 import {
   armAssumptionSchema,
   contactSchema,
+  trialMemberSchema,
   dataEntryLogSchema,
   economicScenarioSchema,
   formTemplateSchema,
@@ -48,6 +49,7 @@ import type {
   LibraryEntry,
   Factor,
   FactorLevel,
+  TrialMember,
 } from "../types";
 import { newId, nowIso } from "../lib/id";
 import { dbDelete, dbGet, dbGetAll, dbPut, dbPutMany, type CollectionName } from "../lib/localdb";
@@ -55,6 +57,7 @@ import { fromRow, isBackendConfigured, supabase, toColumn, toRow } from "../lib/
 import { fileExtension, getMedia, isMediaPointer, markUploaded, mediaIdFromPointer } from "./media";
 import { makeFieldName } from "./templates";
 import { findExisting, fromFormField, isBuiltIn, libraryEntries } from "./measurementLibrary";
+import { involvementFor } from "./involvement";
 import { buildCombinations, canBuild, designLoad } from "./factorial";
 
 const TABLE_NAMES: Partial<Record<CollectionName, string>> = {
@@ -74,6 +77,7 @@ const TABLE_NAMES: Partial<Record<CollectionName, string>> = {
   soilSamples: "soil_samples",
   soilResults: "soil_results",
   measurementLibrary: "measurement_library",
+  trialMembers: "trial_members",
   factors: "factors",
   factorLevels: "factor_levels",
 };
@@ -168,6 +172,7 @@ const PRIMARY_KEY: Record<CollectionName, string> = {
   soilSamples: "sampleId",
   soilResults: "resultId",
   measurementLibrary: "entryId",
+  trialMembers: "memberId",
   factors: "factorId",
   factorLevels: "levelId",
   media: "mediaId",
@@ -1285,7 +1290,7 @@ export async function saveArm(arm: PracticeArm): Promise<Result<PracticeArm>> {
   return saveRecord("practiceArms", arm, "Could not save the practice.");
 }
 
-/** Whether an arm has any records or economics against it. */
+/** Whether an arm has any records against it. */
 export async function armHasData(armId: string): Promise<boolean> {
   const [events, assumptions, results] = await Promise.all([
     listEvents(),
@@ -1572,11 +1577,9 @@ const PULL_SPECS: Array<{ collection: CollectionName; table: string; schema: Zod
   { collection: "trials", table: "trials", schema: trialSchema },
   { collection: "sites", table: "sites", schema: siteSchema },
   { collection: "practiceArms", table: "practice_arms", schema: practiceArmSchema },
-  { collection: "armAssumptions", table: "arm_assumptions", schema: armAssumptionSchema },
   { collection: "formTemplates", table: "form_templates", schema: formTemplateSchema },
   { collection: "measurementEvents", table: "measurement_events", schema: measurementEventSchema },
   { collection: "metrics", table: "metrics", schema: metricSchema },
-  { collection: "economicScenarios", table: "economic_scenarios", schema: economicScenarioSchema },
   { collection: "resultSets", table: "result_sets", schema: resultSetSchema },
   { collection: "dataEntryLogs", table: "data_entry_logs", schema: dataEntryLogSchema },
   { collection: "weatherObservations", table: "weather_observations", schema: weatherObservationSchema },
@@ -1585,7 +1588,134 @@ const PULL_SPECS: Array<{ collection: CollectionName; table: string; schema: Zod
   { collection: "measurementLibrary", table: "measurement_library", schema: libraryEntrySchema },
   { collection: "factors", table: "factors", schema: factorSchema },
   { collection: "factorLevels", table: "factor_levels", schema: factorLevelSchema },
+  { collection: "trialMembers", table: "trial_members", schema: trialMemberSchema },
 ];
+
+/**
+ * Add a person the programme knows about.
+ *
+ * Until now contacts arrived two ways only: seeded, or minted as a "Site host
+ * (to be confirmed)" placeholder when somebody added a site. There was no way
+ * to name a real person anywhere in the app — which made a panel offering to
+ * put people on a trial an offer of four fixed names.
+ *
+ * Email is optional and is not a login. Nothing is sent when somebody is added
+ * here; it is an address to reach them at, and the column that will one day be
+ * matched to an account is auth_user_id, set deliberately and separately.
+ */
+export async function addContact(input: {
+  name: string;
+  business?: string;
+  role: Contact["role"];
+  email?: string;
+  phone?: string;
+  region?: string;
+}): Promise<Result<Contact>> {
+  const contact: Contact = {
+    contactId: newId(),
+    name: input.name.trim(),
+    business: input.business?.trim() ?? "",
+    role: input.role,
+    region: input.region?.trim() ?? "",
+    email: input.email?.trim() ?? "",
+    phone: input.phone?.trim() ?? "",
+    tags: [],
+    // Deliberately not set. The field is optional, and writing an explicit
+    // null would put auth_user_id in the insert — which fails outright on a
+    // backend that has not run migration 0023 yet, taking a perfectly good
+    // person down with it. Nobody has an account at the moment this row is
+    // created, so there is nothing to say.
+    createdAt: nowIso(),
+  };
+
+  const parsed = contactSchema.safeParse(contact);
+  if (!parsed.success) {
+    return { success: false, error: parsed.error.issues[0]?.message ?? "Invalid person." };
+  }
+
+  // The email column is unique where it is non-empty, so a duplicate would be
+  // refused by the database after the row had already been written locally.
+  if (contact.email) {
+    const clash = (await listContacts()).find(
+      (candidate) => candidate.email.toLowerCase() === contact.email.toLowerCase(),
+    );
+    if (clash) {
+      return { success: false, error: `${clash.name} already uses that email address.` };
+    }
+  }
+
+  return saveRecord("contacts", contact, "Could not save this person on this device.");
+}
+
+export const listTrialMembers = (): Promise<TrialMember[]> =>
+  dbGetAll<TrialMember>("trialMembers");
+
+/**
+ * Put somebody on a trial, or change what they do on it.
+ *
+ * Adding a person who is already there updates their role rather than making a
+ * second row: the pair is unique in the database, and a duplicate would make
+ * them vanish from any list keyed on it.
+ *
+ * A farmer whose paddock already holds a site needs no row at all — they are
+ * involved by virtue of the site, and saying so again would be a row that goes
+ * stale the moment the site moves. The interface offers them anyway, because
+ * naming somebody explicitly is how you record a role.
+ */
+export async function addTrialMember(input: {
+  trialId: string;
+  contactId: string;
+  role: TrialMember["role"];
+}): Promise<Result<TrialMember>> {
+  const existing = (await listTrialMembers()).find(
+    (member) => member.trialId === input.trialId && member.contactId === input.contactId,
+  );
+  const member: TrialMember = existing
+    ? { ...existing, role: input.role }
+    : {
+        memberId: newId(),
+        trialId: input.trialId,
+        contactId: input.contactId,
+        role: input.role,
+        createdAt: nowIso(),
+      };
+
+  const parsed = trialMemberSchema.safeParse(member);
+  if (!parsed.success) {
+    return { success: false, error: parsed.error.issues[0]?.message ?? "Invalid member." };
+  }
+  return saveRecord("trialMembers", member, "Could not save who is on this trial.");
+}
+
+/**
+ * Take somebody off a trial.
+ *
+ * Only removes the explicit row. Somebody involved because a site is theirs
+ * stays involved, and the interface says so rather than offering a button that
+ * appears to work and changes nothing.
+ */
+export async function removeTrialMember(memberId: string): Promise<Result<string>> {
+  try {
+    await dbDelete("trialMembers", memberId);
+  } catch {
+    return { success: false, error: "Could not remove them on this device." };
+  }
+  await enqueueDeletion("trialMembers", memberId);
+  notify();
+  void syncPending();
+  return { success: true, data: "Removed." };
+}
+
+/** Everyone involved in a trial, site owners and named members together. */
+export async function involvementForTrial(trialId: string) {
+  const [sites, members] = await Promise.all([listSites(), listTrialMembers()]);
+  return involvementFor(trialId, sites, members);
+}
+
+// arm_assumptions and economic_scenarios are deliberately absent. Economics
+// left this app; the tables and everything in them are untouched in Supabase,
+// but nothing here displays them, and pulling rows no screen reads spends a
+// paddock connection on nothing.
 
 /** Fetch every synced table from Supabase into the local store. */
 export async function pullFromCloud(): Promise<Result<string>> {

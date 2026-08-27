@@ -1,7 +1,7 @@
 // The gate on everything that changes a trial rather than records in one.
 //
 // Until now every staff page — the dashboard, trial setup, the form editor,
-// the importer, the economics — was reachable by anyone who had the URL. That
+// the importer, the results — was reachable by anyone who had the URL. That
 // was fine while the only people with the link were in the room; it is not
 // fine once the app goes past the team.
 
@@ -63,7 +63,7 @@ export function StaffSignIn() {
     <Card className="mx-auto max-w-md">
       <PageTitle>Staff sign-in</PageTitle>
       <p className="mt-2 text-ink-soft">
-        Setting up trials, editing forms and reading the economics are for the people
+        Setting up trials, editing forms and reading the results are for the people
         running the project. We will email you a link — there is no password to set.
       </p>
       <form

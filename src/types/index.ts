@@ -309,6 +309,41 @@ export interface Contact {
   email: string;
   phone: string;
   tags: string[];
+  /**
+   * The account this person signs in with, once they have one.
+   *
+   * Null for almost everybody, and that is the normal state — a grower who
+   * records through a link has no account and does not need one. It exists so
+   * that closing reads later is one column set once per person, rather than a
+   * migration that has to work out after the fact who owned what.
+   */
+  /**
+   * Optional rather than required on purpose, and it matches the Zod schema:
+   * absent means the backend has never heard of the column, null means nobody
+   * has linked this person yet. Those are different facts and
+   * keepColumnsTheCloudLacks depends on being able to tell them apart.
+   */
+  authUserId?: string | null;
+  createdAt: string;
+}
+
+/**
+ * Involvement in a trial that cannot be derived from site ownership.
+ *
+ * A farmer whose paddock holds a site is already involved without a row here;
+ * this is for everybody else — the co-operating agronomist, the project
+ * officer, the researcher who reads results and records nothing.
+ */
+export interface TrialMember {
+  memberId: string;
+  trialId: string;
+  contactId: string;
+  /**
+   * What this person does on this trial, which is not what they are in
+   * general: a contact role says somebody is an agronomist, this says they are
+   * the one who answers for this particular trial.
+   */
+  role: "owner" | "collaborator" | "viewer";
   createdAt: string;
 }
 

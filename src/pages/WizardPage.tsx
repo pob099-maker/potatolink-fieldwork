@@ -12,6 +12,7 @@
 
 import { useState, type ReactNode } from "react";
 import { MeasurementPicker } from "../components/MeasurementPicker";
+import { UnitPicker } from "../components/UnitPicker";
 import { useNavigate } from "react-router-dom";
 import { publishParsedTrial } from "../services/templatePublish";
 import {
@@ -409,19 +410,12 @@ function RecordStep({ answers, set }: { answers: WizardAnswers; set: Setter }) {
                   </select>
                 </label>
                 {wantsUnit ? (
-                  <label className="text-sm font-medium">
-                    Unit
-                    <input
-                      value={question.unit}
-                      aria-label={`Unit for item ${index + 1}`}
-                      onChange={(event) => update(index, { unit: event.target.value })}
-                      placeholder="kg, t, cm, count…"
-                      className={inputClass}
-                    />
-                    <span className="mt-1 block text-sm font-normal text-ink-soft">
-                      kg or t lets the app work out tonnes per hectare.
-                    </span>
-                  </label>
+                  <UnitPicker
+                    id={`unit-${index}`}
+                    label={`Unit for item ${index + 1}`}
+                    value={question.unit}
+                    onChange={(unit) => update(index, { unit })}
+                  />
                 ) : null}
               </div>
 
@@ -555,7 +549,7 @@ function Summary({ answers }: { answers: WizardAnswers }) {
       </dl>
       <p className="mt-3 text-sm text-ink-faint">
         This gets you a trial you can record against. Plot size, extra sites, more
-        questions and the economics all live on the trial page.
+        questions all live on the trial page.
       </p>
     </Card>
   );
