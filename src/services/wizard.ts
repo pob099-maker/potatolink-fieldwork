@@ -41,6 +41,8 @@ export const RECORD_TYPES: Array<{ value: FieldType; label: string; wantsUnit: b
   { value: "select", label: "A choice from a list", wantsUnit: false },
   { value: "photo", label: "A photo", wantsUnit: false },
   { value: "video", label: "A video", wantsUnit: false },
+  { value: "file", label: "A file — CSV, PDF, spreadsheet", wantsUnit: false },
+  { value: "link", label: "A web link", wantsUnit: false },
   { value: "boolean", label: "Yes or no", wantsUnit: false },
   { value: "text", label: "Written notes", wantsUnit: false },
 ];

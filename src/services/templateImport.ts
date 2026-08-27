@@ -74,7 +74,7 @@ export interface ParsedTrial {
 }
 
 const FIELD_TYPES: FieldType[] = [
-  "number", "text", "select", "multiselect", "slider",
+  "number", "text", "select", "multiselect", "slider", "link",
   "photo", "video", "file", "gps", "date", "boolean",
 ];
 

@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+  isLinkValue,
   metricDisplay,
   metricExportValues,
   metricFormValue,
@@ -108,5 +109,27 @@ describe("metricFormValue", () => {
 
   it("leaves a field with no recorded answer empty", () => {
     expect(metricFormValue(field({ type: "text" }), undefined)).toBeUndefined();
+  });
+});
+
+describe("recognising a recorded link", () => {
+  it("accepts what the entry form accepts", () => {
+    expect(isLinkValue("https://lab.example.com/result/1842")).toBe(true);
+    expect(isLinkValue("http://example.com/a")).toBe(true);
+    expect(isLinkValue("  https://example.com/a  ")).toBe(true);
+  });
+
+  it("does not treat prose as a link", () => {
+    // A notes field that happens to mention a website is not a link field,
+    // and turning half a sentence into an anchor would be worse than nothing.
+    expect(isLinkValue("see the lab report")).toBe(false);
+    expect(isLinkValue("www.example.com")).toBe(false);
+    expect(isLinkValue("")).toBe(false);
+  });
+
+  it("is not fooled by a number or a yes/no", () => {
+    expect(isLinkValue(42)).toBe(false);
+    expect(isLinkValue(true)).toBe(false);
+    expect(isLinkValue(["a", "b"])).toBe(false);
   });
 });
