@@ -246,3 +246,40 @@ describe("sites and practices from the CSV", () => {
     expect(validateTemplate(result.data).filter((i) => i.level === "error")).toEqual([]);
   });
 });
+
+describe("the help column", () => {
+  // It has been in the template this app offers for download since v1 and the
+  // parser never read it, so anybody who followed the format and filled it in
+  // lost their text without being told.
+  it("is read into the field rather than discarded", () => {
+    const csv = [
+      "# fieldwork-template v1",
+      "trial,Help Trial",
+      "site,Home,SA,loam",
+      "practice,Current,control,now",
+      "practice,New,alternative,tried",
+      "form,event_type,audience,frequency,requires_site,requires_arm,label,field_name,type,required,unit,min,max,options,response,help",
+      "Harvest,harvest,grower,Once,yes,yes,Weight,weight,number,yes,kg,,,,yes,Weigh before grading",
+    ].join("\n");
+    const result = parseTemplateCsv(csv);
+    expect(result.success).toBe(true);
+    if (result.success) {
+      expect(result.data.forms[0].fields[0].guidance).toBe("Weigh before grading");
+    }
+  });
+
+  it("leaves it blank when the column is absent altogether", () => {
+    const csv = [
+      "# fieldwork-template v1",
+      "trial,No Help",
+      "site,Home,SA,loam",
+      "practice,Current,control,now",
+      "practice,New,alternative,tried",
+      "form,event_type,audience,frequency,requires_site,requires_arm,label,field_name,type,required",
+      "Harvest,harvest,grower,Once,yes,yes,Weight,weight,number,yes",
+    ].join("\n");
+    const result = parseTemplateCsv(csv);
+    expect(result.success).toBe(true);
+    if (result.success) expect(result.data.forms[0].fields[0].guidance).toBe("");
+  });
+});

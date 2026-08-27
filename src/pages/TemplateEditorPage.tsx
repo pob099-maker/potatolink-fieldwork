@@ -178,6 +178,24 @@ export function TemplateEditorPage() {
             />
           </div>
 
+          <div>
+            <label htmlFor={`guidance-${index}`} className="mb-1 block text-sm font-medium">
+              Note for whoever records it (optional)
+            </label>
+            <input
+              id={`guidance-${index}`}
+              className={inputClass}
+              placeholder="e.g. weigh before grading"
+              value={field.guidance ?? ""}
+              onChange={(changeEvent) =>
+                updateField(index, { guidance: changeEvent.target.value })
+              }
+            />
+            <p className="mt-1 text-sm text-ink-soft">
+              Shown under the question in the field, always — not hidden behind a tap.
+            </p>
+          </div>
+
           <div className="grid gap-3 sm:grid-cols-2">
             <div>
               <label htmlFor={`type-${index}`} className="mb-1 block text-sm font-medium">

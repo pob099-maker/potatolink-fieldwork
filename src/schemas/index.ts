@@ -239,6 +239,7 @@ export const formFieldSchema = z.object({
   min: z.number().nullable(),
   max: z.number().nullable(),
   unit: z.string().nullable(),
+  guidance: z.string().optional(),
   displayOrder: z.number().int(),
 });
 

@@ -251,3 +251,44 @@ describe("when the recording is expected", () => {
     expect(wizardProblems(filled({ recordAtStage: null }))).toEqual([]);
   });
 });
+
+describe("a note for whoever records it", () => {
+  // The designer knows things the person in the paddock cannot infer from a
+  // label — before grading or after, which rows to count, whether a blank
+  // means zero. A label cannot carry that without becoming a sentence.
+  it("carries the note through to the field", () => {
+    const trial = toParsedTrial(
+      filled({
+        questions: [
+          {
+            label: "Harvested weight",
+            type: "number",
+            unit: "kg",
+            required: true,
+            guidance: "Weigh before grading.",
+          },
+        ],
+      }),
+    );
+    expect(trial.forms[0].fields[0].guidance).toBe("Weigh before grading.");
+  });
+
+  it("is empty rather than absent when nobody wrote one", () => {
+    expect(toParsedTrial(filled()).forms[0].fields[0].guidance).toBe("");
+  });
+
+  it("does not make a note a condition of finishing", () => {
+    expect(wizardProblems(filled())).toEqual([]);
+  });
+
+  it("trims a note that is only whitespace", () => {
+    const trial = toParsedTrial(
+      filled({
+        questions: [
+          { label: "Count", type: "number", unit: "count", required: true, guidance: "   " },
+        ],
+      }),
+    );
+    expect(trial.forms[0].fields[0].guidance).toBe("");
+  });
+});

@@ -62,6 +62,15 @@ export interface Question {
    * at a door that was not there.
    */
   options?: string[];
+  /**
+   * What the person recording is told, under the label.
+   *
+   * The designer knows things the person in the paddock cannot infer from a
+   * label — before grading or after, which rows to count, whether a blank
+   * means zero. A label cannot carry that without becoming a sentence, and a
+   * sentence makes a poor label.
+   */
+  guidance?: string;
 }
 
 export interface WizardAnswers {
@@ -206,6 +215,7 @@ export function toParsedTrial(answers: WizardAnswers): ParsedTrial {
       question.type === "select"
         ? (question.options ?? []).map((choice) => choice.trim()).filter(Boolean)
         : null,
+    guidance: (question.guidance ?? "").trim(),
     isResponse: response !== null && question === response,
     row: index + 1,
   }));

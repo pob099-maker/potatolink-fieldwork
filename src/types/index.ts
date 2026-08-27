@@ -367,6 +367,15 @@ export interface FormField {
   min: number | null;
   max: number | null;
   unit: string | null;
+  /**
+   * A note to whoever is recording, shown under the label.
+   *
+   * Always visible rather than behind a tap. A hover tooltip has no hover on a
+   * phone, and tap-to-reveal hides the explanation from the person who did not
+   * know they needed it — which is everyone it was written for. "Before
+   * grading" has to be read before the weighing, not after.
+   */
+  guidance?: string;
   displayOrder: number;
 }
 
