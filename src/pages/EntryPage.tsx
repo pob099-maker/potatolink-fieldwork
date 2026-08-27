@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { format } from "date-fns";
 import { Link, useNavigate, useParams, useSearchParams } from "react-router-dom";
 import { useForm, useWatch } from "react-hook-form";
@@ -714,6 +714,17 @@ function EntryForm({
   }, [fields]);
 
   const [screenIndex, setScreenIndex] = useState(0);
+  const stepRef = useRef<HTMLDivElement>(null);
+  // Only after a change, never on first render: stealing focus on load drops
+  // somebody into the middle of a page they have not heard the top of yet.
+  const settled = useRef(false);
+  useEffect(() => {
+    if (!settled.current) {
+      settled.current = true;
+      return;
+    }
+    stepRef.current?.focus();
+  }, [screenIndex]);
   const [saved, setSaved] = useState<MeasurementEvent | null>(null);
   const [saveError, setSaveError] = useState<string | null>(null);
   const [removing, setRemoving] = useState(false);
@@ -926,19 +937,39 @@ function EntryForm({
         Step {screenIndex + 1} of {screens.length}
       </p>
 
+      {/* Focus moves here when the step changes.
+          Without it, pressing Next swapped the fields and left focus on the
+          Next button — invisible to anybody who can see the new fields, and a
+          dead end for anybody who cannot. The live region above announces
+          "Step 2 of 3" either way, but announcing where you are is not the
+          same as taking you there.
+
+          A labelled group rather than the first input: landing on a heading
+          says which step this is before reading out a field, and landing on an
+          input skips that context entirely. tabIndex -1 makes it focusable
+          without putting it in the tab order, so keyboard users are not made
+          to tab through a wrapper on every step. */}
       <Card className="space-y-4">
-        {currentScreen.map((field) => (
-          <EntryField
-            key={field.fieldName}
-            field={field}
-            register={register}
-            control={control}
-            error={errors[field.fieldName]?.message as string | undefined}
-            plotAreaM2={effectiveArea}
-            plotWidthM={plotWidthM}
-            setValue={setValue}
-          />
-        ))}
+        <div
+          ref={stepRef}
+          tabIndex={-1}
+          role="group"
+          aria-label={`Step ${screenIndex + 1} of ${screens.length}`}
+          className="space-y-4"
+        >
+          {currentScreen.map((field) => (
+            <EntryField
+              key={field.fieldName}
+              field={field}
+              register={register}
+              control={control}
+              error={errors[field.fieldName]?.message as string | undefined}
+              plotAreaM2={effectiveArea}
+              plotWidthM={plotWidthM}
+              setValue={setValue}
+            />
+          ))}
+        </div>
       </Card>
 
       {saveError ? <ErrorState message={saveError} onRetry={() => void onSubmit()} /> : null}
