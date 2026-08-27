@@ -82,6 +82,23 @@ export interface WizardAnswers {
    * the whole statistical summary to the wrong column.
    */
   responseIndex: number | null;
+  /**
+   * The growth stage this trial's form is expected at, or null for a trial
+   * recorded whenever something happens.
+   *
+   * One question for the whole form rather than one per item, because a
+   * schedule is a *visit*: somebody drives to the paddock and fills the form
+   * in. Timing each measurement separately would imply a trip each, and a
+   * form is already one visit with its own event type (rule 21). Two
+   * measurements that genuinely need different timing are two forms, which
+   * the trial page can add.
+   *
+   * Null is a real answer and stays null. A form with no timing is skipped by
+   * the due list on purpose, and inventing a schedule for a trial nobody
+   * scheduled would produce a banner nagging about a visit that was never
+   * planned.
+   */
+  recordAtStage: string | null;
 }
 
 /** Questions worth starting from. Every one can be renamed, retyped or removed. */
@@ -104,6 +121,9 @@ export const emptyAnswers = (): WizardAnswers => ({
   replicates: 3,
   questions: starterQuestions(),
   responseIndex: 0,
+  // Null rather than a stage: a schedule nobody asked for produces a banner
+  // nagging about a visit that was never planned.
+  recordAtStage: null,
 });
 
 /** A machine name from a label, since nobody should be asked for one. */
@@ -193,6 +213,12 @@ export function toParsedTrial(answers: WizardAnswers): ParsedTrial {
     eventType: "field_record",
     audience: "grower",
     frequency: answers.kind === "experiment" ? "Once per plot" : "Each time",
+    // The stage carries its own typical window, so the day counts stay null
+    // and the estimate comes from the stage list rather than being frozen
+    // here — a stage whose timing is revised later revises this with it.
+    timing: answers.recordAtStage
+      ? { stage: answers.recordAtStage, dapFrom: null, dapTo: null }
+      : null,
     requiresSite: true,
     requiresArm: true,
     fields,

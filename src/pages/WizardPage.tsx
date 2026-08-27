@@ -13,6 +13,7 @@
 import { useState, type ReactNode } from "react";
 import { MeasurementPicker } from "../components/MeasurementPicker";
 import { UnitPicker } from "../components/UnitPicker";
+import { DEFAULT_STAGES } from "../services/growthStages";
 import { useNavigate } from "react-router-dom";
 import { publishParsedTrial } from "../services/templatePublish";
 import {
@@ -520,6 +521,39 @@ function RecordStep({ answers, set }: { answers: WizardAnswers; set: Setter }) {
             Start from the usual three
           </button>
         ) : null}
+      </div>
+
+      {/* One question for the whole form, because a schedule is a visit:
+          somebody drives to the paddock and fills it in. Timing each item
+          separately would imply a trip each.
+
+          Asked here because it was never asked anywhere. Every trial built in
+          this wizard published with no timing at all, and the due list skips a
+          form without one — so the banner, the due list and the calendar
+          export existed and nothing created through the front door ever
+          reached them. */}
+      <div className="mt-4 border-t border-line pt-4">
+        <label className="block text-sm font-medium" htmlFor="record-at">
+          When should this be recorded?
+          <select
+            id="record-at"
+            value={answers.recordAtStage ?? ""}
+            onChange={(event) => set("recordAtStage", event.target.value || null)}
+            className={inputClass}
+          >
+            <option value="">Whenever it happens — no reminder</option>
+            {DEFAULT_STAGES.map((stage) => (
+              <option key={stage.id} value={stage.id}>
+                {stage.label}
+              </option>
+            ))}
+          </select>
+        </label>
+        <p className="mt-1 text-sm text-ink-soft">
+          {answers.recordAtStage
+            ? "The app works out roughly when that falls from the planting date, and says so on the dashboard. It is an estimate until somebody confirms the stage from the paddock."
+            : "Nothing will remind you. Good for anything recorded as it comes up — pick a stage if this is a visit you plan."}
+        </p>
       </div>
     </Card>
   );
