@@ -38,6 +38,7 @@ import {
   Skeleton,
 } from "../components/ui";
 import { SetupChecklist, SiteManager } from "../components/TrialSetup";
+import { TrialPeople } from "../components/TrialPeople";
 import { PlotLayout } from "../components/PlotLayout";
 import { DataSources } from "../components/DataSources";
 import { PlantingCard } from "../components/ObservationTiming";
@@ -152,6 +153,9 @@ export function TrialSetupPage() {
         {replicated ? (
           <PlotLayout trial={trial} arms={activeArms} sites={sites} recorded={data.plotRecords} />
         ) : null}
+        {/* Directly under the sites, because a site is what makes somebody
+            involved — the panel is mostly a reading of what the sites say. */}
+        <TrialPeople trialId={trial.trialId} />
       </Section>
 
       <Section

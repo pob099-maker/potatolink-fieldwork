@@ -4,6 +4,7 @@ import {
   listArms,
   listAssumptions,
   listContacts,
+  listTrialMembers,
   listEntryLogs,
   listEvents,
   listMetrics,
@@ -43,6 +44,8 @@ export const useTrials = () => useQuery({ queryKey: ["trials"], queryFn: listTri
 export const useSites = () => useQuery({ queryKey: ["sites"], queryFn: listSites });
 export const useArms = () => useQuery({ queryKey: ["arms"], queryFn: listArms });
 export const useContacts = () => useQuery({ queryKey: ["contacts"], queryFn: listContacts });
+export const useTrialMembers = () =>
+  useQuery({ queryKey: ["trialMembers"], queryFn: listTrialMembers });
 export const useTemplates = () =>
   useQuery({ queryKey: ["templates"], queryFn: listTemplates });
 export const useEvents = () => useQuery({ queryKey: ["events"], queryFn: listEvents });

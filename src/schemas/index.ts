@@ -182,6 +182,19 @@ export const contactSchema = z.object({
   email: z.string(),
   phone: z.string(),
   tags: z.array(z.string()),
+  // Absent means the backend has never heard of the column; null means nobody
+  // has linked this person to an account. keepColumnsTheCloudLacks in
+  // services/store.ts is what stops the first meaning being written over the
+  // second, so no default here.
+  authUserId: id.nullable().optional(),
+  createdAt: isoDate,
+});
+
+export const trialMemberSchema = z.object({
+  memberId: id,
+  trialId: id,
+  contactId: id,
+  role: z.enum(["owner", "collaborator", "viewer"]),
   createdAt: isoDate,
 });
 

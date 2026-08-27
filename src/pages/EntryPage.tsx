@@ -24,6 +24,7 @@ import {
 import { Card, EmptyState, ErrorState, PageTitle, Skeleton, SyncBadge } from "../components/ui";
 import { EntryField } from "../components/fields";
 import { RecentEntries, SyncReassurance } from "../components/EntryStatus";
+import { growerForSite } from "../services/involvement";
 import { summariseSync } from "../services/syncHealth";
 import { useAccess } from "../contexts/AccessContext";
 import type { PlotAssignment } from "../services/layout";
@@ -181,7 +182,19 @@ export function EntryPage() {
       trialArms.find((candidate) => candidate.armId === searchParams.get("arm")) ??
       trialArms.find((candidate) => candidate.armId === pickedArmId) ??
       onlyArm;
-  const grower = contacts.data?.find((contact) => contact.role === "grower");
+  // Whose record this is.
+  //
+  // This used to be contacts.find(c => c.role === "grower") — the first grower
+  // in the list, whatever trial or paddock the entry came from — so one
+  // person's name ended up on everybody's data across every trial. The site
+  // has named its grower since the first migration; nothing ever read it.
+  //
+  // Falls back to the old behaviour only when there is no site at all, which
+  // is a whole-trial record rather than a paddock one.
+  const siteGrower = growerForSite(site?.siteId ?? null, sites.data ?? []);
+  const grower =
+    contacts.data?.find((contact) => contact.contactId === siteGrower) ??
+    contacts.data?.find((contact) => contact.role === "grower");
 
   // Staff previewing what a grower sees. The real form renders, but saving is
   // disabled so a preview can never leave a record behind.

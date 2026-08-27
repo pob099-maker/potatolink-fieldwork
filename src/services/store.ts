@@ -7,6 +7,7 @@ import { summariseSync, type SyncState } from "./syncHealth";
 import {
   armAssumptionSchema,
   contactSchema,
+  trialMemberSchema,
   dataEntryLogSchema,
   economicScenarioSchema,
   formTemplateSchema,
@@ -48,6 +49,7 @@ import type {
   LibraryEntry,
   Factor,
   FactorLevel,
+  TrialMember,
 } from "../types";
 import { newId, nowIso } from "../lib/id";
 import { dbDelete, dbGet, dbGetAll, dbPut, dbPutMany, type CollectionName } from "../lib/localdb";
@@ -55,6 +57,7 @@ import { fromRow, isBackendConfigured, supabase, toColumn, toRow } from "../lib/
 import { fileExtension, getMedia, isMediaPointer, markUploaded, mediaIdFromPointer } from "./media";
 import { makeFieldName } from "./templates";
 import { findExisting, fromFormField, isBuiltIn, libraryEntries } from "./measurementLibrary";
+import { involvementFor } from "./involvement";
 import { buildCombinations, canBuild, designLoad } from "./factorial";
 
 const TABLE_NAMES: Partial<Record<CollectionName, string>> = {
@@ -74,6 +77,7 @@ const TABLE_NAMES: Partial<Record<CollectionName, string>> = {
   soilSamples: "soil_samples",
   soilResults: "soil_results",
   measurementLibrary: "measurement_library",
+  trialMembers: "trial_members",
   factors: "factors",
   factorLevels: "factor_levels",
 };
@@ -168,6 +172,7 @@ const PRIMARY_KEY: Record<CollectionName, string> = {
   soilSamples: "sampleId",
   soilResults: "resultId",
   measurementLibrary: "entryId",
+  trialMembers: "memberId",
   factors: "factorId",
   factorLevels: "levelId",
   media: "mediaId",
@@ -1585,7 +1590,73 @@ const PULL_SPECS: Array<{ collection: CollectionName; table: string; schema: Zod
   { collection: "measurementLibrary", table: "measurement_library", schema: libraryEntrySchema },
   { collection: "factors", table: "factors", schema: factorSchema },
   { collection: "factorLevels", table: "factor_levels", schema: factorLevelSchema },
+  { collection: "trialMembers", table: "trial_members", schema: trialMemberSchema },
 ];
+
+export const listTrialMembers = (): Promise<TrialMember[]> =>
+  dbGetAll<TrialMember>("trialMembers");
+
+/**
+ * Put somebody on a trial, or change what they do on it.
+ *
+ * Adding a person who is already there updates their role rather than making a
+ * second row: the pair is unique in the database, and a duplicate would make
+ * them vanish from any list keyed on it.
+ *
+ * A farmer whose paddock already holds a site needs no row at all — they are
+ * involved by virtue of the site, and saying so again would be a row that goes
+ * stale the moment the site moves. The interface offers them anyway, because
+ * naming somebody explicitly is how you record a role.
+ */
+export async function addTrialMember(input: {
+  trialId: string;
+  contactId: string;
+  role: TrialMember["role"];
+}): Promise<Result<TrialMember>> {
+  const existing = (await listTrialMembers()).find(
+    (member) => member.trialId === input.trialId && member.contactId === input.contactId,
+  );
+  const member: TrialMember = existing
+    ? { ...existing, role: input.role }
+    : {
+        memberId: newId(),
+        trialId: input.trialId,
+        contactId: input.contactId,
+        role: input.role,
+        createdAt: nowIso(),
+      };
+
+  const parsed = trialMemberSchema.safeParse(member);
+  if (!parsed.success) {
+    return { success: false, error: parsed.error.issues[0]?.message ?? "Invalid member." };
+  }
+  return saveRecord("trialMembers", member, "Could not save who is on this trial.");
+}
+
+/**
+ * Take somebody off a trial.
+ *
+ * Only removes the explicit row. Somebody involved because a site is theirs
+ * stays involved, and the interface says so rather than offering a button that
+ * appears to work and changes nothing.
+ */
+export async function removeTrialMember(memberId: string): Promise<Result<string>> {
+  try {
+    await dbDelete("trialMembers", memberId);
+  } catch {
+    return { success: false, error: "Could not remove them on this device." };
+  }
+  await enqueueDeletion("trialMembers", memberId);
+  notify();
+  void syncPending();
+  return { success: true, data: "Removed." };
+}
+
+/** Everyone involved in a trial, site owners and named members together. */
+export async function involvementForTrial(trialId: string) {
+  const [sites, members] = await Promise.all([listSites(), listTrialMembers()]);
+  return involvementFor(trialId, sites, members);
+}
 
 /** Fetch every synced table from Supabase into the local store. */
 export async function pullFromCloud(): Promise<Result<string>> {
