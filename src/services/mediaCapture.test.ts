@@ -48,3 +48,28 @@ describe("the camera is offered, not a file browser", () => {
     expect(attachments).not.toContain("getUserMedia");
   });
 });
+
+describe("taking a photograph off again", () => {
+  // Replace was the only way out, which is no way out at all for one taken by
+  // accident in a pocket: the choice was another wrong photograph, or a wrong
+  // one left in place. On an optional field there was no route back to empty.
+  it("offers Remove on the form's own media field", () => {
+    expect(fields).toContain('aria-label={`Remove this ${kind}`}');
+  });
+
+  it("only offers it once there is something to remove", () => {
+    // Otherwise it sits on screen as a control with nothing to do.
+    expect(fields).toContain("{hasMedia ? (");
+  });
+
+  it("clears the input's value as well as the answer", () => {
+    // The input keeps the old filename otherwise, so choosing the same
+    // picture again fires no change event and looks broken.
+    expect(fields).toContain('if (fileRef.current) fileRef.current.value = "";');
+  });
+
+  it("revokes the preview URL rather than leaking it", () => {
+    // A phone walking a trial is an afternoon of these.
+    expect(fields).toContain("URL.revokeObjectURL(previewUrl)");
+  });
+});

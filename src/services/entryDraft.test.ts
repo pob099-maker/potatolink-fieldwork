@@ -119,26 +119,31 @@ describe("keeping and restoring", () => {
 });
 
 describe("age", () => {
+  // One fixed clock for both sides. Building the draft from Date.now() and
+  // then comparing against a later Date.now() made "5 minutes" floor to 4
+  // whenever the two calls straddled a millisecond — a test that failed on
+  // timing rather than on behaviour.
+  const NOW = Date.parse("2026-06-01T12:00:00.000Z");
   const draft = (minutesAgo: number): EntryDraft => ({
     draftId: "x",
     values: {},
     screenIndex: 0,
-    updatedAt: new Date(Date.now() - minutesAgo * 60000).toISOString(),
+    updatedAt: new Date(NOW - minutesAgo * 60000).toISOString(),
   });
 
   it("treats the same visit as fresh", () => {
-    expect(isStale(draft(10), Date.now())).toBe(false);
-    expect(isStale(draft(60 * 24 * 3), Date.now())).toBe(false);
+    expect(isStale(draft(10), NOW)).toBe(false);
+    expect(isStale(draft(60 * 24 * 3), NOW)).toBe(false);
   });
 
   it("treats last month as stale", () => {
     // A different visit to the same plot. Filling in last month's numbers
     // silently would be the app inventing an observation.
-    expect(isStale(draft(60 * 24 * 30), Date.now())).toBe(true);
+    expect(isStale(draft(60 * 24 * 30), NOW)).toBe(true);
   });
 
   it("says how long ago in words somebody would use", () => {
-    const now = Date.now();
+    const now = NOW;
     expect(describeAge(draft(0), now)).toBe("just now");
     expect(describeAge(draft(5), now)).toBe("5 minutes ago");
     expect(describeAge(draft(1), now)).toBe("1 minute ago");
