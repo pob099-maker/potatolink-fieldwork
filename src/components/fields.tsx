@@ -604,17 +604,45 @@ function MediaInput<T extends FieldValues>({
                 if (file) void onFilePicked(file);
               }}
             />
-            <button
-              type="button"
-              onClick={() => fileRef.current?.click()}
-              className="min-h-11 w-full rounded-lg border border-dashed border-line-strong px-4 py-2.5 font-medium text-ink-soft"
-            >
-              {kind === "video"
-                ? `🎬 ${hasMedia ? "Video added — tap to replace" : "Record or choose a video"}`
-                : kind === "photo"
-                  ? `📷 ${hasMedia ? "Photo added — tap to replace" : "Take or choose a photo"}`
-                  : `📎 ${hasMedia ? "File attached — tap to replace" : "Attach a file"}`}
-            </button>
+            <div className="flex gap-2">
+              <button
+                type="button"
+                onClick={() => fileRef.current?.click()}
+                className="min-h-11 flex-1 rounded-lg border border-dashed border-line-strong px-4 py-2.5 font-medium text-ink-soft"
+              >
+                {kind === "video"
+                  ? `🎬 ${hasMedia ? "Video added — tap to replace" : "Record or choose a video"}`
+                  : kind === "photo"
+                    ? `📷 ${hasMedia ? "Photo added — tap to replace" : "Take or choose a photo"}`
+                    : `📎 ${hasMedia ? "File attached — tap to replace" : "Attach a file"}`}
+              </button>
+              {/* Replace was the only way out, which is no way out at all for
+                  a photograph taken by accident in a pocket: the choice was
+                  another wrong photograph or a wrong one left in place. On an
+                  optional field there was no way back to empty.
+
+                  Only offered once something is there, so it never sits on
+                  screen as a control with nothing to do. */}
+              {hasMedia ? (
+                <button
+                  type="button"
+                  onClick={() => {
+                    controller.onChange("");
+                    if (previewUrl) URL.revokeObjectURL(previewUrl);
+                    setPreviewUrl(null);
+                    setCaptureError(null);
+                    // The input keeps the old filename otherwise, so choosing
+                    // the same picture again would fire no change event and
+                    // look broken.
+                    if (fileRef.current) fileRef.current.value = "";
+                  }}
+                  aria-label={`Remove this ${kind}`}
+                  className="min-h-11 rounded-lg border border-line-strong px-4 py-2.5 font-medium text-danger"
+                >
+                  Remove
+                </button>
+              ) : null}
+            </div>
             {kind === "video" ? (
               <p className="mt-1 text-meta text-ink-faint">
                 Keep clips short — under about a minute uploads best from the paddock.

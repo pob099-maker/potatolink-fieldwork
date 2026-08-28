@@ -58,6 +58,7 @@ import { fileExtension, getMedia, isMediaPointer, markUploaded, mediaIdFromPoint
 import { makeFieldName } from "./templates";
 import { findExisting, fromFormField, isBuiltIn, libraryEntries } from "./measurementLibrary";
 import { involvementFor } from "./involvement";
+import { isAttachment, nextAttachmentName } from "./attachments";
 import { buildCombinations, canBuild, designLoad } from "./factorial";
 
 const TABLE_NAMES: Partial<Record<CollectionName, string>> = {
@@ -173,6 +174,10 @@ const PRIMARY_KEY: Record<CollectionName, string> = {
   soilResults: "resultId",
   measurementLibrary: "entryId",
   trialMembers: "memberId",
+  // Local only, and never synced: a draft is what somebody has typed so far,
+  // not an observation. It has a key so deletions are identifiable, and no
+  // table name, so nothing tries to push it anywhere.
+  entryDrafts: "draftId",
   factors: "factorId",
   factorLevels: "levelId",
   media: "mediaId",
@@ -551,8 +556,12 @@ export async function updateEntry(
       { collection: "measurementEvents", value: corrected },
       ...next.map((metric) => ({ collection: "metrics" as const, value: metric })),
     ]);
-    // Whatever the form no longer asks for is removed rather than stranded.
+    // Whatever the form no longer asks for is removed rather than stranded —
+    // except an attachment, which the form never asked for and never will.
+    // Without this exception the first person to fix a typo would silently
+    // delete the photograph somebody drove out to take.
     for (const orphan of byName.values()) {
+      if (isAttachment(orphan)) continue;
       await dbDelete("metrics", orphan.metricId);
       await enqueueDeletion("metrics", orphan.metricId);
     }
@@ -1645,6 +1654,70 @@ export async function addContact(input: {
   }
 
   return saveRecord("contacts", contact, "Could not save this person on this device.");
+}
+
+/**
+ * Attach a photograph, video or file to an entry that never asked for one.
+ *
+ * Saved as a metric under a reserved name, so everything that already handles
+ * media — the export, the report's photo log, the upload queue — picks it up
+ * without knowing this feature exists.
+ */
+export async function addAttachment(
+  eventId: string,
+  pointer: string,
+): Promise<Result<Metric>> {
+  const events = await listEvents();
+  const event = events.find((candidate) => candidate.eventId === eventId);
+  if (!event) return { success: false, error: "That entry no longer exists." };
+
+  const existing = (await listMetrics()).filter((metric) => metric.eventId === eventId);
+  const metric: Metric = {
+    metricId: newId(),
+    eventId,
+    metricName: nextAttachmentName(existing),
+    value: "",
+    unit: "",
+    photoUrl: pointer,
+    createdAt: nowIso(),
+  };
+
+  const parsed = metricSchema.safeParse(metric);
+  if (!parsed.success) {
+    return { success: false, error: "That attachment could not be saved." };
+  }
+
+  try {
+    await dbPut("metrics", metric);
+    // Back to pending so the attachment reaches the cloud with the entry it
+    // belongs to, rather than sitting on the phone behind a record that is
+    // already marked synced.
+    await dbPut("measurementEvents", { ...event, syncStatus: "pending", updatedAt: nowIso() });
+  } catch {
+    return { success: false, error: "Could not save that attachment on this device." };
+  }
+  notify();
+  void syncPending();
+  return { success: true, data: metric };
+}
+
+/** Take one off again — the photograph taken by accident, in a pocket. */
+export async function removeAttachment(metricId: string): Promise<Result<string>> {
+  const metric = (await listMetrics()).find((candidate) => candidate.metricId === metricId);
+  if (!metric) return { success: true, data: "Already gone." };
+  if (!isAttachment(metric)) {
+    // A field the form asked for is cleared by editing the entry, not by this.
+    return { success: false, error: "That is an answer on the form, not an attachment." };
+  }
+  try {
+    await dbDelete("metrics", metricId);
+  } catch {
+    return { success: false, error: "Could not remove it on this device." };
+  }
+  await enqueueDeletion("metrics", metricId);
+  notify();
+  void syncPending();
+  return { success: true, data: "Removed." };
 }
 
 export const listTrialMembers = (): Promise<TrialMember[]> =>
