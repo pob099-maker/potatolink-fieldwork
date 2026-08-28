@@ -11,3 +11,8 @@ dist/
 !.env.example
 *.tsbuildinfo
 .vite/
+
+# Scratch space for things being tried out — agent output, draft CSVs,
+# exports being inspected. The note stays; the contents never get committed.
+sandbox/*
+!sandbox/README.md
