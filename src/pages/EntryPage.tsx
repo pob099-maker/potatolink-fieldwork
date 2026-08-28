@@ -24,6 +24,7 @@ import {
 import { Card, EmptyState, ErrorState, PageTitle, Skeleton, SyncBadge } from "../components/ui";
 import { EntryField } from "../components/fields";
 import { RecentEntries, SyncReassurance } from "../components/EntryStatus";
+import { Attachments } from "../components/Attachments";
 import { growerForSite } from "../services/involvement";
 import { summariseSync } from "../services/syncHealth";
 import {
@@ -956,6 +957,17 @@ function EntryForm({
           {editing ? "Back to the form" : "Add another entry"}
         </button>
       </Card>
+
+      {/* Offered after saving, not during. The form is a sequence of questions
+          with an end, and an open-ended "anything else?" in the middle of it
+          stops somebody who was nearly finished. Afterwards they can see what
+          they wrote and then remember the odd patch two rows over — and the
+          record exists to attach it to. */}
+      {preview ? null : (
+        <div className="mx-auto max-w-md">
+          <Attachments event={saved} metrics={metrics} />
+        </div>
+      )}
       <div className="mx-auto mt-4 max-w-md">
         <RecentEntries
           events={events}
