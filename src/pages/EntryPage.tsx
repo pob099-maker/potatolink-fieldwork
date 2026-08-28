@@ -26,6 +26,16 @@ import { EntryField } from "../components/fields";
 import { RecentEntries, SyncReassurance } from "../components/EntryStatus";
 import { growerForSite } from "../services/involvement";
 import { summariseSync } from "../services/syncHealth";
+import {
+  clearDraft,
+  describeAge,
+  draftId as draftIdOf,
+  isStale,
+  readDraft,
+  writeDraft,
+  type DraftKey,
+  type EntryDraft,
+} from "../services/entryDraft";
 import { useAccess } from "../contexts/AccessContext";
 import type { PlotAssignment } from "../services/layout";
 import type { Words } from "../services/vocabulary";
@@ -326,6 +336,7 @@ export function EntryPage() {
       armLabel={template.requiresArm && arm ? arm.name : null}
       frequency={template.frequency}
       eventType={template.eventType}
+      templateId={template.templateId}
       siteId={template.requiresSite && site ? site.siteId : null}
       armId={template.requiresArm && arm ? arm.armId : null}
       preview={preview}
@@ -653,6 +664,7 @@ function EntryForm({
   onChangePlot,
   frequency,
   eventType,
+  templateId,
   siteId,
   armId,
   replicate,
@@ -681,6 +693,7 @@ function EntryForm({
   onChangePlot: (() => void) | null;
   frequency: string;
   eventType: string;
+  templateId: string;
   siteId: string | null;
   armId: string | null;
   replicate: number | null;
@@ -747,6 +760,77 @@ function EntryForm({
     mode: "onTouched",
     defaultValues,
   });
+
+  // Keep what has been typed, so leaving does not lose it.
+  //
+  // Nothing used to be written until Save. On a sixteen-field form across four
+  // screens that is a trapdoor: fifteen answers in, one required field
+  // somebody genuinely cannot answer, and the choice is invent a value or
+  // start again. Backgrounding a browser tab is enough to lose it, and a phone
+  // does that on an incoming call.
+  //
+  // Not while correcting an existing entry — that record already exists and is
+  // the thing being edited — and not in preview, which must leave nothing
+  // behind at all.
+  const draftKey: DraftKey = {
+    trialId,
+    templateId,
+    siteId,
+    armId,
+    replicate,
+    plot,
+  };
+  const draftable = !preview && !editing;
+
+  /**
+   * An explicitly empty value for every field.
+   *
+   * reset({}) leaves registered inputs showing what was in them — the fields
+   * are not mentioned, so there is nothing for the form to set them back to.
+   * Naming each one is what actually empties the screen.
+   */
+  const blankValues = (): Record<string, unknown> =>
+    Object.fromEntries(
+      fields.map((field) => [field.fieldName, field.type === "multiselect" ? [] : ""]),
+    );
+  const [staleDraft, setStaleDraft] = useState<EntryDraft | null>(null);
+  const [restored, setRestored] = useState<string | null>(null);
+  const draftId = draftIdOf(draftKey);
+
+  useEffect(() => {
+    if (!draftable) return;
+    let live = true;
+    void readDraft(draftKey).then((draft) => {
+      if (!live || !draft) return;
+      if (isStale(draft, Date.now())) {
+        // A different visit to the same plot. Filling last month's numbers in
+        // silently would be the app inventing an observation, so it is offered
+        // instead.
+        setStaleDraft(draft);
+        return;
+      }
+      reset(draft.values);
+      setScreenIndex(draft.screenIndex);
+      setRestored(describeAge(draft, Date.now()));
+    });
+    return () => {
+      live = false;
+    };
+    // Keyed on the draft id: a different plot or form is a different draft.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [draftId, draftable]);
+
+  const watched = useWatch({ control });
+  useEffect(() => {
+    if (!draftable) return;
+    // Debounced, because writing on every keystroke would put a transaction
+    // behind every character typed in a paddock.
+    const timer = window.setTimeout(() => {
+      void writeDraft(draftKey, watched as Record<string, unknown>, screenIndex);
+    }, 800);
+    return () => window.clearTimeout(timer);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [watched, screenIndex, draftId, draftable]);
 
   // The area a weight should be divided by: whatever this record measured,
   // falling back to the trial's plot size. Without this the live conversion
@@ -818,6 +902,11 @@ function EntryForm({
         });
 
     if (result.success) {
+      // The record exists now, so the draft has done its job. Cleared only on
+      // success: a failed save is exactly when somebody most needs their
+      // answers to still be there.
+      if (draftable) void clearDraft(draftKey);
+      setRestored(null);
       setSaved(result.data);
     } else {
       setSaveError(result.error);
@@ -932,6 +1021,66 @@ function EntryForm({
       {preview ? null : (
         <SyncReassurance state={summariseSync(events, 0, 0)} />
       )}
+
+      {/* Said out loud rather than done quietly. Answers appearing in a form
+          nobody remembers filling in is unnerving, and on the wrong plot it
+          would be worse than unnerving. */}
+      {restored ? (
+        <p className="flex flex-wrap items-center gap-2 rounded-lg bg-sunk p-2.5 text-sm text-ink-soft">
+          Picked up where you left off — saved {restored}.
+          <button
+            type="button"
+            onClick={() => {
+              reset(blankValues());
+              setScreenIndex(0);
+              setRestored(null);
+              void clearDraft(draftKey);
+            }}
+            className="min-h-11 font-medium text-primary underline dark:text-primary-soft"
+          >
+            Start fresh instead
+          </button>
+        </p>
+      ) : null}
+
+      {/* A month-old draft is a different visit to the same plot, so it is
+          offered rather than applied. */}
+      {staleDraft ? (
+        <div className="rounded-lg bg-warning/15 p-3 text-sm">
+          <p className="font-medium text-warning">
+            There is an unfinished entry for this plot from{" "}
+            {describeAge(staleDraft, Date.now())}.
+          </p>
+          <p className="mt-1 text-ink-soft">
+            It has not been applied, because that long ago is usually a different
+            visit.
+          </p>
+          <div className="mt-2 flex flex-wrap gap-2">
+            <button
+              type="button"
+              onClick={() => {
+                reset(staleDraft.values);
+                setScreenIndex(staleDraft.screenIndex);
+                setRestored(describeAge(staleDraft, Date.now()));
+                setStaleDraft(null);
+              }}
+              className="min-h-11 rounded-lg border border-line-strong px-4 py-2.5 font-medium"
+            >
+              Use it
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                void clearDraft(draftKey);
+                setStaleDraft(null);
+              }}
+              className="min-h-11 rounded-lg border border-line-strong px-4 py-2.5 font-medium"
+            >
+              Discard it
+            </button>
+          </div>
+        </div>
+      ) : null}
 
       <p className="text-sm text-ink-faint" aria-live="polite">
         Step {screenIndex + 1} of {screens.length}

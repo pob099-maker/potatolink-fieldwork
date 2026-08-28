@@ -173,6 +173,10 @@ const PRIMARY_KEY: Record<CollectionName, string> = {
   soilResults: "resultId",
   measurementLibrary: "entryId",
   trialMembers: "memberId",
+  // Local only, and never synced: a draft is what somebody has typed so far,
+  // not an observation. It has a key so deletions are identifiable, and no
+  // table name, so nothing tries to push it anywhere.
+  entryDrafts: "draftId",
   factors: "factorId",
   factorLevels: "levelId",
   media: "mediaId",
