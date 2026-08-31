@@ -19,6 +19,7 @@ import {
   listAccessRequests,
   markAccessRequest,
   pendingCount,
+  supabaseUsersUrl,
   waitingFor,
   type AccessRequest,
 } from "../services/accessRequests";
@@ -27,6 +28,7 @@ import { Card, CardTitle } from "./ui";
 export function AccessQueue() {
   const [requests, setRequests] = useState<AccessRequest[] | null>(null);
   const [busy, setBusy] = useState<string | null>(null);
+  const usersUrl = supabaseUsersUrl();
 
   async function refresh(): Promise<void> {
     setRequests(await listAccessRequests());
@@ -58,8 +60,22 @@ export function AccessQueue() {
       </CardTitle>
       <p className="mt-1 text-sm text-ink-soft">
         Marking one approved records the decision. It does not create the account — that
-        is done by hand in Supabase, under Authentication → Users.
+        is a deliberate act, and the only place it can happen is Supabase.
       </p>
+
+      {/* The link, rather than a description of where to find it. The one
+          manual step left in letting somebody in should not also be a
+          navigation exercise. */}
+      {usersUrl ? (
+        <a
+          href={usersUrl}
+          target="_blank"
+          rel="noreferrer"
+          className="mt-2 inline-block min-h-11 py-2.5 font-medium text-primary underline dark:text-primary-soft"
+        >
+          Open Supabase → Authentication → Users ↗
+        </a>
+      ) : null}
 
       <ul className="mt-3 divide-y divide-line">
         {waiting.map((request) => (
@@ -76,6 +92,10 @@ export function AccessQueue() {
             ) : (
               <p className="mt-1 text-sm text-ink-faint">No reason given.</p>
             )}
+            <p className="mt-1 text-sm text-ink-faint">
+              Create the account with this address, set a password, and tick
+              <span className="font-medium"> Auto Confirm User</span>.
+            </p>
             <div className="mt-2 flex flex-wrap gap-2">
               <button
                 type="button"

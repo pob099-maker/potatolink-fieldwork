@@ -4,6 +4,7 @@ import {
   pendingCount,
   requestProblems,
   submitAccessRequest,
+  supabaseUsersUrl,
   waitingFor,
   type AccessRequest,
 } from "./accessRequests";
@@ -99,5 +100,16 @@ describe("the queue", () => {
     expect(waitingFor(request({ requestedAt: "2026-06-03T11:45:00.000Z" }), now)).toBe(
       "just now",
     );
+  });
+});
+
+describe("the link to where the account gets made", () => {
+  // The one manual step left in letting somebody in should not also be a
+  // navigation exercise.
+  it("returns nothing when there is no backend to link to", () => {
+    // Tests run with the credentials blanked, so this is the real path — and
+    // a dashboard link to a project that is not configured would be a dead
+    // end dressed as help.
+    expect(supabaseUsersUrl()).toBeNull();
   });
 });
