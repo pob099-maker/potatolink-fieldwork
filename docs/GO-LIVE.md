@@ -1,5 +1,15 @@
 # Locking Fieldwork down
 
+> **Status, 31 August 2026.** Steps 1 to 3 are done: sign-ups are closed, staff
+> accounts exist, and the app requires sign-in. Step 4 — the database rules —
+> is deliberately still outstanding while the app is being built, so reads
+> remain open and the anon key can still write. That is the honest position:
+> strangers meet a sign-in wall, but the wall is in the browser.
+>
+> Staff sign in with **email and password**, set when the account is created in
+> the dashboard. It was an emailed link; see docs/access-requests.md for why
+> that changed.
+
 Fieldwork is deliberately open at the moment. Anyone with the link can see every
 trial, and the app's database key — which is compiled into the JavaScript and so
 is readable by anyone who looks — can change anything. That is a considered
@@ -59,6 +69,10 @@ because it invites trust it hasn't earned.
 Supabase dashboard → **Authentication** → **Users** → **Add user** → *Create new
 user*, with **Auto Confirm User** ticked. One per person who needs to change a
 trial.
+
+Set a password on the account here — that is what people sign in with. There is
+no self-service reset, so a forgotten password means setting a new one in this
+same place.
 
 Growers and contractors do **not** need accounts. They record through a link.
 
