@@ -1,4 +1,22 @@
-# Knowing who has asked to get in
+# Staff sign-in, and knowing who has asked to get in
+
+## How staff sign in
+
+Email and password. Accounts are made by hand in the Supabase dashboard under
+**Authentication → Users → Add user**, with *Auto Confirm User* ticked and a
+password set there. Hand the password over however you would hand over any
+password.
+
+There is no self-service reset. Somebody who forgets theirs asks, and you set a
+new one in the same place. For a handful of staff that is less friction than
+the alternative, which was an emailed sign-in link — and which needed an SMTP
+provider, an app password or a verified domain, a redirect allow-list, and a
+sender capped at two emails an hour before any of it worked at all.
+
+Growers are unaffected either way. Recording needs no account: a link and a
+shared code, as it always has.
+
+---
 
 Once sign-ups are closed, somebody with the link who types their email at the
 sign-in screen is refused — and that used to be the whole of it. No route

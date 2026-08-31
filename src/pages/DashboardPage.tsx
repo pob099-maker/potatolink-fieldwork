@@ -167,11 +167,6 @@ export function DashboardPage() {
 
   return (
     <div className="space-y-4">
-      {/* Above everything, and only when somebody is waiting. A permanent
-          empty panel is a thing to learn to ignore, and the one time it
-          matters it will have been ignored. */}
-      <AccessQueue />
-
       <div className="flex items-center justify-between">
         <PageTitle>Dashboard</PageTitle>
         <Link
@@ -186,6 +181,18 @@ export function DashboardPage() {
           is time-critical — an observation window closes whether or not
           anybody scrolled. */}
       <DueNowBanner items={due} />
+
+      {/* After the due list and before everything else, and only when somebody
+          is waiting. A closing observation window is the more urgent of the
+          two — a request can wait an hour — but a person asking to be let in
+          should not be scrolled past either.
+
+          Below the page title rather than above it: a card floating over the
+          h1 leaves the page led by something other than its own name, which
+          reads oddly and is worse heard than seen. And only when it has
+          something in it, because a permanent empty panel is a thing you learn
+          to ignore, and the one time it matters it will have been ignored. */}
+      <AccessQueue />
 
       <StartHere presence={seedPresence((trials.data ?? []).map((trial) => trial.trialId))} />
 

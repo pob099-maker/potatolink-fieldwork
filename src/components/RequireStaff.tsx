@@ -29,48 +29,33 @@ export function RequireStaff({ children }: { children: React.ReactNode }) {
 }
 
 export function StaffSignIn() {
-  const { sendLink } = useAuth();
+  const { signIn } = useAuth();
   const [asking, setAsking] = useState(false);
   const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
   const [sending, setSending] = useState(false);
-  const [sent, setSent] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   async function onSubmit(): Promise<void> {
     setSending(true);
     setError(null);
-    const result = await sendLink(email);
+    const result = await signIn(email, password);
     setSending(false);
-    if (result.success) setSent(result.data);
-    else setError(result.error);
+    // Nothing to do on success: the session lands, and the gate above this
+    // re-renders into the page somebody was trying to reach.
+    if (!result.success) setError(result.error);
   }
 
   // Somebody with the link and no account is refused by the sign-in above and
   // has nowhere to go. This is where they go.
   if (asking) return <AccessRequestForm onCancel={() => setAsking(false)} />;
 
-  if (sent) {
-    return (
-      <Card className="mx-auto max-w-md text-center">
-        <p className="text-4xl" aria-hidden>
-          📬
-        </p>
-        <PageTitle>Check your email</PageTitle>
-        <p className="mt-2 text-ink-soft">{sent}</p>
-        <p className="mt-2 text-sm text-ink-soft">
-          Open it on this device and you will land back here, signed in. The link works
-          once and expires after an hour.
-        </p>
-      </Card>
-    );
-  }
-
   return (
     <Card className="mx-auto max-w-md">
       <PageTitle>Staff sign-in</PageTitle>
       <p className="mt-2 text-ink-soft">
         Setting up trials, editing forms and reading the results are for the people
-        running the project. We will email you a link — there is no password to set.
+        running the project.
       </p>
       <form
         className="mt-4 space-y-3"
@@ -94,18 +79,41 @@ export function StaffSignIn() {
             className="min-h-11 w-full rounded-lg border border-line-strong bg-surface px-3"
           />
         </div>
+        <div>
+          <label htmlFor="staff-password" className="mb-1 block text-sm font-medium">
+            Your password
+          </label>
+          <input
+            id="staff-password"
+            type="password"
+            autoComplete="current-password"
+            required
+            value={password}
+            onChange={(changeEvent) => setPassword(changeEvent.target.value)}
+            className="min-h-11 w-full rounded-lg border border-line-strong bg-surface px-3"
+          />
+        </div>
         {error ? <ErrorState message={error} /> : null}
         <button
           type="submit"
           disabled={sending}
           className="min-h-11 w-full rounded-lg bg-primary px-4 py-2.5 font-medium text-white disabled:opacity-60"
         >
-          {sending ? "Sending…" : "Email me a sign-in link"}
+          {sending ? "Signing in…" : "Sign in"}
         </button>
       </form>
       <p className="mt-4 border-t border-line pt-3 text-sm text-ink-soft">
         Recording in the field does not need an account — whoever is on site uses the
         link and code they were given, and is unaffected by this.
+      </p>
+
+      {/* Said here rather than left to be discovered. There is no self-service
+          reset: a password is set when the account is made, and resetting one
+          means asking. For a handful of staff that is less friction than the
+          emailed link it replaced, but only if nobody sits waiting for a
+          "forgot password" that is never coming. */}
+      <p className="mt-3 text-sm text-ink-soft">
+        Forgotten it? Ask whoever set your account up — they can set a new one.
       </p>
 
       <p className="mt-3 text-sm text-ink-soft">
