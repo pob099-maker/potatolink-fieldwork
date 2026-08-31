@@ -125,6 +125,24 @@ export async function markAccessRequest(
   return { success: true, data: status === "approved" ? "Marked approved." : "Marked declined." };
 }
 
+/**
+ * A link straight to the Users page of whichever Supabase project this app is
+ * pointed at.
+ *
+ * Derived from the configured URL rather than written down, so it is right for
+ * any deployment and cannot drift from the project actually in use. The ref is
+ * already public — it is part of the API URL compiled into the bundle — so
+ * building a dashboard link from it gives nothing away that was not already
+ * there.
+ *
+ * Null when there is no backend, in which case there is no dashboard to visit.
+ */
+export function supabaseUsersUrl(): string | null {
+  const url = import.meta.env.VITE_SUPABASE_URL as string | undefined;
+  const ref = url?.match(/^https:\/\/([a-z0-9]+)\.supabase\.co/)?.[1];
+  return ref ? `https://supabase.com/dashboard/project/${ref}/auth/users` : null;
+}
+
 export const pendingCount = (requests: AccessRequest[]): number =>
   requests.filter((request) => request.status === "pending").length;
 
