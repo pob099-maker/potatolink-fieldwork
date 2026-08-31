@@ -6,8 +6,22 @@
 // people who create trials, edit the forms and read the results — sign in
 // properly, because those pages change what everybody else sees.
 //
-// Sign-in is by emailed link: no password to set, forget, or type on a phone
-// in a shed, and nothing for this app to store.
+// Sign-in is by email and password.
+//
+// It was an emailed link, on the reasoning that there is no password to set,
+// forget, or type on a phone in a shed. That reasoning was about growers — and
+// growers never sign in. They use a link and a code and always will.
+//
+// Staff sign in at a desk, on their own laptop, with a password manager. For
+// them the emailed link bought nothing and cost a great deal: an SMTP provider
+// with an app password or a verified domain, a redirect URL allow-list, a
+// two-emails-an-hour cap on the default sender, and a PKCE exchange that fails
+// silently if the link is opened on a different device from the one that asked
+// — which is exactly what happens when the request comes from a laptop and the
+// inbox is on a phone.
+//
+// Five failure modes, all downstream of one choice, none of them visible to
+// the person who just wanted to look at a trial. A password has one.
 
 import {
   createContext,
@@ -29,7 +43,7 @@ interface AuthContextValue {
   ready: boolean;
   /** Whether staff pages are gated at all in this deployment. */
   required: boolean;
-  sendLink: (email: string) => Promise<Result<string>>;
+  signIn: (email: string, password: string) => Promise<Result<string>>;
   signOut: () => Promise<void>;
 }
 
@@ -61,21 +75,32 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const value = useMemo<AuthContextValue>(() => {
-    async function sendLink(email: string): Promise<Result<string>> {
+    async function signIn(email: string, password: string): Promise<Result<string>> {
       if (!supabase) {
         return { success: false, error: "No Supabase project is configured." };
       }
       const address = email.trim();
       if (!address) return { success: false, error: "Enter your email address." };
+      if (!password) return { success: false, error: "Enter your password." };
 
-      const { error } = await supabase.auth.signInWithOtp({
+      const { error } = await supabase.auth.signInWithPassword({
         email: address,
-        // Back to this app, whatever host it is served from, keeping the
-        // hash route so a deployment under a sub-path still lands correctly.
-        options: { emailRedirectTo: window.location.origin + window.location.pathname },
+        password,
       });
-      if (error) return { success: false, error: error.message };
-      return { success: true, data: `Check ${address} for a sign-in link.` };
+
+      if (error) {
+        // Deliberately the same message whether the address is unknown or the
+        // password is wrong. Saying which would tell somebody probing the app
+        // whose email addresses have accounts, and this is a public URL.
+        if (/invalid login credentials/i.test(error.message)) {
+          return {
+            success: false,
+            error: "That email and password did not match. Check both, or ask for access below.",
+          };
+        }
+        return { success: false, error: error.message };
+      }
+      return { success: true, data: "Signed in." };
     }
 
     async function signOut(): Promise<void> {
@@ -89,7 +114,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       ready,
       // Nothing to sign in to without a backend, so the gate stays open.
       required: REQUIRED && isBackendConfigured(),
-      sendLink,
+      signIn,
       signOut,
     };
   }, [session, ready]);
