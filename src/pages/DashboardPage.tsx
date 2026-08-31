@@ -14,6 +14,7 @@ import { describeEvent, describeEventScope, eventsForTrial, tallySync } from "..
 import { isSeedTrial, seedPresence, type SeedPresence } from "../services/seed";
 import { hiddenCount, visibleTrials } from "../services/lifecycle";
 import { useOnline } from "../hooks/useOnline";
+import { AccessQueue } from "../components/AccessQueue";
 import { retryFailedEntries } from "../services/store";
 import { deviceSyncSentence, emptySyncState } from "../services/syncHealth";
 import {
@@ -166,6 +167,11 @@ export function DashboardPage() {
 
   return (
     <div className="space-y-4">
+      {/* Above everything, and only when somebody is waiting. A permanent
+          empty panel is a thing to learn to ignore, and the one time it
+          matters it will have been ignored. */}
+      <AccessQueue />
+
       <div className="flex items-center justify-between">
         <PageTitle>Dashboard</PageTitle>
         <Link

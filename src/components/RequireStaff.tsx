@@ -9,6 +9,7 @@ import { useState } from "react";
 import { useAuth } from "../contexts/AuthContext";
 import { staffGate } from "../services/staffAccess";
 import { Card, ErrorState, PageTitle, Skeleton } from "./ui";
+import { AccessRequestForm } from "./AccessRequest";
 
 export function RequireStaff({ children }: { children: React.ReactNode }) {
   const { session, ready, required } = useAuth();
@@ -29,6 +30,7 @@ export function RequireStaff({ children }: { children: React.ReactNode }) {
 
 export function StaffSignIn() {
   const { sendLink } = useAuth();
+  const [asking, setAsking] = useState(false);
   const [email, setEmail] = useState("");
   const [sending, setSending] = useState(false);
   const [sent, setSent] = useState<string | null>(null);
@@ -42,6 +44,10 @@ export function StaffSignIn() {
     if (result.success) setSent(result.data);
     else setError(result.error);
   }
+
+  // Somebody with the link and no account is refused by the sign-in above and
+  // has nowhere to go. This is where they go.
+  if (asking) return <AccessRequestForm onCancel={() => setAsking(false)} />;
 
   if (sent) {
     return (
@@ -100,6 +106,17 @@ export function StaffSignIn() {
       <p className="mt-4 border-t border-line pt-3 text-sm text-ink-soft">
         Recording in the field does not need an account — whoever is on site uses the
         link and code they were given, and is unaffected by this.
+      </p>
+
+      <p className="mt-3 text-sm text-ink-soft">
+        No account yet?{" "}
+        <button
+          type="button"
+          onClick={() => setAsking(true)}
+          className="min-h-11 font-medium text-primary underline dark:text-primary-soft"
+        >
+          Ask for access
+        </button>
       </p>
     </Card>
   );
