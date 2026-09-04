@@ -85,7 +85,7 @@ Anything else in the first column is an error, so do not invent settings.
 Copy this line verbatim:
 
 ```
-form,event_type,audience,frequency,requires_site,requires_arm,label,field_name,type,required,unit,min,max,options,response,help
+form,event_type,audience,frequency,requires_site,requires_arm,label,field_name,type,required,unit,min,max,options,response,help,sensitive
 ```
 
 ### Field rows
@@ -108,8 +108,13 @@ belonging to that form.
 - `min` / `max` — numbers. A slider is usually 1 to 5.
 - `options` — for `select` and `multiselect`, separated by ` | `. Required for
   those types.
-- `response` — `yes` on **exactly one** number field for a replicated trial.
-  Leave blank everywhere else.
+- `response` — `yes` on **exactly one** number field. This is the number the
+  trial turns on, and it is worth setting for an observational comparison as
+  much as a replicated experiment: without it the app records everything and
+  compares nothing.
+- `sensitive` — `yes` on a form carrying costs, prices or contract terms.
+  Marks it on screen and adds a column to the export, so a file going to a
+  third party can be recognised. A label, not a lock.
 - `help` — a note shown under the question in the paddock. Use it where a label
   cannot carry the detail: "weigh before grading", "count the middle two rows".
 

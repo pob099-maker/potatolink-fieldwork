@@ -338,6 +338,7 @@ export function EntryPage() {
       frequency={template.frequency}
       eventType={template.eventType}
       templateId={template.templateId}
+      sensitive={template.commerciallySensitive ?? false}
       siteId={template.requiresSite && site ? site.siteId : null}
       armId={template.requiresArm && arm ? arm.armId : null}
       preview={preview}
@@ -666,6 +667,7 @@ function EntryForm({
   frequency,
   eventType,
   templateId,
+  sensitive,
   siteId,
   armId,
   replicate,
@@ -695,6 +697,7 @@ function EntryForm({
   frequency: string;
   eventType: string;
   templateId: string;
+  sensitive: boolean;
   siteId: string | null;
   armId: string | null;
   replicate: number | null;
@@ -1029,6 +1032,17 @@ function EntryForm({
           ) : null}
         </p>
       </div>
+
+      {/* Said where the figures are typed, not only in setup. Somebody
+          entering a service contract price is entitled to know the form was
+          marked, and to know what the mark does and does not do. */}
+      {sensitive ? (
+        <p className="rounded-lg border border-accent bg-accent/15 p-2.5 text-sm text-ink">
+          🔒 <span className="font-medium">Commercially sensitive.</span> These figures
+          are marked in the export so they are not shared by accident. The mark is a
+          label, not a lock — anyone who can open this form can see them.
+        </p>
+      ) : null}
 
       {preview ? null : (
         <SyncReassurance state={summariseSync(events, 0, 0)} />

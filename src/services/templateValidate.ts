@@ -114,9 +114,7 @@ export function validateTemplate(trial: ParsedTrial): TemplateIssue[] {
   if (responseFields > 1) {
     error(`${responseFields} fields are marked as the response variable; mark exactly one.`);
   }
-  if (trial.design === "observational" && responseFields > 0) {
-    warn("A response variable is marked but the design is observational — it will be ignored unless the design is set to replicated.");
-  }
+
 
   return issues;
 }

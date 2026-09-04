@@ -1,7 +1,7 @@
 import "fake-indexeddb/auto";
 import { describe, expect, it } from "vitest";
 import { publishParsedTrial } from "./templatePublish";
-import { listTemplates } from "./store";
+import { listTemplates, listTrials } from "./store";
 import { emptyAnswers, toParsedTrial, type WizardAnswers } from "./wizard";
 
 // The boundary the wizard tests do not reach.
@@ -91,5 +91,58 @@ describe("what survives being published", () => {
       }),
     );
     expect(template.fields[0].guidance ?? "").toBe("");
+  });
+});
+
+describe("a comparison that is not a replicated experiment", () => {
+  // The Downs CropVision trial is two operating modes on one grading line.
+  // There are no randomised plots, so the honest design is observational — and
+  // that used to mean the response variable was dropped on import, so the app
+  // recorded everything and compared nothing.
+  it("keeps the response variable on an observational trial", async () => {
+    const template = await publish(
+      filled({
+        kind: "comparison",
+        questions: [
+          { label: "Marketable pack-out", type: "number", unit: "%", required: true },
+        ],
+        responseIndex: 0,
+      }),
+    );
+    const trials = await listTrials();
+    const trial = trials.find((t) => t.trialId === template.trialId);
+    expect(trial?.design).toBe("observational");
+    expect(trial?.responseMetric).toBe(template.fields[0].fieldName);
+  });
+
+  it("does not turn it into a replicated trial as a side effect", async () => {
+    // Storing the response must not quietly change the design, or a
+    // demonstration would start asking for blocks and a plot layout.
+    const template = await publish(
+      filled({
+        kind: "comparison",
+        questions: [{ label: "Yield", type: "number", unit: "kg", required: true }],
+        responseIndex: 0,
+      }),
+    );
+    const trial = (await listTrials()).find((t) => t.trialId === template.trialId);
+    expect(trial?.design).toBe("observational");
+  });
+});
+
+describe("a form carrying figures given in confidence", () => {
+  it("keeps the mark through publishing", async () => {
+    const parsed = toParsedTrial(filled());
+    parsed.forms[0].commerciallySensitive = true;
+    const result = await publishParsedTrial(parsed);
+    expect(result.success).toBe(true);
+    if (!result.success) return;
+    const template = (await listTemplates()).find((t) => t.trialId === result.data.trialId);
+    expect(template?.commerciallySensitive).toBe(true);
+  });
+
+  it("leaves an ordinary form unmarked rather than false-by-default noise", async () => {
+    const template = await publish(filled());
+    expect(template.commerciallySensitive ?? false).toBe(false);
   });
 });

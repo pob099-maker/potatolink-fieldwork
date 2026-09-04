@@ -407,6 +407,20 @@ export interface FormTemplate {
   timing: Timing | null;
   requiresSite: boolean;
   requiresArm: boolean;
+  /**
+   * Whether what this form collects is commercially sensitive.
+   *
+   * Deliberately a label and not a lock, and the interface says so. Reads are
+   * open — the entry form has to load its trial before anybody has signed in —
+   * so a flag here cannot restrict who sees a row, and pretending otherwise
+   * would be the worst kind of security theatre: somebody entering a service
+   * contract price believing the app was protecting it.
+   *
+   * What it does is mark the form on screen and in the export, so a file about
+   * to be handed to a third party can be recognised as carrying figures that
+   * were given in confidence.
+   */
+  commerciallySensitive?: boolean;
   fields: FormField[];
   createdAt: string;
   updatedAt?: string;

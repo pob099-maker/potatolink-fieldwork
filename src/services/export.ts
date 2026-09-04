@@ -33,6 +33,11 @@ const COLUMNS = [
   "plot",
   "replicate",
   "form",
+  // Whether the form this row came from was marked as carrying figures given
+  // in confidence. In the file rather than only on screen, because the moment
+  // that matters is somebody about to send a CSV to a third party — and by
+  // then the screen is long gone.
+  "commercially_sensitive",
   "event_type",
   "event_id",
   "event_date",
@@ -101,6 +106,7 @@ export function buildTrialCsv(
       event.plot === null ? "" : String(event.plot),
       event.replicate === null ? "" : String(event.replicate),
       template?.name ?? "",
+      template?.commerciallySensitive ? "yes" : "",
       event.eventType,
       event.eventId,
       event.eventDate,

@@ -505,7 +505,11 @@ function RecordStep({ answers, set }: { answers: WizardAnswers; set: Setter }) {
                 />
                 Must be answered
               </label>
-              {answers.kind === "experiment" && canBeResponse(question) ? (
+              {/* Asked of a comparison too. A demonstration comparing two ways
+                  of doing something still has a number it turns on, and
+                  without one the app records everything and compares
+                  nothing. */}
+              {canBeResponse(question) ? (
                 <label className="mt-1 flex items-center gap-2 text-sm">
                   <input
                     type="radio"

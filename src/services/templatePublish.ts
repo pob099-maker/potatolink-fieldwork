@@ -36,16 +36,28 @@ export async function publishParsedTrial(parsed: ParsedTrial): Promise<Result<Tr
   if (!created.success) return created;
   let trial = created.data;
 
-  if (parsed.design === "replicated") {
+  // The response variable is set whatever the design.
+  //
+  // It used to be stored only for a replicated trial, so an observational
+  // comparison — two ways of doing something, recorded side by side — imported
+  // and recorded perfectly and then compared nothing at all. The statistics do
+  // not care: responseSummary produces means and standard errors per practice
+  // from whatever was recorded, and the results page renders them off
+  // responseMetric alone. Only this gate stood in the way, and a grading line
+  // being run two ways is exactly the trial the app describes observational
+  // designs as being for: "record what happens under each, and show a
+  // neighbour the difference".
+  const wantsResponse = responseField && trial.responseMetric !== responseField.fieldName;
+  if (parsed.design === "replicated" || wantsResponse) {
     const updated = await saveTrial({
       ...trial,
-      design: "replicated",
-      replicates: parsed.replicates,
+      design: parsed.design,
+      replicates: parsed.design === "replicated" ? parsed.replicates : trial.replicates,
       // Blocked unless told otherwise. Neither route set this, so a trial
       // created by answering "how many blocks?" came out completely
       // randomised — the wizard's own words promising an arrangement the
       // trial did not have, silently.
-      blocking: parsed.blocking ?? "blocks",
+      blocking: parsed.design === "replicated" ? (parsed.blocking ?? "blocks") : trial.blocking,
       responseMetric: responseField?.fieldName ?? null,
     });
     if (!updated.success) return { success: false, error: updated.error };
@@ -78,6 +90,7 @@ export async function publishParsedTrial(parsed: ParsedTrial): Promise<Result<Tr
       timing: form.timing ?? null,
       requiresSite: form.requiresSite,
       requiresArm: form.requiresArm,
+      commerciallySensitive: form.commerciallySensitive,
       fields: form.fields.map((field, index) => ({
         fieldName: field.fieldName,
         label: field.label,

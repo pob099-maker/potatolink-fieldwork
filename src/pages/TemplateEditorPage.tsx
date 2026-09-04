@@ -121,6 +121,31 @@ export function TemplateEditorPage() {
             setStatus(null);
           }}
         />
+
+        {/* Honest about its own reach. Reads are open — the entry form has to
+            load its trial before anybody has signed in — so this cannot
+            restrict who sees a row, and implying otherwise would be worse than
+            not offering it: somebody would type a contract price believing the
+            app was protecting it. */}
+        <label className="mt-4 flex items-start gap-2 text-sm">
+          <input
+            type="checkbox"
+            checked={draft.commerciallySensitive ?? false}
+            onChange={(changeEvent) => {
+              setDraft({ ...draft, commerciallySensitive: changeEvent.target.checked });
+              setStatus(null);
+            }}
+            className="mt-0.5 size-4"
+          />
+          <span>
+            <span className="font-medium">Commercially sensitive</span>
+            <span className="mt-1 block text-ink-soft">
+              Costs, prices, contract terms. Marks the form on screen and adds a column
+              to the export, so a file going to a third party can be recognised. It is a
+              label, not a lock — it does not restrict who can open the form.
+            </span>
+          </span>
+        </label>
       </Card>
 
       {draft.fields.map((field, index) => (

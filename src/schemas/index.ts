@@ -254,6 +254,7 @@ export const formTemplateSchema = z.object({
   timing: timingSchema.nullable().default(null),
   requiresSite: z.boolean().default(true),
   requiresArm: z.boolean().default(true),
+  commerciallySensitive: z.boolean().optional(),
   fields: z.array(formFieldSchema).min(1),
   createdAt: isoDate,
   updatedAt: optionalDate,
