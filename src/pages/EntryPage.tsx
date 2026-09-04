@@ -352,7 +352,11 @@ export function EntryPage() {
       events={events.data ?? []}
       metrics={metrics.data ?? []}
       arms={trialArms}
-      replicate={trial.design === "replicated" ? replicate : null}
+      // Also carried for an observational form that groups: the run number
+      // lives in `replicate`, which is what experimentalUnit collapses on.
+      // Nulling it here is how the grouping question got asked, answered, and
+      // then thrown away one line before it was saved.
+      replicate={trial.design === "replicated" || template.groupsBy ? replicate : null}
       plot={plotNumber}
       plotAreaM2={plotArea(trial)}
       plotWidthM={trial.plotWidthM}
@@ -363,7 +367,13 @@ export function EntryPage() {
           ? `Plot ${plotNumber}`
           : trial.design === "replicated" && replicate
             ? `Rep ${replicate}`
-            : null
+            : // Named with the designer's own word, beside the site and the
+              // practice, because it is the same kind of fact: which one thing
+              // this record belongs to. Without it there is nothing on screen
+              // to say which run somebody is filling in for.
+              template.groupsBy && replicate
+              ? `${template.groupsBy.charAt(0).toUpperCase()}${template.groupsBy.slice(1)} ${replicate}`
+              : null
       }
       enteredBy={grower?.contactId ?? ""}
       fields={[...template.fields].sort((a, b) => a.displayOrder - b.displayOrder)}

@@ -376,6 +376,22 @@ export interface FormField {
    * grading" has to be read before the weighing, not after.
    */
   guidance?: string;
+  /**
+   * A sum over other answers on the same form, for a number nobody measures
+   * directly — a percentage, an efficiency, a rate per hour.
+   *
+   * Written as arithmetic over the other questions' names:
+   * `(clodsIn - clodsOut) / clodsIn * 100`. It is evaluated as the form is
+   * filled in, shown read-only, and saved like any other number, so it
+   * reaches the export and the comparison without anybody doing it twice.
+   *
+   * Blank until every input it reads has a value — never zero. A percentage
+   * over a denominator that has not been filled in yet is not 0%, and rule 13
+   * is what happens when a blank is allowed to become a number.
+   *
+   * Only on a `number` field, and cleared when the type changes.
+   */
+  formula?: string;
   displayOrder: number;
 }
 

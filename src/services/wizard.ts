@@ -228,6 +228,10 @@ export function toParsedTrial(answers: WizardAnswers): ParsedTrial {
         ? (question.options ?? []).map((choice) => choice.trim()).filter(Boolean)
         : null,
     guidance: (question.guidance ?? "").trim(),
+    // The wizard does not offer a sum. It builds one form of a handful of
+    // questions, and a formula needs the questions it reads to exist first —
+    // so it belongs on the form editor, where they do.
+    formula: "",
     isResponse: response !== null && question === response,
     row: index + 1,
   }));

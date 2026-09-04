@@ -240,6 +240,7 @@ export const formFieldSchema = z.object({
   max: z.number().nullable(),
   unit: z.string().nullable(),
   guidance: z.string().optional(),
+  formula: z.string().optional(),
   displayOrder: z.number().int(),
 });
 
@@ -344,7 +345,13 @@ export function buildEntryFormSchema(
         value = z.string();
         break;
     }
-    if (!field.required) {
+    // A worked-out number is never required in its own right. Nobody can type
+    // into it, so a "this is required" error would point at a box that cannot
+    // be filled — whether it has a value follows from its inputs, and those
+    // are where the requirement belongs. Its min and max still apply: a
+    // percentage that comes out over 100 is a real inconsistency worth
+    // stopping on.
+    if (!field.required || (field.type === "number" && field.formula?.trim())) {
       value = value.optional().or(z.literal("").transform(() => undefined));
     }
     shape[field.fieldName] = value;

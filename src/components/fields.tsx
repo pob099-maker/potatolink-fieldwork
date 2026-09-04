@@ -11,6 +11,7 @@ import type {
   UseFormSetValue,
 } from "react-hook-form";
 import { Controller, useWatch } from "react-hook-form";
+import { evaluateFormula, parseFormula } from "../services/formula";
 import { getMedia, isMediaPointer, mediaIdFromPointer, saveMedia } from "../services/media";
 import { areaUnit, weightUnit, yieldPerHectare } from "../services/plotArea";
 import { accuracyNote, stripArea, type Fix } from "../services/stripMeasure";
@@ -81,6 +82,7 @@ export function EntryField<T extends FieldValues>({
         field={field}
         register={register}
         control={control}
+        setValue={setValue}
         labelId={labelId}
         required={field.required}
         invalid={Boolean(error)}
@@ -253,10 +255,81 @@ function YieldHint<T extends FieldValues>({
   );
 }
 
+/**
+ * A number worked out from the other answers, rather than typed.
+ *
+ * Read-only on purpose. A box somebody can type into and the app can also
+ * write to is a box that fights whoever is using it, and the moment they
+ * disagree there is no telling which number was meant. If the figure looks
+ * wrong the input is wrong, and that is where the correction belongs.
+ *
+ * Blank until every input it reads has a value — shown as a dash with the
+ * reason, not as 0. Rule 13 is what happens when a blank becomes a number.
+ */
+function ComputedNumber<T extends FieldValues>({
+  field,
+  control,
+  setValue,
+  describedBy,
+}: {
+  field: FormField;
+  control: Control<T>;
+  setValue: UseFormSetValue<T>;
+  describedBy: string | undefined;
+}) {
+  const parsed = parseFormula(field.formula ?? "");
+  const names = parsed.ok ? parsed.formula.names : [];
+  // Watching only what the sum reads, so a long form does not re-render every
+  // computed field on every keystroke anywhere in it.
+  const watched = useWatch({ control, name: names as unknown as Path<T>[] }) as unknown[];
+  const values: Record<string, unknown> = {};
+  names.forEach((name, index) => {
+    values[name] = watched?.[index];
+  });
+  const value = parsed.ok ? evaluateFormula(parsed.formula, values) : null;
+
+  // Written into form state so it saves, exports and compares like anything
+  // else — and so a second sum can read this one.
+  useEffect(() => {
+    setValue(
+      field.fieldName as Path<T>,
+      (value === null ? "" : value) as PathValue<T, Path<T>>,
+      { shouldDirty: false },
+    );
+  }, [value, field.fieldName, setValue]);
+
+  const shown =
+    value === null
+      ? null
+      : // Enough places to be useful, no more than the inputs justify.
+        Number(value.toFixed(2)).toString();
+
+  return (
+    <div>
+      <output
+        id={field.fieldName}
+        htmlFor={names.join(" ")}
+        aria-describedby={describedBy}
+        className="block min-h-11 rounded-lg border border-line bg-sunk px-3 py-2.5 text-base tabular-nums"
+      >
+        {shown ?? <span className="text-ink-faint">—</span>}
+      </output>
+      <p className="mt-1 text-sm text-ink-soft">
+        {!parsed.ok
+          ? `This is worked out automatically, but the sum has a problem: ${parsed.error}`
+          : shown === null
+            ? "Worked out automatically once the answers above are filled in."
+            : "Worked out automatically from the answers above."}
+      </p>
+    </div>
+  );
+}
+
 function FieldInput<T extends FieldValues>({
   field,
   register,
   control,
+  setValue,
   labelId,
   required,
   invalid,
@@ -265,6 +338,7 @@ function FieldInput<T extends FieldValues>({
   field: FormField;
   register: UseFormRegister<T>;
   control: Control<T>;
+  setValue: UseFormSetValue<T> | undefined;
   labelId: string;
   required: boolean;
   invalid: boolean;
@@ -278,6 +352,20 @@ function FieldInput<T extends FieldValues>({
     "aria-invalid": invalid || undefined,
     "aria-describedby": describedBy,
   };
+
+  // A worked-out number is still a number everywhere else — same unit, same
+  // storage, same column in the export. The only difference is that nobody
+  // types it, so the branch sits here rather than in the type list.
+  if (field.type === "number" && field.formula?.trim() && setValue) {
+    return (
+      <ComputedNumber
+        field={field}
+        control={control}
+        setValue={setValue}
+        describedBy={describedBy}
+      />
+    );
+  }
 
   switch (field.type) {
     case "number":

@@ -102,6 +102,7 @@ export async function publishParsedTrial(parsed: ParsedTrial): Promise<Result<Tr
         max: field.max,
         unit: field.unit,
         guidance: field.guidance,
+        formula: field.formula || undefined,
         displayOrder: index,
       })),
       createdAt,

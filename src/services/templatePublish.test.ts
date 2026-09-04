@@ -168,3 +168,37 @@ describe("a form where several samples come from one thing", () => {
     expect(template.groupsBy).toBeUndefined();
   });
 });
+
+describe("a number the app works out rather than somebody typing it", () => {
+  // Same boundary, same reason: the sum can survive parsing, validation and
+  // every unit test in formula.test.ts and still be dropped on the way to a
+  // FormTemplate — at which point the field renders as an empty number box
+  // and nobody can say why.
+  it("carries the sum through to the published form", async () => {
+    const parsed = toParsedTrial(
+      filled({
+        questions: [
+          { label: "Clods in", type: "number", unit: "count", required: true },
+          { label: "Clods out", type: "number", unit: "count", required: true },
+          { label: "Separation", type: "number", unit: "%", required: false },
+        ],
+      }),
+    );
+    const fields = parsed.forms[0].fields;
+    fields[2].formula = `(${fields[0].fieldName} - ${fields[1].fieldName}) / ${fields[0].fieldName} * 100`;
+    const result = await publishParsedTrial(parsed);
+    expect(result.success).toBe(true);
+    if (!result.success) return;
+    const template = (await listTemplates()).find((t) => t.trialId === result.data.trialId);
+    expect(template?.fields[2].formula).toBe(fields[2].formula);
+  });
+
+  it("leaves a field somebody types undefined rather than storing an empty sum", async () => {
+    const template = await publish(
+      filled({
+        questions: [{ label: "Weight", type: "number", unit: "kg", required: true }],
+      }),
+    );
+    expect(template.fields[0].formula).toBeUndefined();
+  });
+});

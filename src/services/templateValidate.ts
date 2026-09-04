@@ -2,6 +2,7 @@
 // Errors block publish; warnings ask the person to confirm. This is where
 // field mistakes get caught at a desk instead of in a paddock.
 
+import { formulaProblems } from "./formula";
 import type { ParsedTrial } from "./templateImport";
 
 export interface TemplateIssue {
@@ -84,6 +85,17 @@ export function validateTemplate(trial: ParsedTrial): TemplateIssue[] {
       }
       if (field.type === "number" && !field.unit) {
         warn(`Form "${form.name}": "${field.label}" is a number with no unit — units keep exported data unambiguous.`, field.row);
+      }
+      // A sum that names a field which is not on the form would import
+      // cleanly and then show a dash forever, with nothing to say why. Better
+      // to fail at the desk, naming the row.
+      if (field.formula) {
+        if (field.type !== "number") {
+          error(`Form "${form.name}": "${field.label}" has a sum but is not a number field.`, field.row);
+        }
+        for (const problem of formulaProblems(field.formula, form.fields, field.fieldName)) {
+          error(`Form "${form.name}": "${field.label}" — ${problem}`, field.row);
+        }
       }
       if (field.type === "text") freeText += 1;
       if (field.isResponse) {
