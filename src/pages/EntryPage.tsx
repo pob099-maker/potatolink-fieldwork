@@ -25,6 +25,7 @@ import { Card, EmptyState, ErrorState, PageTitle, Skeleton, SyncBadge } from "..
 import { EntryField } from "../components/fields";
 import { RecentEntries, SyncReassurance } from "../components/EntryStatus";
 import { Attachments } from "../components/Attachments";
+import { unitLabel, unitNumber } from "../services/entryUnit";
 import { growerForSite } from "../services/involvement";
 import { summariseSync } from "../services/syncHealth";
 import {
@@ -352,29 +353,11 @@ export function EntryPage() {
       events={events.data ?? []}
       metrics={metrics.data ?? []}
       arms={trialArms}
-      // Also carried for an observational form that groups: the run number
-      // lives in `replicate`, which is what experimentalUnit collapses on.
-      // Nulling it here is how the grouping question got asked, answered, and
-      // then thrown away one line before it was saved.
-      replicate={trial.design === "replicated" || template.groupsBy ? replicate : null}
+      replicate={unitNumber(trial, template, replicate)}
       plot={plotNumber}
       plotAreaM2={plotArea(trial)}
       plotWidthM={trial.plotWidthM}
-      replicateLabel={
-        // With a layout the plot number is what is painted on the peg, so it
-        // is what the person recording recognises; the replicate is bookkeeping.
-        plotNumber
-          ? `Plot ${plotNumber}`
-          : trial.design === "replicated" && replicate
-            ? `Rep ${replicate}`
-            : // Named with the designer's own word, beside the site and the
-              // practice, because it is the same kind of fact: which one thing
-              // this record belongs to. Without it there is nothing on screen
-              // to say which run somebody is filling in for.
-              template.groupsBy && replicate
-              ? `${template.groupsBy.charAt(0).toUpperCase()}${template.groupsBy.slice(1)} ${replicate}`
-              : null
-      }
+      replicateLabel={unitLabel(trial, template, replicate, plotNumber)}
       enteredBy={grower?.contactId ?? ""}
       fields={[...template.fields].sort((a, b) => a.displayOrder - b.displayOrder)}
     />
