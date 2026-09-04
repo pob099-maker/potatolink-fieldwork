@@ -62,7 +62,13 @@ export function normaliseField(field: FormField, type: FieldType): FormField {
     next.min = next.min ?? 1;
     next.max = next.max ?? 5;
   }
-  if (type !== "number") next.unit = null;
+  if (type !== "number") {
+    next.unit = null;
+    // A sum only makes sense as a number. Left behind on a photo field it
+    // would be invisible and still saved, which is how a stale formula comes
+    // back to life the day somebody switches the type back.
+    delete next.formula;
+  }
   if (OPTION_TYPES.includes(type) && (!next.options || next.options.length === 0)) {
     next.options = ["option 1", "option 2"];
   }

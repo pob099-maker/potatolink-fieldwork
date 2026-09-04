@@ -131,7 +131,36 @@ export function ImportTrialPage() {
                     {form.requiresArm
                       ? ` · per ${words({ vocabulary: null, design: parsed.design }).one}`
                       : ""}
+                    {form.commerciallySensitive ? " · commercially sensitive" : ""}
                   </span>
+                  {/* Said here because this is the last screen before the
+                      trial exists. Grouping changes how every treatment mean
+                      on this form is worked out, and a sum is a question
+                      nobody in the paddock has to answer — both are worth
+                      seeing before the file is accepted, not discovered
+                      afterwards. */}
+                  {form.groupsBy ? (
+                    <span className="mt-0.5 block text-meta text-ink-soft">
+                      Several samples can share one {form.groupsBy} — those are averaged
+                      together rather than counted separately.
+                    </span>
+                  ) : null}
+                  {form.fields.some((field) => field.isResponse) ? (
+                    <span className="mt-0.5 block text-meta text-ink-soft">
+                      ★ is the number this trial turns on — what the treatment means
+                      are worked out from.
+                    </span>
+                  ) : null}
+                  {form.fields.some((field) => field.formula) ? (
+                    <span className="mt-0.5 block text-meta text-ink-soft">
+                      Worked out from the other answers:{" "}
+                      {form.fields
+                        .filter((field) => field.formula)
+                        .map((field) => field.label)
+                        .join(", ")}
+                      .
+                    </span>
+                  ) : null}
                   <ul className="mt-1 flex flex-wrap gap-1">
                     {form.fields.map((field) => (
                       <li

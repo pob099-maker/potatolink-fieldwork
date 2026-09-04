@@ -505,7 +505,11 @@ function RecordStep({ answers, set }: { answers: WizardAnswers; set: Setter }) {
                 />
                 Must be answered
               </label>
-              {answers.kind === "experiment" && canBeResponse(question) ? (
+              {/* Asked of a comparison too. A demonstration comparing two ways
+                  of doing something still has a number it turns on, and
+                  without one the app records everything and compares
+                  nothing. */}
+              {canBeResponse(question) ? (
                 <label className="mt-1 flex items-center gap-2 text-sm">
                   <input
                     type="radio"
@@ -573,6 +577,51 @@ function RecordStep({ answers, set }: { answers: WizardAnswers; set: Setter }) {
             : "Nothing will remind you. Good for anything recorded as it comes up — pick a stage if this is a visit you plan."}
         </p>
       </div>
+
+      {/* Asked as a question about how the sampling actually works, because
+          that is what it is. Nobody setting up a trial thinks in terms of
+          subsamples and degrees of freedom, but everybody knows whether they
+          pull one sample off a run or three — and the difference decides
+          whether the standard error the trial reports is honest. */}
+      <div className="mt-4 border-t border-line pt-4">
+        <label className="block text-sm font-medium" htmlFor="samples-share">
+          Will more than one sample come from the same run, batch or load?
+          <select
+            id="samples-share"
+            value={answers.samplesShare ? "yes" : "no"}
+            onChange={(event) => set("samplesShare", event.target.value === "yes" ? "run" : "")}
+            className={inputClass}
+          >
+            <option value="no">No — each record is its own separate sample</option>
+            <option value="yes">Yes — several samples can share one</option>
+          </select>
+        </label>
+        {answers.samplesShare ? (
+          <div className="mt-3">
+            <label className="block text-sm font-medium" htmlFor="samples-share-word">
+              What do you call the thing they share?
+              <input
+                id="samples-share-word"
+                className={inputClass}
+                value={answers.samplesShare}
+                placeholder="run"
+                onChange={(event) => set("samplesShare", event.target.value)}
+              />
+            </label>
+            <p className="mt-1 text-sm text-ink-soft">
+              One word, lower case — run, batch, load, visit. Whoever records is asked
+              “Which {answers.samplesShare.trim() || "run"}?” first, and everything
+              entered under the same number is averaged into one measurement of it.
+            </p>
+          </div>
+        ) : (
+          <p className="mt-1 text-sm text-ink-soft">
+            Say yes and three samples off one run count as one measurement of that run
+            rather than three. Counted as three they make the result look more certain
+            than it is.
+          </p>
+        )}
+      </div>
     </Card>
   );
 }
@@ -604,6 +653,12 @@ function Summary({ answers }: { answers: WizardAnswers }) {
         {parsed.design === "replicated" ? (
           <Row label="Comparing">
             {parsed.forms[0].fields.find((entry) => entry.isResponse)?.label ?? "—"}
+          </Row>
+        ) : null}
+        {parsed.forms[0].groupsBy ? (
+          <Row label="Samples share">
+            One {parsed.forms[0].groupsBy} — records with the same number are averaged
+            together
           </Row>
         ) : null}
       </dl>

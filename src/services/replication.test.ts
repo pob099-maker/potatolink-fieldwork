@@ -191,3 +191,49 @@ describe("records from before and after a layout", () => {
     expect(std.mean).toBe(50);
   });
 });
+
+describe("subsamples off one run", () => {
+  // The Downs CropVision case: three 10 kg samples pulled off a single
+  // grading run. They are one measurement of that run, not three of the
+  // practice — and left ungrouped they shrink the standard error by roughly
+  // √3, which reads as three times the evidence actually collected.
+  //
+  // The grouping is carried by `replicate`, so this is a test of what the
+  // form's "which run?" question buys: same number in, one observation out.
+  const obs: Trial = { ...trial, design: "observational", replicates: 0 };
+
+  const grouped = [
+    ev("std", 1, "g1"), ev("std", 1, "g2"), ev("std", 1, "g3"),
+    ev("std", 2, "g4"), ev("std", 2, "g5"), ev("std", 2, "g6"),
+  ];
+  const groupedMetrics = [
+    yieldMetric("g1", 40), yieldMetric("g2", 44), yieldMetric("g3", 48),
+    yieldMetric("g4", 50), yieldMetric("g5", 54), yieldMetric("g6", 58),
+  ];
+
+  it("counts one run as one observation, not one per sample", () => {
+    const rows = responseSummary(obs, arms, grouped, groupedMetrics);
+    const std = rows.find((row) => row.armId === "std");
+    expect(std?.n).toBe(2);
+  });
+
+  it("averages the samples within a run before comparing", () => {
+    const rows = responseSummary(obs, arms, grouped, groupedMetrics);
+    // Run 1 means 44, run 2 means 54, so the treatment mean is 49 — not the
+    // mean of all six, which happens to agree here, and the standard error,
+    // which does not.
+    expect(rows.find((row) => row.armId === "std")?.mean).toBeCloseTo(49, 6);
+  });
+
+  it("reports a bigger standard error than the ungrouped samples would", () => {
+    const groupedSe = responseSummary(obs, arms, grouped, groupedMetrics).find(
+      (row) => row.armId === "std",
+    )?.se;
+    // The same six numbers with nothing shared: six separate observations.
+    const loose = grouped.map((event, index) => ({ ...event, replicate: index + 1 }));
+    const looseSe = responseSummary(obs, arms, loose, groupedMetrics).find(
+      (row) => row.armId === "std",
+    )?.se;
+    expect(groupedSe).toBeGreaterThan(looseSe ?? 0);
+  });
+});

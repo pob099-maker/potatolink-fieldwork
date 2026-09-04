@@ -283,3 +283,81 @@ describe("the help column", () => {
     if (result.success) expect(result.data.forms[0].fields[0].guidance).toBe("");
   });
 });
+
+describe("groups_by", () => {
+  const withGroup = (value: string) =>
+    [
+      HEADER,
+      "trial,Test Trial",
+      `${FIELD_HEADER},sensitive,groups_by`,
+      `Run,run,grower,Each run,yes,yes,Weight,,number,yes,kg,,,,,,,${value}`,
+    ].join("\n");
+
+  it("carries the word off the file", () => {
+    const result = parseTemplateCsv(withGroup("run"));
+    expect(result.success).toBe(true);
+    if (result.success) expect(result.data.forms[0].groupsBy).toBe("run");
+  });
+
+  it("leaves a form ungrouped when the column is blank", () => {
+    const result = parseTemplateCsv(withGroup(""));
+    expect(result.success).toBe(true);
+    if (result.success) expect(result.data.forms[0].groupsBy ?? "").toBe("");
+  });
+
+  // Both new columns were appended rather than inserted, so a file written
+  // against the older header still parses. Columns are looked up by name.
+  it("still parses a file written before the column existed", () => {
+    const result = parseTemplateCsv(
+      csv("Run,run,grower,Each run,yes,yes,Weight,,number,yes,kg,,,,,"),
+    );
+    expect(result.success).toBe(true);
+    if (result.success) expect(result.data.forms[0].groupsBy ?? "").toBe("");
+  });
+});
+
+describe("a number the app works out", () => {
+  const withFormula = (formula: string) =>
+    [
+      HEADER,
+      "trial,Test Trial",
+      `${FIELD_HEADER},sensitive,groups_by,formula`,
+      "Grade,grade,staff,Each run,yes,yes,Clods in,clodsIn,number,yes,count,,,,,,,,",
+      "Grade,grade,staff,Each run,yes,yes,Clods out,clodsOut,number,yes,count,,,,,,,,",
+      `Grade,grade,staff,Each run,yes,yes,Separation,separation,number,no,%,,,,,,,,${formula}`,
+    ].join(NEWLINE);
+
+  it("carries the sum off the file", () => {
+    const result = parseTemplateCsv(withFormula("(clodsIn - clodsOut) / clodsIn * 100"));
+    expect(result.success).toBe(true);
+    if (result.success) {
+      expect(result.data.forms[0].fields[2].formula).toBe("(clodsIn - clodsOut) / clodsIn * 100");
+    }
+  });
+
+  // A sum naming a field that is not there would import cleanly and then show
+  // a dash forever, with nothing on screen to say why.
+  it("refuses a sum that names a question the form does not have", () => {
+    const result = parseTemplateCsv(withFormula("clodsIn / clodsGone"));
+    expect(result.success).toBe(true);
+    if (!result.success) return;
+    const issues = validateTemplate(result.data);
+    const errors = issues.filter((issue) => issue.level === "error");
+    expect(errors.some((issue) => issue.message.includes("clodsGone"))).toBe(true);
+  });
+
+  it("accepts a sum whose names are all on the form", () => {
+    const result = parseTemplateCsv(withFormula("(clodsIn - clodsOut) / clodsIn * 100"));
+    expect(result.success).toBe(true);
+    if (!result.success) return;
+    expect(validateTemplate(result.data).filter((issue) => issue.level === "error")).toEqual([]);
+  });
+
+  it("says which row a broken sum is on", () => {
+    const result = parseTemplateCsv(withFormula("(clodsIn - clodsOut"));
+    expect(result.success).toBe(true);
+    if (!result.success) return;
+    const broken = validateTemplate(result.data).find((issue) => issue.level === "error");
+    expect(broken?.row).toBeGreaterThan(0);
+  });
+});

@@ -28,6 +28,12 @@ export interface ParsedField {
    * format and filled it in lost their text without being told.
    */
   guidance: string;
+  /**
+   * A sum over other fields on the same form, for a number nobody measures.
+   * Written against the other fields' `field_name` values, so a form using
+   * one has to set those explicitly rather than letting them be generated.
+   */
+  formula: string;
   isResponse: boolean;
   row: number;
 }
@@ -39,6 +45,10 @@ export interface ParsedForm {
   frequency: string;
   requiresSite: boolean;
   requiresArm: boolean;
+  /** Marks the form as carrying figures given in confidence. A label, not a lock. */
+  commerciallySensitive?: boolean;
+  /** What several samples share when they are subsamples — "run", "batch". */
+  groupsBy?: string;
   /**
    * When this visit is expected, relative to the crop.
    *
@@ -243,6 +253,8 @@ export function parseTemplateCsv(text: string): Result<ParsedTrial> {
         frequency: (col("frequency", row) ?? "").trim(),
         requiresSite: col("requires_site", row) === undefined ? true : truthy(col("requires_site", row)),
         requiresArm: col("requires_arm", row) === undefined ? true : truthy(col("requires_arm", row)),
+        commerciallySensitive: truthy(col("sensitive", row)),
+        groupsBy: (col("groups_by", row) ?? "").trim(),
         fields: [],
       };
       formsByName.set(formName, form);
@@ -265,6 +277,7 @@ export function parseTemplateCsv(text: string): Result<ParsedTrial> {
       max: numberOrNull(col("max", row)),
       options: options.length > 0 ? options : null,
       guidance: (col("help", row) ?? "").trim(),
+      formula: (col("formula", row) ?? "").trim(),
       isResponse: truthy(col("response", row)),
       row: rowNumber,
     });
@@ -291,7 +304,7 @@ export const REFERENCE_TEMPLATE_CSV = [
   "site,Tolga,North Queensland,Red ferrosol",
   "practice,Current practice,control,What the grower does now.",
   "practice,New practice,alternative,The change being tested.",
-  "form,event_type,audience,frequency,requires_site,requires_arm,label,field_name,type,required,unit,min,max,options,response,help",
+  "form,event_type,audience,frequency,requires_site,requires_arm,label,field_name,type,required,unit,min,max,options,response,help,sensitive,groups_by,formula",
   "Run record,run_record,grower,Each run,yes,yes,Tonnes handled,,number,yes,t,0,,,,Core throughput measure",
   "Run record,run_record,grower,Each run,yes,yes,How well did it work?,,slider,no,,1,5,,,Quick operator rating",
   "Run record,run_record,grower,Each run,yes,yes,Main issue seen,,select,no,,,,issue A | issue B | none,,Structured instead of free text",

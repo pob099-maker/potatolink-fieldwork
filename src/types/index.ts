@@ -376,6 +376,22 @@ export interface FormField {
    * grading" has to be read before the weighing, not after.
    */
   guidance?: string;
+  /**
+   * A sum over other answers on the same form, for a number nobody measures
+   * directly — a percentage, an efficiency, a rate per hour.
+   *
+   * Written as arithmetic over the other questions' names:
+   * `(clodsIn - clodsOut) / clodsIn * 100`. It is evaluated as the form is
+   * filled in, shown read-only, and saved like any other number, so it
+   * reaches the export and the comparison without anybody doing it twice.
+   *
+   * Blank until every input it reads has a value — never zero. A percentage
+   * over a denominator that has not been filled in yet is not 0%, and rule 13
+   * is what happens when a blank is allowed to become a number.
+   *
+   * Only on a `number` field, and cleared when the type changes.
+   */
+  formula?: string;
   displayOrder: number;
 }
 
@@ -407,6 +423,37 @@ export interface FormTemplate {
   timing: Timing | null;
   requiresSite: boolean;
   requiresArm: boolean;
+  /**
+   * Whether what this form collects is commercially sensitive.
+   *
+   * Deliberately a label and not a lock, and the interface says so. Reads are
+   * open — the entry form has to load its trial before anybody has signed in —
+   * so a flag here cannot restrict who sees a row, and pretending otherwise
+   * would be the worst kind of security theatre: somebody entering a service
+   * contract price believing the app was protecting it.
+   *
+   * What it does is mark the form on screen and in the export, so a file about
+   * to be handed to a third party can be recognised as carrying figures that
+   * were given in confidence.
+   */
+  commerciallySensitive?: boolean;
+  /**
+   * What several samples on this form share, when they are subsamples rather
+   * than independent observations — "run", "batch", "load", "visit".
+   *
+   * Three 10 kg samples pulled from one grading run are one observation of
+   * that run, not three of the treatment. Left ungrouped they inflate n and
+   * shrink the standard error, which is the worst kind of wrong: a confident
+   * number that reads as more evidence than was collected.
+   *
+   * The number the person gives is stored in `replicate`, because that is
+   * already what experimentalUnit groups on — it means "the same piece of
+   * ground" for a plot trial and "the same run" here, and both are the same
+   * question: which single thing did these readings come from.
+   *
+   * Empty on a form where each entry stands alone, which is most of them.
+   */
+  groupsBy?: string;
   fields: FormField[];
   createdAt: string;
   updatedAt?: string;
