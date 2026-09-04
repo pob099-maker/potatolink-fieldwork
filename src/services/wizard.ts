@@ -110,6 +110,17 @@ export interface WizardAnswers {
    * planned.
    */
   recordAtStage: string | null;
+  /**
+   * What several samples share, when more than one is taken from the same
+   * thing — "run", "batch", "load", "visit". Empty when each record stands
+   * alone, which is most trials.
+   *
+   * Asked in the wizard because it is a fact about the work, and the person
+   * setting the trial up is the only one who knows it. Left unasked, three
+   * samples off one grading run publish as three independent observations and
+   * every standard error the trial reports is too small by roughly √3.
+   */
+  samplesShare: string;
 }
 
 /** Questions worth starting from. Every one can be renamed, retyped or removed. */
@@ -135,6 +146,7 @@ export const emptyAnswers = (): WizardAnswers => ({
   // Null rather than a stage: a schedule nobody asked for produces a banner
   // nagging about a visit that was never planned.
   recordAtStage: null,
+  samplesShare: "",
 });
 
 /** A machine name from a label, since nobody should be asked for one. */
@@ -233,6 +245,7 @@ export function toParsedTrial(answers: WizardAnswers): ParsedTrial {
       : null,
     requiresSite: true,
     requiresArm: true,
+    groupsBy: answers.samplesShare.trim() || undefined,
     fields,
   };
 

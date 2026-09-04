@@ -91,6 +91,7 @@ export async function publishParsedTrial(parsed: ParsedTrial): Promise<Result<Tr
       requiresSite: form.requiresSite,
       requiresArm: form.requiresArm,
       commerciallySensitive: form.commerciallySensitive,
+      groupsBy: form.groupsBy,
       fields: form.fields.map((field, index) => ({
         fieldName: field.fieldName,
         label: field.label,

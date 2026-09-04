@@ -146,3 +146,25 @@ describe("a form carrying figures given in confidence", () => {
     expect(template.commerciallySensitive ?? false).toBe(false);
   });
 });
+
+describe("a form where several samples come from one thing", () => {
+  // The gap this closes: three 10 kg samples pulled off one grading run used
+  // to publish as three independent observations, and every standard error
+  // the trial reported came out too small by roughly √3. The fix is only
+  // worth anything if the answer survives to the template — which is the
+  // boundary this file exists to hold.
+  it("carries the word through to the published form", async () => {
+    const template = await publish(filled({ samplesShare: "run" }));
+    expect(template.groupsBy).toBe("run");
+  });
+
+  it("trims what somebody typed rather than storing the spaces", async () => {
+    const template = await publish(filled({ samplesShare: "  batch  " }));
+    expect(template.groupsBy).toBe("batch");
+  });
+
+  it("leaves an ordinary form ungrouped", async () => {
+    const template = await publish(filled());
+    expect(template.groupsBy).toBeUndefined();
+  });
+});

@@ -298,7 +298,13 @@ export function EntryPage() {
     trial.replicates > 0 &&
     template.requiresArm &&
     replicate == null;
-  if (needsSite || needsPlot || needsArm || needsReplicate) {
+  // A form that takes several samples of one thing has to know which thing,
+  // or the samples arrive as separate observations and overstate how much was
+  // measured. Open-ended, so it is typed rather than picked from a list —
+  // nobody knows in advance how many runs a season holds.
+  const needsGroup =
+    !editing && Boolean(template.groupsBy) && !needsReplicate && replicate == null;
+  if (needsSite || needsPlot || needsArm || needsReplicate || needsGroup) {
     return (
       <ContextChooser
         preview={preview}
@@ -308,7 +314,8 @@ export function EntryPage() {
         arms={trialArms}
         site={needsSite ? undefined : site}
         arm={needsArm ? undefined : arm}
-        replicates={needsSite || needsArm ? 0 : trial.replicates}
+        replicates={needsSite || needsArm || needsGroup ? 0 : trial.replicates}
+        groupsBy={template.groupsBy ?? ""}
         plots={needsSite ? [] : needsPlot ? plots : []}
         word={words(trial)}
         onPickSite={setPickedSiteId}
@@ -369,6 +376,46 @@ export function EntryPage() {
  * proper link never see this; it exists so a generic link can't silently
  * attribute a run to the wrong place.
  */
+/**
+ * Which run, batch or load these samples came from.
+ *
+ * Typed rather than picked, because the count is open-ended — a season has as
+ * many runs as it has, and a list of buttons would have to guess.
+ */
+function GroupNumber({ label, onPick }: { label: string; onPick: (n: number) => void }) {
+  const [value, setValue] = useState("");
+  const parsed = Number(value);
+  const valid = Number.isInteger(parsed) && parsed > 0;
+  return (
+    <form
+      onSubmit={(event) => {
+        event.preventDefault();
+        if (valid) onPick(parsed);
+      }}
+    >
+      <label className="block text-sm font-medium">
+        {label.charAt(0).toUpperCase() + label.slice(1)} number
+        <input
+          type="number"
+          inputMode="numeric"
+          min={1}
+          step={1}
+          value={value}
+          onChange={(event) => setValue(event.target.value)}
+          className="min-h-11 w-full rounded-lg border border-line-strong bg-surface px-3 py-2"
+        />
+      </label>
+      <button
+        type="submit"
+        disabled={!valid}
+        className="mt-3 min-h-11 w-full rounded-lg bg-primary px-4 py-2.5 font-medium text-white disabled:opacity-60"
+      >
+        Continue
+      </button>
+    </form>
+  );
+}
+
 function ContextChooser({
   preview,
   trialId,
@@ -378,6 +425,7 @@ function ContextChooser({
   site,
   arm,
   replicates,
+  groupsBy,
   plots,
   word,
   onPickSite,
@@ -396,6 +444,8 @@ function ContextChooser({
   site: Site | undefined;
   arm: PracticeArm | undefined;
   replicates: number;
+  /** What several samples share, when the form takes subsamples. */
+  groupsBy: string;
   plots: PlotAssignment[];
   word: Words;
   onPickSite: (siteId: string) => void;
@@ -403,7 +453,16 @@ function ContextChooser({
   onPickReplicate: (replicate: number) => void;
   onPickPlot: (plot: number) => void;
 }) {
-  const step = !site ? "site" : plots.length > 0 ? "plot" : !arm ? "arm" : "replicate";
+  const step = !site
+    ? "site"
+    : plots.length > 0
+      ? "plot"
+      : !arm
+        ? "arm"
+        : replicates > 0
+          ? "replicate"
+          : "group";
+  // A typed number always has an answer, so the group step is never empty.
   const optionCount =
     step === "site"
       ? sites.length
@@ -411,7 +470,9 @@ function ContextChooser({
         ? plots.length
         : step === "arm"
           ? arms.length
-          : Math.max(0, replicates);
+          : step === "group"
+            ? 1
+            : Math.max(0, replicates);
 
   // Nothing to choose from means the trial is not set up yet. Say so, rather
   // than showing a question with no answers.
@@ -444,7 +505,9 @@ function ContextChooser({
         ? "Which plot?"
         : step === "arm"
           ? `Which ${word.one}?`
-          : "Which replicate?";
+          : step === "group"
+            ? `Which ${groupsBy}?`
+            : "Which replicate?";
   const help =
     step === "site"
       ? "Choose the site you're recording at so this run is filed correctly."
@@ -452,7 +515,9 @@ function ContextChooser({
         ? "Tap the number on the peg. The app already knows what is planted there."
         : step === "arm"
           ? `Choose the ${word.one} this run used.`
-          : "Choose the replicate (plot) this record is for.";
+          : step === "group"
+            ? `Several samples come from one ${groupsBy}. Give them all the same number and they count as one measurement of it, not several.`
+            : "Choose the replicate (plot) this record is for.";
   return (
     <Card className="mx-auto max-w-md">
       {preview ? <PreviewBanner /> : null}
@@ -491,6 +556,8 @@ function ContextChooser({
                 </span>
               </button>
             ))
+          : step === "group"
+          ? <GroupNumber label={groupsBy} onPick={onPickReplicate} />
           : Array.from({ length: Math.max(0, replicates) }, (_, index) => index + 1).map((rep) => (
               <button
                 key={rep}

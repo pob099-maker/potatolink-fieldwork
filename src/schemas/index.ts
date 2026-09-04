@@ -255,6 +255,7 @@ export const formTemplateSchema = z.object({
   requiresSite: z.boolean().default(true),
   requiresArm: z.boolean().default(true),
   commerciallySensitive: z.boolean().optional(),
+  groupsBy: z.string().optional(),
   fields: z.array(formFieldSchema).min(1),
   createdAt: isoDate,
   updatedAt: optionalDate,

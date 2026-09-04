@@ -87,7 +87,12 @@ export function TemplateEditorPage() {
 
   async function onSave(): Promise<void> {
     if (!draft) return;
-    const result = await saveTemplate(draft);
+    // A ticked box with the word rubbed out is not a grouping, whatever the
+    // checkbox looks like. Saving "" would leave a form that groups on nothing.
+    const result = await saveTemplate({
+      ...draft,
+      groupsBy: draft.groupsBy?.trim() ? draft.groupsBy.trim() : undefined,
+    });
     setStatus(
       result.success
         ? { kind: "saved", message: "Form saved. Anyone recording sees the change immediately." }
@@ -146,6 +151,65 @@ export function TemplateEditorPage() {
             </span>
           </span>
         </label>
+
+        {/* Asked as a question about the work, not as a setting. Whether a
+            form takes subsamples is something the person setting up the trial
+            knows without being taught a word for it — and if they are not
+            asked, three samples off one run arrive as three observations and
+            the standard error comes out too small by roughly √3. That is the
+            worst kind of wrong: a confident number nobody has reason to
+            doubt. */}
+        <div className="mt-4 border-t border-line pt-4">
+          <label className="flex items-start gap-2 text-sm">
+            <input
+              type="checkbox"
+              checked={draft.groupsBy !== undefined}
+              onChange={(changeEvent) => {
+                setDraft({
+                  ...draft,
+                  groupsBy: changeEvent.target.checked ? "run" : undefined,
+                });
+                setStatus(null);
+              }}
+              className="mt-0.5 size-4"
+            />
+            <span>
+              <span className="font-medium">
+                Several samples can come from the same one thing
+              </span>
+              <span className="mt-1 block text-ink-soft">
+                Tick this if more than one sample is taken from a single run, batch, load
+                or visit. Three samples off one grading run are one measurement of that
+                run, not three &mdash; and counted as three they make the result look more
+                certain than it is.
+              </span>
+            </span>
+          </label>
+
+          {draft.groupsBy !== undefined ? (
+            <div className="mt-3 pl-6">
+              <label htmlFor="groups-by" className="mb-1 block text-sm font-medium">
+                What do you call that one thing?
+              </label>
+              <input
+                id="groups-by"
+                className={inputClass}
+                value={draft.groupsBy}
+                placeholder="run"
+                onChange={(changeEvent) => {
+                  setDraft({ ...draft, groupsBy: changeEvent.target.value });
+                  setStatus(null);
+                }}
+              />
+              <p className="mt-1 text-sm text-ink-soft">
+                One word, lower case &mdash; run, batch, load, visit. Whoever records is
+                asked &ldquo;Which {draft.groupsBy.trim() || "run"}?&rdquo; before the
+                questions, and everything they enter under the same number is averaged
+                together.
+              </p>
+            </div>
+          ) : null}
+        </div>
       </Card>
 
       {draft.fields.map((field, index) => (

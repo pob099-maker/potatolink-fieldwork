@@ -85,7 +85,7 @@ Anything else in the first column is an error, so do not invent settings.
 Copy this line verbatim:
 
 ```
-form,event_type,audience,frequency,requires_site,requires_arm,label,field_name,type,required,unit,min,max,options,response,help,sensitive
+form,event_type,audience,frequency,requires_site,requires_arm,label,field_name,type,required,unit,min,max,options,response,help,sensitive,groups_by
 ```
 
 ### Field rows
@@ -115,6 +115,11 @@ belonging to that form.
 - `sensitive` — `yes` on a form carrying costs, prices or contract terms.
   Marks it on screen and adds a column to the export, so a file going to a
   third party can be recognised. A label, not a lock.
+- `groups_by` — one lower-case word (`run`, `batch`, `load`, `visit`) on a form
+  where more than one sample comes from the same one thing. Whoever records is
+  asked "Which run?" first, and everything under the same number is averaged
+  into one observation instead of counting as several. Leave it blank when each
+  record stands alone, which is most forms.
 - `help` — a note shown under the question in the paddock. Use it where a label
   cannot carry the detail: "weigh before grading", "count the middle two rows".
 

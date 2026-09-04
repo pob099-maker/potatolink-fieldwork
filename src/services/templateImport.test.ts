@@ -283,3 +283,35 @@ describe("the help column", () => {
     if (result.success) expect(result.data.forms[0].fields[0].guidance).toBe("");
   });
 });
+
+describe("groups_by", () => {
+  const withGroup = (value: string) =>
+    [
+      HEADER,
+      "trial,Test Trial",
+      `${FIELD_HEADER},sensitive,groups_by`,
+      `Run,run,grower,Each run,yes,yes,Weight,,number,yes,kg,,,,,,,${value}`,
+    ].join("\n");
+
+  it("carries the word off the file", () => {
+    const result = parseTemplateCsv(withGroup("run"));
+    expect(result.success).toBe(true);
+    if (result.success) expect(result.data.forms[0].groupsBy).toBe("run");
+  });
+
+  it("leaves a form ungrouped when the column is blank", () => {
+    const result = parseTemplateCsv(withGroup(""));
+    expect(result.success).toBe(true);
+    if (result.success) expect(result.data.forms[0].groupsBy ?? "").toBe("");
+  });
+
+  // Both new columns were appended rather than inserted, so a file written
+  // against the older header still parses. Columns are looked up by name.
+  it("still parses a file written before the column existed", () => {
+    const result = parseTemplateCsv(
+      csv("Run,run,grower,Each run,yes,yes,Weight,,number,yes,kg,,,,,"),
+    );
+    expect(result.success).toBe(true);
+    if (result.success) expect(result.data.forms[0].groupsBy ?? "").toBe("");
+  });
+});

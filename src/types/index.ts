@@ -421,6 +421,23 @@ export interface FormTemplate {
    * were given in confidence.
    */
   commerciallySensitive?: boolean;
+  /**
+   * What several samples on this form share, when they are subsamples rather
+   * than independent observations — "run", "batch", "load", "visit".
+   *
+   * Three 10 kg samples pulled from one grading run are one observation of
+   * that run, not three of the treatment. Left ungrouped they inflate n and
+   * shrink the standard error, which is the worst kind of wrong: a confident
+   * number that reads as more evidence than was collected.
+   *
+   * The number the person gives is stored in `replicate`, because that is
+   * already what experimentalUnit groups on — it means "the same piece of
+   * ground" for a plot trial and "the same run" here, and both are the same
+   * question: which single thing did these readings come from.
+   *
+   * Empty on a form where each entry stands alone, which is most of them.
+   */
+  groupsBy?: string;
   fields: FormField[];
   createdAt: string;
   updatedAt?: string;
